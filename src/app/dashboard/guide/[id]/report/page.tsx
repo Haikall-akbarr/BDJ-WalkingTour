@@ -62,41 +62,41 @@ export default function TourReportPage({ params }: { params: { id: string } }) {
   };
 
   return (
-    <div className="container mx-auto p-4 space-y-6 max-w-4xl">
-      <Button variant="ghost" onClick={() => router.back()} className="gap-2">
-        <ChevronLeft className="h-4 w-4" /> Kembali ke Dashboard
+    <div className="container mx-auto p-4 space-y-6 max-w-5xl">
+      <Button variant="ghost" onClick={() => router.back()} className="gap-2 text-sm">
+        <ChevronLeft className="h-4 w-4" /> Kembali
       </Button>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
         <Card className="border-none shadow-lg h-fit">
-          <CardHeader>
-            <CardTitle className="font-headline text-xl">Detail Laporan Tur</CardTitle>
-            <CardDescription>Masukkan sorotan utama dari tur hari ini.</CardDescription>
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="font-headline text-lg md:text-xl">Detail Laporan Tur</CardTitle>
+            <CardDescription className="text-xs md:text-sm">Masukkan sorotan utama dari tur hari ini.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-4 md:p-6">
             <div className="space-y-2">
-              <Label>Nama Tur</Label>
-              <Input value={formData.tourName} readOnly className="bg-muted" />
+              <Label className="text-xs">Nama Tur</Label>
+              <Input value={formData.tourName} readOnly className="bg-muted text-sm h-9" />
             </div>
             <div className="space-y-2">
-              <Label>Nama Pemandu</Label>
-              <Input value={formData.guideName} readOnly className="bg-muted" />
+              <Label className="text-xs">Nama Pemandu</Label>
+              <Input value={formData.guideName} readOnly className="bg-muted text-sm h-9" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="notes">Temuan & Perjumpaan Menarik</Label>
+              <Label htmlFor="notes" className="text-xs">Temuan & Perjumpaan Menarik</Label>
               <Textarea 
                 id="notes" 
-                placeholder="misal: Menemukan pengrajin wayang tradisional, bertemu warga usia 90 tahun yang bercerita tentang sejarah kuil..." 
-                className="min-h-[150px]"
+                placeholder="misal: Menemukan pengrajin wayang tradisional, bertemu warga usia 90 tahun..." 
+                className="min-h-[120px] md:min-h-[150px] text-sm"
                 value={formData.notableEncounters}
                 onChange={(e) => setFormData({...formData, notableEncounters: e.target.value})}
               />
-              <p className="text-xs text-muted-foreground">Berikan poin-poin atau catatan singkat untuk hasil AI terbaik.</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground">Berikan poin-poin singkat untuk hasil AI terbaik.</p>
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="p-4 md:p-6">
             <Button 
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-2 text-sm h-10"
               onClick={handleGenerateAI}
               disabled={loading}
             >
@@ -106,37 +106,37 @@ export default function TourReportPage({ params }: { params: { id: string } }) {
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4" /> Buat Narasi Menarik (AI)
+                  <Sparkles className="h-4 w-4" /> Buat Narasi (AI)
                 </>
               )}
             </Button>
           </CardFooter>
         </Card>
 
-        <Card className={`border-none shadow-lg h-fit transition-opacity ${generatedReport ? 'opacity-100' : 'opacity-50'}`}>
-          <CardHeader>
-            <CardTitle className="font-headline text-xl flex items-center gap-2">
+        <Card className={`border-none shadow-lg h-fit transition-all ${generatedReport ? 'opacity-100 scale-100' : 'opacity-60 scale-[0.98]'}`}>
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="font-headline text-lg md:text-xl flex items-center gap-2">
               Laporan Hasil AI
             </CardTitle>
-            <CardDescription>Tinjau dan edit narasi akhir tur Anda.</CardDescription>
+            <CardDescription className="text-xs md:text-sm">Tinjau dan edit narasi akhir tur Anda.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 md:p-6">
             {generatedReport ? (
               <Textarea 
-                className="min-h-[350px] leading-relaxed p-4" 
+                className="min-h-[300px] md:min-h-[350px] leading-relaxed p-3 md:p-4 text-sm" 
                 value={generatedReport}
                 onChange={(e) => setGeneratedReport(e.target.value)}
               />
             ) : (
-              <div className="h-[350px] border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground p-8 text-center space-y-4">
-                <Sparkles className="h-12 w-12 text-primary/30" />
-                <p>Narasi laporan akan muncul di sini setelah Anda klik "Buat Narasi".</p>
+              <div className="h-[300px] md:h-[350px] border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground p-6 text-center space-y-4">
+                <Sparkles className="h-10 w-10 text-primary/30" />
+                <p className="text-sm">Narasi akan muncul di sini setelah Anda klik "Buat Narasi".</p>
               </div>
             )}
           </CardContent>
-          <CardFooter>
+          <CardFooter className="p-4 md:p-6">
             <Button 
-              className="w-full bg-secondary hover:bg-secondary/90 text-white gap-2"
+              className="w-full bg-secondary hover:bg-secondary/90 text-white gap-2 text-sm h-10"
               disabled={!generatedReport || loading}
               onClick={handleSubmitFinal}
             >

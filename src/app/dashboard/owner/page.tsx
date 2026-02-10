@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 const STATS = [
-  { label: "Total Pendapatan", value: "Rp 12,5 Juta", icon: DollarSign, trend: "+12%", color: "text-green-600" },
+  { label: "Total Pendapatan", value: "Rp 12,5 Jt", icon: DollarSign, trend: "+12%", color: "text-green-600" },
   { label: "Total Pemesanan", value: "184", icon: Users, trend: "+5%", color: "text-blue-600" },
   { label: "Tur Aktif", value: "8", icon: Map, trend: "Stabil", color: "text-primary-foreground" }
 ];
@@ -54,9 +54,9 @@ const REVENUE_DATA = [
 ];
 
 const UNASSIGNED_TOURS = [
-  { id: "t1", name: "Heritage Trail", date: "22 Jan 2024", time: "09:00 WIB", pax: 12 },
-  { id: "t2", name: "Pasar Terapung Kuin", date: "23 Jan 2024", time: "05:30 WIB", pax: 8 },
-  { id: "t3", name: "Pacinan Night Walk", date: "25 Jan 2024", time: "19:00 WIB", pax: 15 },
+  { id: "t1", name: "Heritage Trail", date: "22 Jan", time: "09:00", pax: 12 },
+  { id: "t2", name: "Pasar Terapung", date: "23 Jan", time: "05:30", pax: 8 },
+  { id: "t3", name: "Pacinan Night Walk", date: "25 Jan", time: "19:00", pax: 15 },
 ];
 
 const GUIDES = [
@@ -74,33 +74,34 @@ export default function OwnerDashboard() {
   };
 
   return (
-    <div className="container mx-auto p-4 space-y-8">
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
+    <div className="container mx-auto p-4 space-y-6 md:space-y-8">
+      {/* Header Responsif */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl shadow-sm border gap-4">
         <div className="flex items-center gap-2">
           <div className="bg-primary/20 p-2 rounded-lg">
             <MapPin className="h-6 w-6 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold font-headline leading-tight">BDJ WalkingTour</h1>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Business Insight</p>
+            <h1 className="text-lg md:text-xl font-bold font-headline leading-tight">BDJ WalkingTour</h1>
+            <p className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-wider">Business Insight</p>
           </div>
         </div>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50 gap-2">
+            <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50 gap-2 w-full sm:w-auto">
               <LogOut className="h-4 w-4" /> Keluar
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent>
+          <AlertDialogContent className="w-[90%] rounded-xl">
             <AlertDialogHeader>
-              <AlertDialogTitle>Apakah Anda yakin ingin keluar?</AlertDialogTitle>
+              <AlertDialogTitle>Keluar dari sistem?</AlertDialogTitle>
               <AlertDialogDescription>
-                Sesi Anda akan berakhir dan Anda akan diarahkan ke halaman utama.
+                Sesi Anda akan berakhir.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Batal</AlertDialogCancel>
-              <AlertDialogAction onClick={handleLogout} className="bg-red-500 hover:bg-red-600">
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+              <AlertDialogCancel className="w-full sm:w-auto">Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={handleLogout} className="bg-red-500 hover:bg-red-600 w-full sm:w-auto">
                 Keluar
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -108,48 +109,49 @@ export default function OwnerDashboard() {
         </AlertDialog>
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Pemantauan Bisnis</h1>
-          <p className="text-muted-foreground">Ringkasan real-time operasional BDJ WalkingTour.</p>
+          <h1 className="text-2xl md:text-3xl font-bold font-headline">Pemantauan Bisnis</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Ringkasan real-time operasional.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">Ekspor Laporan</Button>
-          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">Ringkasan Bulanan</Button>
+        <div className="flex gap-2 w-full lg:w-auto">
+          <Button variant="outline" className="flex-1 lg:flex-none text-xs md:text-sm">Ekspor</Button>
+          <Button className="flex-1 lg:flex-none bg-primary hover:bg-primary/90 text-primary-foreground text-xs md:text-sm">Ringkasan</Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Grid Statistik Responsif */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {STATS.map((stat, idx) => (
           <Card key={idx} className="border-none shadow-md">
-            <CardContent className="p-6 flex items-center justify-between">
+            <CardContent className="p-4 md:p-6 flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <p className="text-2xl font-bold">{stat.value}</p>
-                <p className={`text-xs ${stat.color} flex items-center gap-1`}>
-                  <TrendingUp className="h-3 w-3" /> {stat.trend} bulan ini
+                <p className="text-xs md:text-sm text-muted-foreground">{stat.label}</p>
+                <p className="text-xl md:text-2xl font-bold">{stat.value}</p>
+                <p className={`text-[10px] md:text-xs ${stat.color} flex items-center gap-1`}>
+                  <TrendingUp className="h-3 w-3" /> {stat.trend}
                 </p>
               </div>
-              <div className="bg-primary/10 p-3 rounded-xl">
-                <stat.icon className="h-6 w-6 text-primary" />
+              <div className="bg-primary/10 p-2 md:p-3 rounded-xl">
+                <stat.icon className="h-5 w-5 md:h-6 md:w-6 text-primary" />
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
         <Card className="border-none shadow-lg">
           <CardHeader>
-            <CardTitle>Ikhtisar Pendapatan</CardTitle>
-            <CardDescription>Visualisasi pertumbuhan pendapatan bulanan.</CardDescription>
+            <CardTitle className="text-lg md:text-xl">Ikhtisar Pendapatan</CardTitle>
+            <CardDescription className="text-xs md:text-sm">Visualisasi pertumbuhan pendapatan bulanan.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-[250px] md:h-[300px] p-2 md:p-6">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={REVENUE_DATA}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12}} />
                 <Tooltip cursor={{fill: '#f5f5f5'}} />
                 <Bar dataKey="value" fill="#98DDCA" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -159,28 +161,30 @@ export default function OwnerDashboard() {
 
         <Card className="border-none shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
               <CalendarClock className="h-5 w-5 text-secondary" /> 
-              Tur Mendatang (Alokasi Pemandu)
+              Alokasi Pemandu
             </CardTitle>
-            <CardDescription>Alokasikan sumber daya untuk jadwal mendatang.</CardDescription>
+            <CardDescription className="text-xs md:text-sm">Tugaskan pemandu untuk jadwal mendatang.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 px-3 md:px-6">
             {UNASSIGNED_TOURS.map((tour) => (
-              <div key={tour.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border bg-slate-50 gap-4">
-                <div className="space-y-1">
-                  <p className="font-bold">{tour.name}</p>
-                  <div className="flex gap-2 text-xs text-muted-foreground">
-                    <span>{tour.date}</span>
-                    <span>•</span>
-                    <span>{tour.time}</span>
-                    <span>•</span>
-                    <Badge variant="outline" className="text-[10px] py-0">{tour.pax} Pax</Badge>
+              <div key={tour.id} className="flex flex-col gap-3 p-3 md:p-4 rounded-xl border bg-slate-50">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1 min-w-0">
+                    <p className="font-bold text-sm md:text-base truncate">{tour.name}</p>
+                    <div className="flex flex-wrap gap-2 text-[10px] md:text-xs text-muted-foreground">
+                      <span>{tour.date}</span>
+                      <span>•</span>
+                      <span>{tour.time}</span>
+                      <span>•</span>
+                      <Badge variant="outline" className="text-[9px] md:text-[10px] py-0 px-1">{tour.pax} Pax</Badge>
+                    </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Select>
-                    <SelectTrigger className="w-[180px] bg-white">
+                    <SelectTrigger className="w-full sm:w-[180px] bg-white h-9 text-xs">
                       <SelectValue placeholder="Pilih Pemandu" />
                     </SelectTrigger>
                     <SelectContent>
@@ -189,7 +193,7 @@ export default function OwnerDashboard() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1">
+                  <Button size="sm" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground gap-1 text-xs h-9">
                     <UserPlus className="h-3 w-3" /> Tugaskan
                   </Button>
                 </div>
