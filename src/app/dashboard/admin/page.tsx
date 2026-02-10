@@ -67,6 +67,7 @@ export default function AdminDashboard() {
     distance: "3 KM",
     duration: "2 Jam"
   });
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Queries
   const bookingsQuery = useMemo(() => {
@@ -85,6 +86,14 @@ export default function AdminDashboard() {
 
   const { data: pendingBookings, loading: bookingsLoading } = useCollection(bookingsQuery);
   const { data: tours, loading: toursLoading } = useCollection(toursQuery);
+
+  const filteredBookings = useMemo(() => {
+    if (!pendingBookings) return [];
+    return pendingBookings.filter((b: any) => 
+      b.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      b.tourName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [pendingBookings, searchTerm]);
 
   // Handlers
   const handleUpdateBookingStatus = (bookingId: string, newStatus: string) => {
@@ -253,7 +262,12 @@ export default function AdminDashboard() {
                 </div>
                 <div className="relative w-full lg:w-64">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Cari pemesanan..." className="pl-10 text-sm" />
+                  <Input 
+                    placeholder="Cari pemesanan..." 
+                    className="pl-10 text-sm" 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
               </div>
             </CardHeader>
@@ -278,8 +292,8 @@ export default function AdminDashboard() {
                           <p className="mt-2 text-muted-foreground">Memuat data...</p>
                         </td>
                       </tr>
-                    ) : pendingBookings && pendingBookings.length > 0 ? (
-                      pendingBookings.map((booking: any) => (
+                    ) : filteredBookings && filteredBookings.length > 0 ? (
+                      filteredBookings.map((booking: any) => (
                         <tr key={booking.id} className="hover:bg-muted/20">
                           <td className="p-3 md:p-4 whitespace-nowrap">
                             <p className="font-bold">{booking.userName}</p>
@@ -318,7 +332,7 @@ export default function AdminDashboard() {
                     ) : (
                       <tr>
                         <td colSpan={6} className="p-12 text-center text-muted-foreground">
-                          Tidak ada pemesanan pending.
+                          Tidak ada pemesanan yang cocok.
                         </td>
                       </tr>
                     )}

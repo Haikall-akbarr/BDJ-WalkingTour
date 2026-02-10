@@ -1,29 +1,56 @@
 
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
-import { ChevronLeft, Sparkles, Send, RefreshCcw } from "lucide-react"
+import { ChevronLeft, Sparkles, Send, RefreshCcw, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { generateTourReport } from "@/ai/flows/tour-report-generation"
+import { useFirestore, useDoc } from "@/firebase"
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore"
+import { errorEmitter } from "@/firebase/error-emitter"
+import { FirestorePermissionError } from "@/firebase/errors"
 
 export default function TourReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: bookingId } = React.use(params);
+  const db = useFirestore();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const bookingRef = useMemo(() => {
+    if (!db || !bookingId) return null;
+    return doc(db, "bookings", bookingId);
+  }, [db, bookingId]);
+
+  const { data: booking, loading: bookingLoading } = useDoc(bookingRef);
+
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    tourName: "Pacinan Walking Tour",
-    guideName: "Andi Saputra",
-    date: new Date().toLocaleDateString('id-ID'),
+    tourName: "",
+    guideName: "",
+    date: "",
     notableEncounters: ""
   });
   const [generatedReport, setGeneratedReport] = useState("");
-  const router = useRouter();
-  const { toast } = useToast();
+
+  useEffect(() => {
+    if (booking) {
+      setFormData({
+        tourName: booking.tourName || "Tur Tanpa Nama",
+        guideName: booking.guideName || "Pemandu",
+        date: booking.createdAt?.toDate ? booking.createdAt.toDate().toLocaleDateString('id-ID') : new Date().toLocaleDateString('id-ID'),
+        notableEncounters: ""
+      });
+      if (booking.report) {
+        setGeneratedReport(booking.report);
+      }
+    }
+  }, [booking]);
 
   const handleGenerateAI = async () => {
     if (!formData.notableEncounters) {
@@ -55,12 +82,35 @@ export default function TourReportPage({ params }: { params: Promise<{ id: strin
   };
 
   const handleSubmitFinal = () => {
+    if (!db || !bookingId) return;
+
+    const bRef = doc(db, "bookings", bookingId);
+    updateDoc(bRef, {
+      report: generatedReport,
+      reportSubmittedAt: serverTimestamp()
+    }).catch(async (error) => {
+      const permissionError = new FirestorePermissionError({
+        path: `bookings/${bookingId}`,
+        operation: "update",
+        requestResourceData: { report: generatedReport }
+      });
+      errorEmitter.emit("permission-error", permissionError);
+    });
+
     toast({
       title: "Berhasil",
       description: "Laporan resmi telah dikirim!",
     });
     router.push("/dashboard/guide");
   };
+
+  if (bookingLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   return (
     <div className="container mx-auto p-4 space-y-6 max-w-5xl">

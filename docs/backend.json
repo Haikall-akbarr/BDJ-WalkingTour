@@ -18,6 +18,7 @@
         "guideId": { "type": "string" },
         "guideName": { "type": "string" },
         "paymentProof": { "type": "string" },
+        "report": { "type": "string", "description": "Narasi laporan tur hasil AI" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userName", "userWhatsApp", "tourId", "status"]
@@ -30,7 +31,9 @@
         "name": { "type": "string" },
         "price": { "type": "number" },
         "date": { "type": "string" },
-        "description": { "type": "string" }
+        "description": { "type": "string" },
+        "distance": { "type": "string" },
+        "duration": { "type": "string" }
       }
     },
     "Staff": {

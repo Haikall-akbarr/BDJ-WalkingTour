@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useMemo } from "react"
+import React, { useState, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Navbar } from "@/components/public/Navbar"
 import { Button } from "@/components/ui/button"
@@ -20,7 +20,9 @@ import { errorEmitter } from "@/firebase/error-emitter"
 import { FirestorePermissionError } from "@/firebase/errors"
 
 export default function BookingPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: tourIdParam } = React.use(params);
+  const unwrappedParams = React.use(params);
+  const tourIdParam = unwrappedParams.id;
+  
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [domicile, setDomicile] = useState("banjarmasin");
@@ -41,9 +43,15 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     name: "",
     whatsapp: "",
     email: "",
-    tourId: tourIdParam || "",
+    tourId: tourIdParam === "new" ? "" : tourIdParam,
     pax: 1
   });
+
+  useEffect(() => {
+    if (tourIdParam && tourIdParam !== "new" && !formData.tourId) {
+      setFormData(prev => ({ ...prev, tourId: tourIdParam }));
+    }
+  }, [tourIdParam, formData.tourId]);
 
   const selectedTour = useMemo(() => {
     if (!tours || !formData.tourId) return null;
