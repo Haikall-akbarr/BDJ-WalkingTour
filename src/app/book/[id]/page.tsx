@@ -19,6 +19,8 @@ import { useToast } from "@/hooks/use-toast"
 export default function BookingPage({ params }: { params: { id: string } }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [domicile, setDomicile] = useState("banjarmasin");
+  const [customDomicile, setCustomDomicile] = useState("");
   const { toast } = useToast();
   const router = useRouter();
 
@@ -83,9 +85,13 @@ export default function BookingPage({ params }: { params: { id: string } }) {
                     <Input id="email" type="email" placeholder="john@example.com" />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     <Label>Domisili Anda</Label>
-                    <RadioGroup defaultValue="banjarmasin" className="grid grid-cols-2 gap-4">
+                    <RadioGroup 
+                      value={domicile} 
+                      onValueChange={setDomicile} 
+                      className="grid grid-cols-2 gap-4"
+                    >
                       <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
                         <RadioGroupItem value="banjarmasin" id="r1" />
                         <Label htmlFor="r1" className="cursor-pointer">Banjarmasin</Label>
@@ -103,6 +109,19 @@ export default function BookingPage({ params }: { params: { id: string } }) {
                         <Label htmlFor="r4" className="cursor-pointer">Lainnya</Label>
                       </div>
                     </RadioGroup>
+
+                    {domicile === "others" && (
+                      <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <Label htmlFor="custom-domicile">Sebutkan Domisili Anda</Label>
+                        <Input 
+                          id="custom-domicile" 
+                          placeholder="Nama Kota atau Kabupaten" 
+                          required 
+                          value={customDomicile}
+                          onChange={(e) => setCustomDomicile(e.target.value)}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
