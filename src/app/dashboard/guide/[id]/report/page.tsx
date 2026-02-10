@@ -17,7 +17,7 @@ export default function TourReportPage({ params }: { params: { id: string } }) {
   const [formData, setFormData] = useState({
     tourName: "Pacinan Walking Tour",
     guideName: "Andi Saputra",
-    date: new Date().toLocaleDateString(),
+    date: new Date().toLocaleDateString('id-ID'),
     notableEncounters: ""
   });
   const [generatedReport, setGeneratedReport] = useState("");
@@ -27,8 +27,8 @@ export default function TourReportPage({ params }: { params: { id: string } }) {
   const handleGenerateAI = async () => {
     if (!formData.notableEncounters) {
       toast({
-        title: "Input Required",
-        description: "Please provide some notable encounters first.",
+        title: "Input Diperlukan",
+        description: "Mohon berikan catatan temuan menarik terlebih dahulu.",
         variant: "destructive"
       });
       return;
@@ -39,13 +39,13 @@ export default function TourReportPage({ params }: { params: { id: string } }) {
       const result = await generateTourReport(formData);
       setGeneratedReport(result.report);
       toast({
-        title: "Report Generated",
-        description: "AI has created a narrative based on your notes.",
+        title: "Laporan Berhasil Dibuat",
+        description: "AI telah membuat narasi berdasarkan catatan Anda.",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to generate report. Please try again.",
+        description: "Gagal membuat laporan. Silakan coba lagi.",
         variant: "destructive"
       });
     } finally {
@@ -55,8 +55,8 @@ export default function TourReportPage({ params }: { params: { id: string } }) {
 
   const handleSubmitFinal = () => {
     toast({
-      title: "Success",
-      description: "Report submitted successfully!",
+      title: "Berhasil",
+      description: "Laporan resmi telah dikirim!",
     });
     router.push("/dashboard/guide");
   };
@@ -64,34 +64,34 @@ export default function TourReportPage({ params }: { params: { id: string } }) {
   return (
     <div className="container mx-auto p-4 space-y-6 max-w-4xl">
       <Button variant="ghost" onClick={() => router.back()} className="gap-2">
-        <ChevronLeft className="h-4 w-4" /> Back to Dashboard
+        <ChevronLeft className="h-4 w-4" /> Kembali ke Dashboard
       </Button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <Card className="border-none shadow-lg h-fit">
           <CardHeader>
-            <CardTitle className="font-headline text-xl">Tour Report Details</CardTitle>
-            <CardDescription>Enter the key highlights of today's tour.</CardDescription>
+            <CardTitle className="font-headline text-xl">Detail Laporan Tur</CardTitle>
+            <CardDescription>Masukkan sorotan utama dari tur hari ini.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Tour Name</Label>
+              <Label>Nama Tur</Label>
               <Input value={formData.tourName} readOnly className="bg-muted" />
             </div>
             <div className="space-y-2">
-              <Label>Guide Name</Label>
+              <Label>Nama Pemandu</Label>
               <Input value={formData.guideName} readOnly className="bg-muted" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="notes">Notable Encounters & Discoveries</Label>
+              <Label htmlFor="notes">Temuan & Perjumpaan Menarik</Label>
               <Textarea 
                 id="notes" 
-                placeholder="e.g. Found a local artisan making traditional puppets, met a 90-year old resident with stories of the old temple..." 
+                placeholder="misal: Menemukan pengrajin wayang tradisional, bertemu warga usia 90 tahun yang bercerita tentang sejarah kuil..." 
                 className="min-h-[150px]"
                 value={formData.notableEncounters}
                 onChange={(e) => setFormData({...formData, notableEncounters: e.target.value})}
               />
-              <p className="text-xs text-muted-foreground">Provide bullet points or brief notes for the best AI results.</p>
+              <p className="text-xs text-muted-foreground">Berikan poin-poin atau catatan singkat untuk hasil AI terbaik.</p>
             </div>
           </CardContent>
           <CardFooter>
@@ -102,11 +102,11 @@ export default function TourReportPage({ params }: { params: { id: string } }) {
             >
               {loading ? (
                 <>
-                  <RefreshCcw className="h-4 w-4 animate-spin" /> Generating...
+                  <RefreshCcw className="h-4 w-4 animate-spin" /> Membuat...
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4" /> Generate Compelling Narrative
+                  <Sparkles className="h-4 w-4" /> Buat Narasi Menarik (AI)
                 </>
               )}
             </Button>
@@ -116,9 +116,9 @@ export default function TourReportPage({ params }: { params: { id: string } }) {
         <Card className={`border-none shadow-lg h-fit transition-opacity ${generatedReport ? 'opacity-100' : 'opacity-50'}`}>
           <CardHeader>
             <CardTitle className="font-headline text-xl flex items-center gap-2">
-              AI-Generated Report
+              Laporan Hasil AI
             </CardTitle>
-            <CardDescription>Review and edit your final tour narrative.</CardDescription>
+            <CardDescription>Tinjau dan edit narasi akhir tur Anda.</CardDescription>
           </CardHeader>
           <CardContent>
             {generatedReport ? (
@@ -130,7 +130,7 @@ export default function TourReportPage({ params }: { params: { id: string } }) {
             ) : (
               <div className="h-[350px] border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground p-8 text-center space-y-4">
                 <Sparkles className="h-12 w-12 text-primary/30" />
-                <p>Generated report will appear here after you click "Generate Narrative".</p>
+                <p>Narasi laporan akan muncul di sini setelah Anda klik "Buat Narasi".</p>
               </div>
             )}
           </CardContent>
@@ -140,7 +140,7 @@ export default function TourReportPage({ params }: { params: { id: string } }) {
               disabled={!generatedReport || loading}
               onClick={handleSubmitFinal}
             >
-              <Send className="h-4 w-4" /> Submit Official Report
+              <Send className="h-4 w-4" /> Kirim Laporan Resmi
             </Button>
           </CardFooter>
         </Card>

@@ -25,9 +25,9 @@ import {
 } from "recharts"
 
 const STATS = [
-  { label: "Total Income", value: "Rp 12.5M", icon: DollarSign, trend: "+12%", color: "text-green-600" },
-  { label: "Total Bookings", value: "184", icon: Users, trend: "+5%", color: "text-blue-600" },
-  { label: "Active Tours", value: "8", icon: Map, trend: "Stable", color: "text-primary-foreground" }
+  { label: "Total Pendapatan", value: "Rp 12,5 Juta", icon: DollarSign, trend: "+12%", color: "text-green-600" },
+  { label: "Total Pemesanan", value: "184", icon: Users, trend: "+5%", color: "text-blue-600" },
+  { label: "Tur Aktif", value: "8", icon: Map, trend: "Stabil", color: "text-primary-foreground" }
 ];
 
 const REVENUE_DATA = [
@@ -35,14 +35,14 @@ const REVENUE_DATA = [
   { name: 'Feb', value: 3000 },
   { name: 'Mar', value: 2000 },
   { name: 'Apr', value: 2780 },
-  { name: 'May', value: 1890 },
+  { name: 'Mei', value: 1890 },
   { name: 'Jun', value: 2390 },
 ];
 
 const UNASSIGNED_TOURS = [
-  { id: "t1", name: "Heritage Trail", date: "22 Jan 2024", time: "09:00 AM", pax: 12 },
-  { id: "t2", name: "Kuin Floating Market", date: "23 Jan 2024", time: "05:30 AM", pax: 8 },
-  { id: "t3", name: "Pacinan Night Walk", date: "25 Jan 2024", time: "07:00 PM", pax: 15 },
+  { id: "t1", name: "Heritage Trail", date: "22 Jan 2024", time: "09:00 WIB", pax: 12 },
+  { id: "t2", name: "Pasar Terapung Kuin", date: "23 Jan 2024", time: "05:30 WIB", pax: 8 },
+  { id: "t3", name: "Pacinan Night Walk", date: "25 Jan 2024", time: "19:00 WIB", pax: 15 },
 ];
 
 const GUIDES = [
@@ -57,12 +57,12 @@ export default function OwnerDashboard() {
     <div className="container mx-auto p-4 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Business Monitoring</h1>
-          <p className="text-muted-foreground">Real-time overview of JelajahBorneoKu operations.</p>
+          <h1 className="text-3xl font-bold font-headline">Pemantauan Bisnis</h1>
+          <p className="text-muted-foreground">Ringkasan real-time operasional BDJ WalkingTour.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">Export Reports</Button>
-          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">Monthly Summary</Button>
+          <Button variant="outline">Ekspor Laporan</Button>
+          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">Ringkasan Bulanan</Button>
         </div>
       </div>
 
@@ -74,7 +74,7 @@ export default function OwnerDashboard() {
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
                 <p className="text-2xl font-bold">{stat.value}</p>
                 <p className={`text-xs ${stat.color} flex items-center gap-1`}>
-                  <TrendingUp className="h-3 w-3" /> {stat.trend} this month
+                  <TrendingUp className="h-3 w-3" /> {stat.trend} bulan ini
                 </p>
               </div>
               <div className="bg-primary/10 p-3 rounded-xl">
@@ -89,8 +89,8 @@ export default function OwnerDashboard() {
         {/* Revenue Chart */}
         <Card className="border-none shadow-lg">
           <CardHeader>
-            <CardTitle>Income Overview</CardTitle>
-            <CardDescription>Monthly revenue growth visualization.</CardDescription>
+            <CardTitle>Ikhtisar Pendapatan</CardTitle>
+            <CardDescription>Visualisasi pertumbuhan pendapatan bulanan.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -110,9 +110,9 @@ export default function OwnerDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarClock className="h-5 w-5 text-secondary" /> 
-              Upcoming Tours (Assign Guides)
+              Tur Mendatang (Alokasi Pemandu)
             </CardTitle>
-            <CardDescription>Allocate resources for upcoming schedules.</CardDescription>
+            <CardDescription>Alokasikan sumber daya untuk jadwal mendatang.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {UNASSIGNED_TOURS.map((tour) => (
@@ -130,7 +130,7 @@ export default function OwnerDashboard() {
                 <div className="flex gap-2">
                   <Select>
                     <SelectTrigger className="w-[180px] bg-white">
-                      <SelectValue placeholder="Select Guide" />
+                      <SelectValue placeholder="Pilih Pemandu" />
                     </SelectTrigger>
                     <SelectContent>
                       {GUIDES.map(guide => (
@@ -139,7 +139,7 @@ export default function OwnerDashboard() {
                     </SelectContent>
                   </Select>
                   <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1">
-                    <UserPlus className="h-3 w-3" /> Assign
+                    <UserPlus className="h-3 w-3" /> Tugaskan
                   </Button>
                 </div>
               </div>

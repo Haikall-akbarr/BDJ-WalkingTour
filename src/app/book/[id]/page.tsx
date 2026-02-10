@@ -28,13 +28,12 @@ export default function BookingPage({ params }: { params: { id: string } }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate API call
     setTimeout(() => {
       setLoading(false);
       setStep(3);
       toast({
-        title: "Registration Success!",
-        description: "We've received your booking.",
+        title: "Pendaftaran Berhasil!",
+        description: "Kami telah menerima pesanan Anda.",
       });
     }, 1500);
   };
@@ -47,16 +46,16 @@ export default function BookingPage({ params }: { params: { id: string } }) {
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-2xl mx-auto space-y-8">
           <div className="space-y-2 text-center">
-            <h1 className="text-3xl font-bold font-headline">Book Your Tour</h1>
-            <p className="text-muted-foreground">Just a few steps away from your next adventure.</p>
+            <h1 className="text-3xl font-bold font-headline">Pesan Tur Anda</h1>
+            <p className="text-muted-foreground">Hanya beberapa langkah dari petualangan Anda berikutnya.</p>
           </div>
 
           <div className="space-y-4">
             <Progress value={progressValue} className="h-2 bg-slate-200" />
             <div className="flex justify-between text-xs font-medium text-muted-foreground">
-              <span>REGISTRATION</span>
-              <span>PAYMENT</span>
-              <span>CONFIRMATION</span>
+              <span>PENDAFTARAN</span>
+              <span>PEMBAYARAN</span>
+              <span>KONFIRMASI</span>
             </div>
           </div>
 
@@ -64,28 +63,28 @@ export default function BookingPage({ params }: { params: { id: string } }) {
             {step === 1 && (
               <form onSubmit={(e) => { e.preventDefault(); handleNext(); }}>
                 <CardHeader>
-                  <CardTitle>Registration Details</CardTitle>
-                  <CardDescription>Tell us who you are and which tour you'd like to join.</CardDescription>
+                  <CardTitle>Detail Pendaftaran</CardTitle>
+                  <CardDescription>Beri tahu kami siapa Anda dan tur mana yang ingin Anda ikuti.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
+                      <Label htmlFor="name">Nama Lengkap</Label>
                       <Input id="name" placeholder="John Doe" required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="whatsapp">WhatsApp Number</Label>
+                      <Label htmlFor="whatsapp">Nomor WhatsApp</Label>
                       <Input id="whatsapp" type="tel" placeholder="0812..." required />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email Address (Optional)</Label>
+                    <Label htmlFor="email">Alamat Email (Opsional)</Label>
                     <Input id="email" type="email" placeholder="john@example.com" />
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Your Address</Label>
+                    <Label>Domisili Anda</Label>
                     <RadioGroup defaultValue="banjarmasin" className="grid grid-cols-2 gap-4">
                       <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
                         <RadioGroupItem value="banjarmasin" id="r1" />
@@ -101,42 +100,42 @@ export default function BookingPage({ params }: { params: { id: string } }) {
                       </div>
                       <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
                         <RadioGroupItem value="others" id="r4" />
-                        <Label htmlFor="r4" className="cursor-pointer">Others</Label>
+                        <Label htmlFor="r4" className="cursor-pointer">Lainnya</Label>
                       </div>
                     </RadioGroup>
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>Tour Package</Label>
+                      <Label>Paket Tur</Label>
                       <Select defaultValue="pacinan">
                         <SelectTrigger>
-                          <SelectValue placeholder="Select tour" />
+                          <SelectValue placeholder="Pilih tur" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="pacinan">Pacinan - 15 Jan - Rp 65k</SelectItem>
-                          <SelectItem value="river">River - 18 Jan - Rp 75k</SelectItem>
-                          <SelectItem value="heritage">Heritage - 20 Jan - Rp 60k</SelectItem>
+                          <SelectItem value="pacinan">Pacinan - 15 Jan - Rp 65rb</SelectItem>
+                          <SelectItem value="river">River - 18 Jan - Rp 75rb</SelectItem>
+                          <SelectItem value="heritage">Heritage - 20 Jan - Rp 60rb</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="pax">Pax Count</Label>
+                      <Label htmlFor="pax">Jumlah Peserta</Label>
                       <Input id="pax" type="number" min="1" defaultValue="1" required />
-                      <p className="text-[10px] text-muted-foreground">Choose total participants including yourself.</p>
+                      <p className="text-[10px] text-muted-foreground">Pilih total peserta termasuk diri Anda sendiri.</p>
                     </div>
                   </div>
 
                   <div className="flex items-center space-x-2 bg-primary/10 p-4 rounded-lg">
                     <Checkbox id="consent" required />
                     <Label htmlFor="consent" className="text-sm leading-tight font-normal">
-                      I am willing to walk 2-3 km and will prepare comfortable footwear.
+                      Saya bersedia berjalan kaki 2-3 km dan akan menyiapkan alas kaki yang nyaman.
                     </Label>
                   </div>
                 </CardContent>
                 <div className="flex p-6 pt-0">
                   <Button type="submit" className="w-full bg-secondary hover:bg-secondary/90 text-white gap-2">
-                    Proceed to Payment <ChevronRight className="h-4 w-4" />
+                    Lanjut ke Pembayaran <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
               </form>
@@ -145,8 +144,8 @@ export default function BookingPage({ params }: { params: { id: string } }) {
             {step === 2 && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <CardHeader>
-                  <CardTitle>Payment Confirmation</CardTitle>
-                  <CardDescription>Complete your payment to secure your spot.</CardDescription>
+                  <CardTitle>Konfirmasi Pembayaran</CardTitle>
+                  <CardDescription>Selesaikan pembayaran Anda untuk mengamankan tempat.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
                   <div className="bg-slate-50 p-6 rounded-xl border-2 border-dashed border-slate-200 text-center space-y-4">
@@ -154,35 +153,35 @@ export default function BookingPage({ params }: { params: { id: string } }) {
                       <QrCode className="h-24 w-24 text-slate-400" />
                     </div>
                     <div className="space-y-1">
-                      <p className="font-bold text-lg">SCAN QRIS</p>
-                      <p className="text-sm text-muted-foreground">BDJ Walking Tour (JelajahBorneoKu)</p>
+                      <p className="font-bold text-lg">PINDAI QRIS</p>
+                      <p className="text-sm text-muted-foreground">BDJ WalkingTour (JelajahBorneoKu)</p>
                     </div>
                     <div className="pt-2">
-                      <p className="text-xs text-muted-foreground uppercase tracking-widest">Bank Transfer</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-widest">Transfer Bank</p>
                       <p className="font-mono font-bold text-xl">BCA: 123 456 7890</p>
-                      <p className="text-sm">A/N: Jelajah Borneo Ku</p>
+                      <p className="text-sm">A/N: BDJ WalkingTour</p>
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    <Label className="block text-center mb-4">Upload Payment Proof</Label>
+                    <Label className="block text-center mb-4">Unggah Bukti Pembayaran</Label>
                     <div className="border-2 border-dashed border-primary/30 bg-primary/5 rounded-xl p-8 text-center cursor-pointer hover:bg-primary/10 transition-colors space-y-2">
                       <UploadCloud className="h-10 w-10 text-primary mx-auto" />
-                      <p className="font-medium">Click to upload image</p>
-                      <p className="text-xs text-muted-foreground">JPG, PNG up to 5MB</p>
+                      <p className="font-medium">Klik untuk unggah gambar</p>
+                      <p className="text-xs text-muted-foreground">JPG, PNG hingga 5MB</p>
                     </div>
                   </div>
                 </CardContent>
                 <div className="flex gap-4 p-6 pt-0">
                   <Button variant="outline" onClick={handleBack} className="flex-1">
-                    <ChevronLeft className="h-4 w-4 mr-2" /> Back
+                    <ChevronLeft className="h-4 w-4 mr-2" /> Kembali
                   </Button>
                   <Button 
                     className="flex-[2] bg-secondary hover:bg-secondary/90 text-white" 
                     onClick={handleSubmit}
                     disabled={loading}
                   >
-                    {loading ? "Processing..." : "I Have Paid / Upload Proof"}
+                    {loading ? "Memproses..." : "Saya Sudah Bayar / Unggah Bukti"}
                   </Button>
                 </div>
               </div>
@@ -196,29 +195,29 @@ export default function BookingPage({ params }: { params: { id: string } }) {
                 <div className="space-y-2">
                   <h2 className="text-3xl font-bold font-headline">Pendaftaran Berhasil!</h2>
                   <p className="text-muted-foreground">
-                    Thank you for booking with JelajahBorneoKu. We've sent a confirmation message to your WhatsApp.
+                    Terima kasih telah memesan di BDJ WalkingTour. Kami telah mengirimkan pesan konfirmasi ke WhatsApp Anda.
                   </p>
                 </div>
                 <div className="bg-muted p-4 rounded-lg text-sm text-left">
-                  <p className="font-bold mb-2">Booking Summary:</p>
+                  <p className="font-bold mb-2">Ringkasan Pesanan:</p>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tour:</span>
+                    <span className="text-muted-foreground">Tur:</span>
                     <span>Pacinan Walking Tour</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Date:</span>
+                    <span className="text-muted-foreground">Tanggal:</span>
                     <span>15 Jan 2024</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Participants:</span>
-                    <span>1 Person</span>
+                    <span className="text-muted-foreground">Peserta:</span>
+                    <span>1 Orang</span>
                   </div>
                 </div>
                 <Button 
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground mt-4"
                   onClick={() => router.push("/")}
                 >
-                  Return to Home
+                  Kembali ke Beranda
                 </Button>
               </div>
             )}

@@ -23,19 +23,19 @@ export default function AdminDashboard() {
     <div className="container mx-auto p-4 space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Admin Control Center</h1>
-          <p className="text-muted-foreground">Manage system users, tours, and global settings.</p>
+          <h1 className="text-3xl font-bold font-headline">Pusat Kontrol Admin</h1>
+          <p className="text-muted-foreground">Kelola pengguna sistem, tur, dan pengaturan global.</p>
         </div>
         <Button variant="outline" className="gap-2">
-          <History className="h-4 w-4" /> System Logs
+          <History className="h-4 w-4" /> Log Sistem
         </Button>
       </div>
 
       <Tabs defaultValue="bookings" className="w-full">
         <TabsList className="bg-white border w-full justify-start p-1 h-auto mb-6">
-          <TabsTrigger value="bookings" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground py-2 px-6">Pending Bookings</TabsTrigger>
-          <TabsTrigger value="tours" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground py-2 px-6">Manage Tours</TabsTrigger>
-          <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground py-2 px-6">Manage Users</TabsTrigger>
+          <TabsTrigger value="bookings" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground py-2 px-6">Pemesanan Pending</TabsTrigger>
+          <TabsTrigger value="tours" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground py-2 px-6">Kelola Tur</TabsTrigger>
+          <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground py-2 px-6">Kelola Pengguna</TabsTrigger>
         </TabsList>
 
         <TabsContent value="bookings" className="space-y-4">
@@ -43,12 +43,12 @@ export default function AdminDashboard() {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
-                  <CardTitle>New Booking Requests</CardTitle>
-                  <CardDescription>Approve or decline new registration requests.</CardDescription>
+                  <CardTitle>Permintaan Pemesanan Baru</CardTitle>
+                  <CardDescription>Setujui atau tolak permintaan pendaftaran baru.</CardDescription>
                 </div>
                 <div className="relative w-64">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search bookings..." className="pl-10" />
+                  <Input placeholder="Cari pemesanan..." className="pl-10" />
                 </div>
               </div>
             </CardHeader>
@@ -57,12 +57,12 @@ export default function AdminDashboard() {
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50 border-b">
                     <tr>
-                      <th className="p-4 text-left font-medium">Customer</th>
-                      <th className="p-4 text-left font-medium">Tour</th>
+                      <th className="p-4 text-left font-medium">Pelanggan</th>
+                      <th className="p-4 text-left font-medium">Tur</th>
                       <th className="p-4 text-left font-medium">Pax</th>
-                      <th className="p-4 text-left font-medium">Date</th>
+                      <th className="p-4 text-left font-medium">Tanggal</th>
                       <th className="p-4 text-left font-medium">Status</th>
-                      <th className="p-4 text-right font-medium">Actions</th>
+                      <th className="p-4 text-right font-medium">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
                         <td className="p-4">Pacinan Walking Tour</td>
                         <td className="p-4">2</td>
                         <td className="p-4">15 Jan 2024</td>
-                        <td className="p-4"><Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">Pending Approval</Badge></td>
+                        <td className="p-4"><Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">Menunggu Persetujuan</Badge></td>
                         <td className="p-4 text-right space-x-2">
                           <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 hover:bg-green-50"><Check className="h-4 w-4" /></Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 hover:bg-red-50"><X className="h-4 w-4" /></Button>
@@ -92,22 +92,22 @@ export default function AdminDashboard() {
         <TabsContent value="tours" className="space-y-4">
           <div className="flex justify-end">
             <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
-              <Plus className="h-4 w-4" /> Create New Tour Package
+              <Plus className="h-4 w-4" /> Buat Paket Tur Baru
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map(i => (
               <Card key={i} className="overflow-hidden border-none shadow-md group">
                 <div className="h-32 bg-slate-200 flex items-center justify-center relative">
-                  <span className="text-muted-foreground text-sm">Tour Thumbnail Placeholder</span>
+                  <span className="text-muted-foreground text-sm">Placeholder Thumbnail Tur</span>
                   <div className="absolute top-2 right-2 flex gap-1">
                     <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full"><Edit className="h-4 w-4" /></Button>
                     <Button size="icon" variant="destructive" className="h-8 w-8 rounded-full"><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </div>
                 <CardHeader className="p-4">
-                  <CardTitle className="text-lg">Package Alpha {i}</CardTitle>
-                  <CardDescription>Rp 65.000 • 3 KM • 2 Hours</CardDescription>
+                  <CardTitle className="text-lg">Paket Alpha {i}</CardTitle>
+                  <CardDescription>Rp 65.000 • 3 KM • 2 Jam</CardDescription>
                 </CardHeader>
               </Card>
             ))}
@@ -118,17 +118,17 @@ export default function AdminDashboard() {
           <Card className="border-none shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>Assign roles and manage staff access.</CardDescription>
+                <CardTitle>Manajemen Pengguna</CardTitle>
+                <CardDescription>Atur peran dan kelola akses staf.</CardDescription>
               </div>
-              <Button size="sm" className="gap-2"><Settings className="h-4 w-4" /> Roles Config</Button>
+              <Button size="sm" className="gap-2"><Settings className="h-4 w-4" /> Konfig Peran</Button>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 {[
-                  { name: "Owner Name", role: "Owner", icon: ShieldCheck },
+                  { name: "Nama Pemilik", role: "Owner", icon: ShieldCheck },
                   { name: "Admin Alpha", role: "Admin", icon: Settings },
-                  { name: "Guide Beta", role: "Guide", icon: Plus }
+                  { name: "Pemandu Beta", role: "Guide", icon: Plus }
                 ].map((user, i) => (
                   <div key={i} className="flex items-center justify-between p-4 rounded-xl border hover:bg-muted/10 transition-colors">
                     <div className="flex items-center gap-3">
@@ -137,7 +137,7 @@ export default function AdminDashboard() {
                       </div>
                       <div>
                         <p className="font-bold">{user.name}</p>
-                        <p className="text-xs text-muted-foreground">staff_{i}@jelajahborneoku.com</p>
+                        <p className="text-xs text-muted-foreground">staf_{i}@bdjwalkingtour.com</p>
                       </div>
                     </div>
                     <Badge variant="secondary">{user.role}</Badge>

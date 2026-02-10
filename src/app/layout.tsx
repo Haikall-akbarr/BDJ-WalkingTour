@@ -4,8 +4,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'JelajahBorneoKu | BDJ Walking Tour',
-  description: 'Experience the local beauty of Banjarmasin through curated walking tours.',
+  title: 'BDJ WalkingTour | Jelajahi Banjarmasin',
+  description: 'Rasakan keindahan lokal Banjarmasin melalui tur jalan kaki yang dikurasi.',
 };
 
 export default function RootLayout({
@@ -14,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="id">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

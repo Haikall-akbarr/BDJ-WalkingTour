@@ -13,8 +13,8 @@ const MY_SCHEDULE = [
     id: "s1",
     tourName: "Pacinan Walking Tour",
     date: "15 Jan 2024",
-    time: "08:00 AM",
-    status: "Upcoming",
+    time: "08:00 WIB",
+    status: "Mendatang",
     location: "Kampung Pecinan",
     participants: [
       { name: "Andi Wijaya", wa: "08123456789", pax: 2 },
@@ -26,8 +26,8 @@ const MY_SCHEDULE = [
     id: "s2",
     tourName: "Riverfront Discovery",
     date: "18 Jan 2024",
-    time: "04:00 PM",
-    status: "Confirmed",
+    time: "16:00 WIB",
+    status: "Dikonfirmasi",
     location: "Siring Menara Pandang",
     participants: [
       { name: "Jessica Lee", wa: "08192837465", pax: 1 }
@@ -42,16 +42,16 @@ export default function GuideDashboard() {
     <div className="container mx-auto p-4 space-y-6 max-w-4xl">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold font-headline">Guide Dashboard</h1>
-          <p className="text-muted-foreground">Manage your upcoming walking tours.</p>
+          <h1 className="text-2xl font-bold font-headline">Dashboard Pemandu</h1>
+          <p className="text-muted-foreground">Kelola tur jalan kaki Anda mendatang.</p>
         </div>
-        <Badge variant="outline" className="px-4 py-1">Guide Access</Badge>
+        <Badge variant="outline" className="px-4 py-1">Akses Pemandu</Badge>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1 space-y-4">
           <h2 className="text-lg font-bold flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-primary" /> My Schedule
+            <Calendar className="h-4 w-4 text-primary" /> Jadwal Saya
           </h2>
           {MY_SCHEDULE.map((tour) => (
             <Card 
@@ -66,7 +66,7 @@ export default function GuideDashboard() {
                     <p>{tour.date}</p>
                     <p>{tour.time}</p>
                   </div>
-                  <Badge variant={tour.status === 'Upcoming' ? 'secondary' : 'default'} className="text-[10px]">
+                  <Badge variant={tour.status === 'Mendatang' ? 'secondary' : 'default'} className="text-[10px]">
                     {tour.status}
                   </Badge>
                 </div>
@@ -81,7 +81,7 @@ export default function GuideDashboard() {
               <div className="flex justify-between items-start">
                 <CardTitle className="text-xl font-headline">{selectedTour.tourName}</CardTitle>
                 <Button size="sm" variant="outline" className="text-xs gap-1">
-                  <CheckCircle2 className="h-3 w-3" /> Confirm Attendance
+                  <CheckCircle2 className="h-3 w-3" /> Konfirmasi Kehadiran
                 </Button>
               </div>
               <CardDescription className="flex items-center gap-1">
@@ -91,7 +91,7 @@ export default function GuideDashboard() {
             <CardContent>
               <div className="space-y-4 mt-4">
                 <h3 className="text-sm font-bold flex items-center gap-2 border-b pb-2">
-                  <Users className="h-4 w-4 text-primary" /> Participant List ({selectedTour.participants.reduce((acc, p) => acc + p.pax, 0)} Total Pax)
+                  <Users className="h-4 w-4 text-primary" /> Daftar Peserta ({selectedTour.participants.reduce((acc, p) => acc + p.pax, 0)} Total Pax)
                 </h3>
                 <div className="grid gap-2">
                   {selectedTour.participants.map((p, idx) => (
@@ -109,10 +109,10 @@ export default function GuideDashboard() {
               </div>
             </CardContent>
             <CardFooter className="bg-muted/30 pt-4 flex justify-between items-center">
-              <p className="text-xs text-muted-foreground italic">Prepare your equipment and local stories!</p>
+              <p className="text-xs text-muted-foreground italic">Siapkan perlengkapan dan cerita lokal Anda!</p>
               <Link href={`/dashboard/guide/${selectedTour.id}/report`}>
                 <Button className="bg-secondary hover:bg-secondary/90 text-white gap-2">
-                  <MessageSquareText className="h-4 w-4" /> Submit Tour Report
+                  <MessageSquareText className="h-4 w-4" /> Kirim Laporan Tur
                 </Button>
               </Link>
             </CardFooter>

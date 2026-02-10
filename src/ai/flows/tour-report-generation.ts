@@ -1,26 +1,27 @@
+
 'use server';
 
 /**
- * @fileOverview This file defines a Genkit flow for generating tour reports.
+ * @fileOverview File ini mendefinisikan alur Genkit untuk menghasilkan laporan tur.
  *
- * - generateTourReport - A function that generates a compelling tour report.
- * - TourReportInput - The input type for the generateTourReport function.
- * - TourReportOutput - The return type for the generateTourReport function.
+ * - generateTourReport - Fungsi yang menghasilkan laporan tur yang menarik.
+ * - TourReportInput - Tipe input untuk fungsi generateTourReport.
+ * - TourReportOutput - Tipe output untuk fungsi generateTourReport.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const TourReportInputSchema = z.object({
-  tourName: z.string().describe('The name of the tour.'),
-  guideName: z.string().describe('The name of the guide.'),
-  date: z.string().describe('The date of the tour.'),
-  notableEncounters: z.string().describe('Notable encounters and discoveries during the tour.'),
+  tourName: z.string().describe('Nama tur.'),
+  guideName: z.string().describe('Nama pemandu.'),
+  date: z.string().describe('Tanggal tur.'),
+  notableEncounters: z.string().describe('Temuan dan perjumpaan menarik selama tur.'),
 });
 export type TourReportInput = z.infer<typeof TourReportInputSchema>;
 
 const TourReportOutputSchema = z.object({
-  report: z.string().describe('The generated tour report.'),
+  report: z.string().describe('Laporan tur yang dihasilkan.'),
 });
 export type TourReportOutput = z.infer<typeof TourReportOutputSchema>;
 
@@ -32,16 +33,16 @@ const prompt = ai.definePrompt({
   name: 'tourReportPrompt',
   input: {schema: TourReportInputSchema},
   output: {schema: TourReportOutputSchema},
-  prompt: `You are an expert tour guide report writer.
-  Your goal is to create a compelling and engaging narrative of a walking tour.
-  Use the following information to generate the report:
+  prompt: `Anda adalah penulis laporan tur jalan kaki profesional.
+  Tujuan Anda adalah membuat narasi yang menarik dan memikat tentang pengalaman tur jalan kaki di Banjarmasin.
+  Gunakan informasi berikut untuk menghasilkan laporan dalam Bahasa Indonesia:
 
-  Tour Name: {{{tourName}}}
-  Guide Name: {{{guideName}}}
-  Date: {{{date}}}
-  Notable Encounters and Discoveries: {{{notableEncounters}}}
+  Nama Tur: {{{tourName}}}
+  Nama Pemandu: {{{guideName}}}
+  Tanggal: {{{date}}}
+  Temuan Menarik & Catatan: {{{notableEncounters}}}
 
-  Write a detailed and engaging tour report.
+  Tulis laporan tur yang detail, hangat, dan menggugah minat pembaca untuk ikut serta di masa mendatang.
   `,
 });
 

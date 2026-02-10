@@ -58,17 +58,19 @@ export default function LandingPage() {
         )}
         <div className="relative z-10 container px-4 space-y-6">
           <h1 className="text-4xl md:text-6xl font-bold text-white font-headline max-w-3xl mx-auto leading-tight">
-            Discover the Hidden Gems of <span className="text-primary">Banjarmasin</span>
+            Temukan Permata Tersembunyi di <span className="text-primary">Banjarmasin</span>
           </h1>
           <p className="text-xl text-white/90 max-w-xl mx-auto">
-            Experience the culture, history, and vibrant life of the Thousand Rivers City through the eyes of local experts.
+            Rasakan budaya, sejarah, dan kehidupan kota seribu sungai melalui kacamata pemandu lokal berpengalaman.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 rounded-full text-lg">
-              Explore Tours
-            </Button>
+            <Link href="#tours">
+              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 rounded-full text-lg">
+                Jelajahi Tur
+              </Button>
+            </Link>
             <Button size="lg" variant="outline" className="bg-white/10 text-white border-white/20 hover:bg-white/20 px-8 rounded-full text-lg backdrop-blur-sm">
-              Our Story
+              Cerita Kami
             </Button>
           </div>
         </div>
@@ -79,13 +81,13 @@ export default function LandingPage() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
             <div className="space-y-2">
-              <Badge variant="secondary" className="bg-primary/20 text-primary-foreground border-none">Upcoming Tours</Badge>
-              <h2 className="text-3xl font-bold font-headline">Popular Walking Routes</h2>
-              <p className="text-muted-foreground">Choose your next adventure and book your spot today.</p>
+              <Badge variant="secondary" className="bg-primary/20 text-primary-foreground border-none">Tur Mendatang</Badge>
+              <h2 className="text-3xl font-bold font-headline">Rute Jalan Kaki Populer</h2>
+              <p className="text-muted-foreground">Pilih petualangan Anda dan pesan tempat sekarang.</p>
             </div>
             <Link href="/tours">
               <Button variant="ghost" className="group gap-2 hover:bg-primary/10">
-                View All Tours <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                Lihat Semua Tur <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
           </div>
@@ -117,13 +119,13 @@ export default function LandingPage() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Users className="h-4 w-4" />
-                    <span>Small group tour</span>
+                    <span>Tur grup kecil</span>
                   </div>
                 </CardContent>
                 <CardFooter>
                   <Link href={`/book/${tour.id}`} className="w-full">
                     <Button className="w-full bg-secondary hover:bg-secondary/90 text-white rounded-full">
-                      Book Now
+                      Pesan Sekarang
                     </Button>
                   </Link>
                 </CardFooter>
@@ -137,16 +139,15 @@ export default function LandingPage() {
       <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center space-y-4 mb-12">
-            <h2 className="text-3xl font-bold font-headline">Where We Walk</h2>
-            <p className="text-muted-foreground">Explore our common meeting points and popular heritage trails across the city.</p>
+            <h2 className="text-3xl font-bold font-headline">Tempat Kami Menjelajah</h2>
+            <p className="text-muted-foreground">Jelajahi titik temu dan rute warisan populer kami di seluruh kota.</p>
           </div>
           <div className="aspect-[21/9] bg-white rounded-2xl shadow-inner border overflow-hidden relative">
-            {/* Simple Map Placeholder */}
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-[url('https://picsum.photos/seed/map/1200/600')] bg-cover opacity-60">
                <div className="bg-white/90 p-6 rounded-xl shadow-xl backdrop-blur-sm text-center">
                   <MapPin className="h-10 w-10 text-secondary mx-auto mb-2 animate-bounce" />
-                  <p className="font-bold text-lg">Interactive Map Interface</p>
-                  <p className="text-sm text-muted-foreground">Meeting points and routes are shown here.</p>
+                  <p className="font-bold text-lg">Peta Interaktif</p>
+                  <p className="text-sm text-muted-foreground">Titik temu dan rute akan ditampilkan di sini.</p>
                </div>
             </div>
           </div>
@@ -159,31 +160,31 @@ export default function LandingPage() {
           <div className="col-span-1 md:col-span-2 space-y-4">
             <div className="flex items-center gap-2 font-bold text-2xl tracking-tight">
               <MapPin className="h-6 w-6 text-primary" />
-              <span className="font-headline">JelajahBorneoKu</span>
+              <span className="font-headline">BDJ WalkingTour</span>
             </div>
             <p className="text-gray-400 max-w-sm">
-              Supporting sustainable local tourism in Banjarmasin since 2021. Join us for a walk you won't forget.
+              Mendukung pariwisata lokal berkelanjutan di Banjarmasin sejak 2021. Mari melangkah bersama kami.
             </p>
           </div>
           <div className="space-y-4">
-            <h4 className="font-bold">Links</h4>
+            <h4 className="font-bold">Tautan</h4>
             <ul className="space-y-2 text-gray-400">
-              <li><Link href="/" className="hover:text-primary">Home</Link></li>
-              <li><Link href="/tours" className="hover:text-primary">All Tours</Link></li>
-              <li><Link href="/login" className="hover:text-primary">Staff Login</Link></li>
+              <li><Link href="/" className="hover:text-primary">Beranda</Link></li>
+              <li><Link href="/tours" className="hover:text-primary">Semua Tur</Link></li>
+              <li><Link href="/login" className="hover:text-primary">Login Staf</Link></li>
             </ul>
           </div>
           <div className="space-y-4">
-            <h4 className="font-bold">Contact</h4>
+            <h4 className="font-bold">Kontak</h4>
             <ul className="space-y-2 text-gray-400">
-              <li>Email: hello@jelajahborneoku.com</li>
+              <li>Email: hello@bdjwalkingtour.com</li>
               <li>WA: +62 812-3456-7890</li>
               <li>Jl. Ahmad Yani No. 123</li>
             </ul>
           </div>
         </div>
         <div className="container mx-auto px-4 mt-12 pt-8 border-t border-gray-800 text-center text-gray-500 text-sm">
-          &copy; 2024 BDJ Walking Tour Management System. All rights reserved.
+          &copy; 2024 BDJ WalkingTour Management System. Hak Cipta Dilindungi.
         </div>
       </footer>
     </div>
