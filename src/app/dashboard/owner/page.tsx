@@ -88,24 +88,23 @@ export default function OwnerDashboard() {
     const guideName = GUIDES.find(g => g.id === guideId)?.name;
     const bookingRef = doc(db, "bookings", bookingId);
     
+    // Update Firestore without waiting (non-blocking)
     updateDoc(bookingRef, { 
       guideId: guideId,
       guideName: guideName
-    })
-      .then(() => {
-        // Hapus dari state local setelah berhasil
-        const newSelected = { ...selectedGuides };
-        delete newSelected[bookingId];
-        setSelectedGuides(newSelected);
-      })
-      .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: `bookings/${bookingId}`,
-          operation: "update",
-          requestResourceData: { guideId, guideName }
-        });
-        errorEmitter.emit("permission-error", permissionError);
+    }).catch(async (error) => {
+      const permissionError = new FirestorePermissionError({
+        path: `bookings/${bookingId}`,
+        operation: "update",
+        requestResourceData: { guideId, guideName }
       });
+      errorEmitter.emit("permission-error", permissionError);
+    });
+
+    // Update local state instantly for better UX
+    const newSelected = { ...selectedGuides };
+    delete newSelected[bookingId];
+    setSelectedGuides(newSelected);
   };
 
   const handleLogout = () => {

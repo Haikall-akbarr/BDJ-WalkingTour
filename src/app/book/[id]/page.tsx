@@ -39,7 +39,7 @@ export default function BookingPage({ params }: { params: { id: string } }) {
   const handleNext = () => setStep(step + 1);
   const handleBack = () => setStep(step - 1);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = () => {
     if (!db) return;
     setLoading(true);
 
@@ -56,17 +56,9 @@ export default function BookingPage({ params }: { params: { id: string } }) {
       createdAt: serverTimestamp()
     };
 
+    // Optimistic UI: Proceed immediately without waiting for the promise
     addDoc(collection(db, "bookings"), bookingData)
-      .then(() => {
-        setLoading(false);
-        setStep(3);
-        toast({
-          title: "Pendaftaran Berhasil!",
-          description: "Data Anda telah tersimpan dan sedang menunggu verifikasi.",
-        });
-      })
       .catch(async (error) => {
-        setLoading(false);
         const permissionError = new FirestorePermissionError({
           path: "bookings",
           operation: "create",
@@ -74,6 +66,16 @@ export default function BookingPage({ params }: { params: { id: string } }) {
         });
         errorEmitter.emit("permission-error", permissionError);
       });
+
+    // Move to next step instantly
+    setTimeout(() => {
+      setLoading(false);
+      setStep(3);
+      toast({
+        title: "Pendaftaran Berhasil!",
+        description: "Data Anda telah tersimpan dan sedang menunggu verifikasi.",
+      });
+    }, 100);
   };
 
   const progressValue = (step / 3) * 100;
