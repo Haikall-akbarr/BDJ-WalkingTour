@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from "react"
+import { useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -19,7 +19,8 @@ import {
   Check,
   X,
   LogOut,
-  MapPin
+  MapPin,
+  Loader2
 } from "lucide-react"
 import {
   AlertDialog,
@@ -32,9 +33,40 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useFirestore, useCollection } from "@/firebase"
+import { collection, query, where, doc, updateDoc, orderBy } from "firebase/firestore"
+import { errorEmitter } from "@/firebase/error-emitter"
+import { FirestorePermissionError } from "@/firebase/errors"
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const db = useFirestore();
+
+  const bookingsQuery = useMemo(() => {
+    if (!db) return null;
+    return query(
+      collection(db, "bookings"), 
+      where("status", "==", "pending"),
+      orderBy("createdAt", "desc")
+    );
+  }, [db]);
+
+  const { data: pendingBookings, loading } = useCollection(bookingsQuery);
+
+  const handleUpdateStatus = (bookingId: string, newStatus: string) => {
+    if (!db) return;
+    const bookingRef = doc(db, "bookings", bookingId);
+    
+    updateDoc(bookingRef, { status: newStatus })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: `bookings/${bookingId}`,
+          operation: "update",
+          requestResourceData: { status: newStatus }
+        });
+        errorEmitter.emit("permission-error", permissionError);
+      });
+  };
 
   const handleLogout = () => {
     router.push("/");
@@ -42,7 +74,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="container mx-auto p-4 space-y-6 md:space-y-8">
-      {/* Header Responsif */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl shadow-sm border gap-4">
         <div className="flex items-center gap-2">
           <div className="bg-primary/20 p-2 rounded-lg">
@@ -123,26 +154,57 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {[1, 2, 3].map((i) => (
-                      <tr key={i} className="hover:bg-muted/20">
-                        <td className="p-3 md:p-4 whitespace-nowrap">
-                          <p className="font-bold">John Doe {i}</p>
-                          <p className="text-[10px] md:text-xs text-muted-foreground">08123456789</p>
-                        </td>
-                        <td className="p-3 md:p-4 whitespace-nowrap">Pacinan Walking Tour</td>
-                        <td className="p-3 md:p-4 text-center">2</td>
-                        <td className="p-3 md:p-4 whitespace-nowrap">15 Jan 2024</td>
-                        <td className="p-3 md:p-4">
-                          <Badge variant="outline" className="text-[10px] md:text-xs text-amber-600 border-amber-200 bg-amber-50 whitespace-nowrap">
-                            Menunggu Persetujuan
-                          </Badge>
-                        </td>
-                        <td className="p-3 md:p-4 text-right space-x-1 whitespace-nowrap">
-                          <Button size="icon" variant="ghost" className="h-7 w-7 md:h-8 md:w-8 text-green-600 hover:bg-green-50"><Check className="h-4 w-4" /></Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 md:h-8 md:w-8 text-red-600 hover:bg-red-50"><X className="h-4 w-4" /></Button>
+                    {loading ? (
+                      <tr>
+                        <td colSpan={6} className="p-12 text-center">
+                          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                          <p className="mt-2 text-muted-foreground">Memuat data...</p>
                         </td>
                       </tr>
-                    ))}
+                    ) : pendingBookings && pendingBookings.length > 0 ? (
+                      pendingBookings.map((booking: any) => (
+                        <tr key={booking.id} className="hover:bg-muted/20">
+                          <td className="p-3 md:p-4 whitespace-nowrap">
+                            <p className="font-bold">{booking.userName}</p>
+                            <p className="text-[10px] md:text-xs text-muted-foreground">{booking.userWhatsApp}</p>
+                          </td>
+                          <td className="p-3 md:p-4 whitespace-nowrap">{booking.tourName}</td>
+                          <td className="p-3 md:p-4 text-center">{booking.pax}</td>
+                          <td className="p-3 md:p-4 whitespace-nowrap">
+                            {booking.createdAt?.toDate().toLocaleDateString('id-ID')}
+                          </td>
+                          <td className="p-3 md:p-4">
+                            <Badge variant="outline" className="text-[10px] md:text-xs text-amber-600 border-amber-200 bg-amber-50 whitespace-nowrap">
+                              Menunggu Verifikasi
+                            </Badge>
+                          </td>
+                          <td className="p-3 md:p-4 text-right space-x-1 whitespace-nowrap">
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="h-7 w-7 md:h-8 md:w-8 text-green-600 hover:bg-green-50"
+                              onClick={() => handleUpdateStatus(booking.id, "approved")}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="h-7 w-7 md:h-8 md:w-8 text-red-600 hover:bg-red-50"
+                              onClick={() => handleUpdateStatus(booking.id, "rejected")}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="p-12 text-center text-muted-foreground">
+                          Tidak ada pemesanan pending.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -186,9 +248,9 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent className="space-y-2 px-3 md:px-6">
               {[
-                { name: "Nama Pemilik", role: "Owner", icon: ShieldCheck },
+                { name: "Owner BDJ", role: "Owner", icon: ShieldCheck },
                 { name: "Admin Alpha", role: "Admin", icon: Settings },
-                { name: "Pemandu Beta", role: "Guide", icon: Plus }
+                { name: "Andi Saputra", role: "Guide", icon: Plus }
               ].map((user, i) => (
                 <div key={i} className="flex items-center justify-between p-3 md:p-4 rounded-xl border hover:bg-muted/10 transition-colors gap-2">
                   <div className="flex items-center gap-3">

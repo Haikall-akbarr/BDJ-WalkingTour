@@ -1,0 +1,64 @@
+
+{
+  "entities": {
+    "Booking": {
+      "title": "Booking",
+      "description": "Informasi pendaftaran tur oleh pelanggan",
+      "type": "object",
+      "properties": {
+        "userName": { "type": "string" },
+        "userWhatsApp": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "domicile": { "type": "string" },
+        "customDomicile": { "type": "string" },
+        "tourId": { "type": "string" },
+        "tourName": { "type": "string" },
+        "pax": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "guideId": { "type": "string" },
+        "guideName": { "type": "string" },
+        "paymentProof": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userName", "userWhatsApp", "tourId", "status"]
+    },
+    "Tour": {
+      "title": "Tour",
+      "description": "Informasi paket tur yang tersedia",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "date": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "Staff": {
+      "title": "Staff",
+      "description": "Data staf sistem (Admin, Owner, Guide)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "owner", "guide"] },
+        "email": { "type": "string" }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["password"]
+  },
+  "firestore": {
+    "/bookings/{bookingId}": {
+      "schema": "#/entities/Booking",
+      "description": "Koleksi pendaftaran tur"
+    },
+    "/tours/{tourId}": {
+      "schema": "#/entities/Tour",
+      "description": "Koleksi paket tur"
+    },
+    "/staff/{staffId}": {
+      "schema": "#/entities/Staff",
+      "description": "Koleksi data staf"
+    }
+  }
+}

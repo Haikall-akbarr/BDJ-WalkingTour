@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,7 +15,8 @@ import {
   CalendarClock,
   UserPlus,
   LogOut,
-  MapPin
+  MapPin,
+  Loader2
 } from "lucide-react"
 import { 
   BarChart, 
@@ -37,6 +38,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useFirestore, useCollection } from "@/firebase"
+import { collection, query, where, doc, updateDoc, orderBy } from "firebase/firestore"
+import { errorEmitter } from "@/firebase/error-emitter"
+import { FirestorePermissionError } from "@/firebase/errors"
 
 const STATS = [
   { label: "Total Pendapatan", value: "Rp 12,5 Jt", icon: DollarSign, trend: "+12%", color: "text-green-600" },
@@ -53,12 +58,6 @@ const REVENUE_DATA = [
   { name: 'Jun', value: 2390 },
 ];
 
-const UNASSIGNED_TOURS = [
-  { id: "t1", name: "Heritage Trail", date: "22 Jan", time: "09:00", pax: 12 },
-  { id: "t2", name: "Pasar Terapung", date: "23 Jan", time: "05:30", pax: 8 },
-  { id: "t3", name: "Pacinan Night Walk", date: "25 Jan", time: "19:00", pax: 15 },
-];
-
 const GUIDES = [
   { id: "g1", name: "Andi Saputra" },
   { id: "g2", name: "Budi Santoso" },
@@ -68,6 +67,46 @@ const GUIDES = [
 
 export default function OwnerDashboard() {
   const router = useRouter();
+  const db = useFirestore();
+  const [selectedGuides, setSelectedGuides] = useState<Record<string, string>>({});
+
+  const unassignedQuery = useMemo(() => {
+    if (!db) return null;
+    return query(
+      collection(db, "bookings"), 
+      where("status", "==", "approved"),
+      where("guideId", "==", null)
+    );
+  }, [db]);
+
+  const { data: unassignedBookings, loading } = useCollection(unassignedQuery);
+
+  const handleAssignGuide = (bookingId: string) => {
+    if (!db || !selectedGuides[bookingId]) return;
+    
+    const guideId = selectedGuides[bookingId];
+    const guideName = GUIDES.find(g => g.id === guideId)?.name;
+    const bookingRef = doc(db, "bookings", bookingId);
+    
+    updateDoc(bookingRef, { 
+      guideId: guideId,
+      guideName: guideName
+    })
+      .then(() => {
+        // Hapus dari state local setelah berhasil
+        const newSelected = { ...selectedGuides };
+        delete newSelected[bookingId];
+        setSelectedGuides(newSelected);
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: `bookings/${bookingId}`,
+          operation: "update",
+          requestResourceData: { guideId, guideName }
+        });
+        errorEmitter.emit("permission-error", permissionError);
+      });
+  };
 
   const handleLogout = () => {
     router.push("/");
@@ -75,7 +114,6 @@ export default function OwnerDashboard() {
 
   return (
     <div className="container mx-auto p-4 space-y-6 md:space-y-8">
-      {/* Header Responsif */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl shadow-sm border gap-4">
         <div className="flex items-center gap-2">
           <div className="bg-primary/20 p-2 rounded-lg">
@@ -120,7 +158,6 @@ export default function OwnerDashboard() {
         </div>
       </div>
 
-      {/* Grid Statistik Responsif */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {STATS.map((stat, idx) => (
           <Card key={idx} className="border-none shadow-md">
@@ -165,40 +202,59 @@ export default function OwnerDashboard() {
               <CalendarClock className="h-5 w-5 text-secondary" /> 
               Alokasi Pemandu
             </CardTitle>
-            <CardDescription className="text-xs md:text-sm">Tugaskan pemandu untuk jadwal mendatang.</CardDescription>
+            <CardDescription className="text-xs md:text-sm">Tugaskan pemandu untuk pesanan yang sudah disetujui.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 px-3 md:px-6">
-            {UNASSIGNED_TOURS.map((tour) => (
-              <div key={tour.id} className="flex flex-col gap-3 p-3 md:p-4 rounded-xl border bg-slate-50">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1 min-w-0">
-                    <p className="font-bold text-sm md:text-base truncate">{tour.name}</p>
-                    <div className="flex flex-wrap gap-2 text-[10px] md:text-xs text-muted-foreground">
-                      <span>{tour.date}</span>
-                      <span>•</span>
-                      <span>{tour.time}</span>
-                      <span>•</span>
-                      <Badge variant="outline" className="text-[9px] md:text-[10px] py-0 px-1">{tour.pax} Pax</Badge>
+            {loading ? (
+              <div className="flex flex-col items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-xs text-muted-foreground mt-2">Memuat data...</p>
+              </div>
+            ) : unassignedBookings && unassignedBookings.length > 0 ? (
+              unassignedBookings.map((booking: any) => (
+                <div key={booking.id} className="flex flex-col gap-3 p-3 md:p-4 rounded-xl border bg-slate-50">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1 min-w-0">
+                      <p className="font-bold text-sm md:text-base truncate">{booking.tourName}</p>
+                      <div className="flex flex-wrap gap-2 text-[10px] md:text-xs text-muted-foreground">
+                        <span className="font-medium text-primary-foreground">{booking.userName}</span>
+                        <span>•</span>
+                        <span>{booking.createdAt?.toDate().toLocaleDateString('id-ID')}</span>
+                        <span>•</span>
+                        <Badge variant="outline" className="text-[9px] md:text-[10px] py-0 px-1">{booking.pax} Pax</Badge>
+                      </div>
                     </div>
                   </div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Select 
+                      value={selectedGuides[booking.id] || ""}
+                      onValueChange={(val) => setSelectedGuides({ ...selectedGuides, [booking.id]: val })}
+                    >
+                      <SelectTrigger className="w-full sm:w-[180px] bg-white h-9 text-xs">
+                        <SelectValue placeholder="Pilih Pemandu" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {GUIDES.map(guide => (
+                          <SelectItem key={guide.id} value={guide.id}>{guide.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      size="sm" 
+                      className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground gap-1 text-xs h-9"
+                      disabled={!selectedGuides[booking.id]}
+                      onClick={() => handleAssignGuide(booking.id)}
+                    >
+                      <UserPlus className="h-3 w-3" /> Tugaskan
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Select>
-                    <SelectTrigger className="w-full sm:w-[180px] bg-white h-9 text-xs">
-                      <SelectValue placeholder="Pilih Pemandu" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {GUIDES.map(guide => (
-                        <SelectItem key={guide.id} value={guide.id}>{guide.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button size="sm" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground gap-1 text-xs h-9">
-                    <UserPlus className="h-3 w-3" /> Tugaskan
-                  </Button>
-                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                Semua pesanan sudah memiliki pemandu.
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
       </div>

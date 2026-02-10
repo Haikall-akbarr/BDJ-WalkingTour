@@ -3,7 +3,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import Image from "next/image"
 import { Navbar } from "@/components/public/Navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -15,29 +14,66 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
 import { CheckCircle2, ChevronLeft, ChevronRight, UploadCloud, QrCode } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useFirestore } from "@/firebase"
+import { collection, addDoc, serverTimestamp } from "firebase/firestore"
+import { errorEmitter } from "@/firebase/error-emitter"
+import { FirestorePermissionError } from "@/firebase/errors"
 
 export default function BookingPage({ params }: { params: { id: string } }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [domicile, setDomicile] = useState("banjarmasin");
   const [customDomicile, setCustomDomicile] = useState("");
+  const [formData, setFormData] = useState({
+    name: "",
+    whatsapp: "",
+    email: "",
+    tourId: "pacinan",
+    pax: 1
+  });
+
   const { toast } = useToast();
   const router = useRouter();
+  const db = useFirestore();
 
   const handleNext = () => setStep(step + 1);
   const handleBack = () => setStep(step - 1);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    if (!db) return;
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setStep(3);
-      toast({
-        title: "Pendaftaran Berhasil!",
-        description: "Kami telah menerima pesanan Anda.",
+
+    const bookingData = {
+      userName: formData.name,
+      userWhatsApp: formData.whatsapp,
+      userEmail: formData.email,
+      domicile: domicile,
+      customDomicile: domicile === "others" ? customDomicile : "",
+      tourId: formData.tourId,
+      tourName: formData.tourId === "pacinan" ? "Pacinan Walking Tour" : formData.tourId === "river" ? "Riverfront Discovery" : "Heritage Trail",
+      pax: Number(formData.pax),
+      status: "pending",
+      createdAt: serverTimestamp()
+    };
+
+    addDoc(collection(db, "bookings"), bookingData)
+      .then(() => {
+        setLoading(false);
+        setStep(3);
+        toast({
+          title: "Pendaftaran Berhasil!",
+          description: "Data Anda telah tersimpan dan sedang menunggu verifikasi.",
+        });
+      })
+      .catch(async (error) => {
+        setLoading(false);
+        const permissionError = new FirestorePermissionError({
+          path: "bookings",
+          operation: "create",
+          requestResourceData: bookingData
+        });
+        errorEmitter.emit("permission-error", permissionError);
       });
-    }, 1500);
   };
 
   const progressValue = (step / 3) * 100;
@@ -72,17 +108,36 @@ export default function BookingPage({ params }: { params: { id: string } }) {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="name">Nama Lengkap</Label>
-                      <Input id="name" placeholder="John Doe" required />
+                      <Input 
+                        id="name" 
+                        placeholder="John Doe" 
+                        required 
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="whatsapp">Nomor WhatsApp</Label>
-                      <Input id="whatsapp" type="tel" placeholder="0812..." required />
+                      <Input 
+                        id="whatsapp" 
+                        type="tel" 
+                        placeholder="0812..." 
+                        required 
+                        value={formData.whatsapp}
+                        onChange={(e) => setFormData({...formData, whatsapp: e.target.value})}
+                      />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="email">Alamat Email (Opsional)</Label>
-                    <Input id="email" type="email" placeholder="john@example.com" />
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      placeholder="john@example.com" 
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    />
                   </div>
 
                   <div className="space-y-4">
@@ -127,7 +182,10 @@ export default function BookingPage({ params }: { params: { id: string } }) {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Paket Tur</Label>
-                      <Select defaultValue="pacinan">
+                      <Select 
+                        value={formData.tourId} 
+                        onValueChange={(val) => setFormData({...formData, tourId: val})}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Pilih tur" />
                         </SelectTrigger>
@@ -140,7 +198,14 @@ export default function BookingPage({ params }: { params: { id: string } }) {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="pax">Jumlah Peserta</Label>
-                      <Input id="pax" type="number" min="1" defaultValue="1" required />
+                      <Input 
+                        id="pax" 
+                        type="number" 
+                        min="1" 
+                        value={formData.pax}
+                        onChange={(e) => setFormData({...formData, pax: Number(e.target.value)})}
+                        required 
+                      />
                       <p className="text-[10px] text-muted-foreground">Pilih total peserta termasuk diri Anda sendiri.</p>
                     </div>
                   </div>
@@ -214,22 +279,22 @@ export default function BookingPage({ params }: { params: { id: string } }) {
                 <div className="space-y-2">
                   <h2 className="text-3xl font-bold font-headline">Pendaftaran Berhasil!</h2>
                   <p className="text-muted-foreground">
-                    Terima kasih telah memesan di BDJ WalkingTour. Kami telah mengirimkan pesan konfirmasi ke WhatsApp Anda.
+                    Terima kasih telah memesan di BDJ WalkingTour. Kami telah menyimpan data Anda dan akan memverifikasi pembayaran Anda segera.
                   </p>
                 </div>
                 <div className="bg-muted p-4 rounded-lg text-sm text-left">
                   <p className="font-bold mb-2">Ringkasan Pesanan:</p>
                   <div className="flex justify-between">
+                    <span className="text-muted-foreground">Nama:</span>
+                    <span>{formData.name}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-muted-foreground">Tur:</span>
-                    <span>Pacinan Walking Tour</span>
+                    <span>{formData.tourId === "pacinan" ? "Pacinan Walking Tour" : formData.tourId === "river" ? "Riverfront Discovery" : "Heritage Trail"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tanggal:</span>
-                    <span>15 Jan 2024</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Peserta:</span>
-                    <span>1 Orang</span>
+                    <span className="text-muted-foreground">Status:</span>
+                    <span className="text-amber-600 font-bold uppercase">Pending</span>
                   </div>
                 </div>
                 <Button 
