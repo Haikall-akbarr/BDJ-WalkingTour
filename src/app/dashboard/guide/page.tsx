@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -22,6 +22,32 @@ import {
 import { useFirestore, useCollection } from "@/firebase"
 import { collection, query, where } from "firebase/firestore"
 
+// Data statis untuk keperluan demonstrasi jika database kosong
+const MOCK_TOURS = [
+  {
+    id: "mock-1",
+    tourName: "Susur Sungai Martapura",
+    userName: "Budi Santoso",
+    userWhatsApp: "08123456789",
+    userEmail: "budi@example.com",
+    domicile: "Banjarmasin",
+    pax: 2,
+    createdAt: { toDate: () => new Date() },
+    status: "approved"
+  },
+  {
+    id: "mock-2",
+    tourName: "Pacinan Walking Tour",
+    userName: "Siti Rahma",
+    userWhatsApp: "08987654321",
+    userEmail: "siti@example.com",
+    domicile: "Banjarbaru",
+    pax: 4,
+    createdAt: { toDate: () => new Date(Date.now() + 86400000) },
+    status: "approved"
+  }
+];
+
 export default function GuideDashboard() {
   const router = useRouter();
   const db = useFirestore();
@@ -38,12 +64,18 @@ export default function GuideDashboard() {
     );
   }, [db]);
 
-  const { data: myTours, loading } = useCollection(scheduleQuery);
+  const { data: dbTours, loading } = useCollection(scheduleQuery);
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
 
+  // Gabungkan data DB dengan data mock jika DB kosong
+  const myTours = useMemo(() => {
+    if (!dbTours || dbTours.length === 0) return MOCK_TOURS;
+    return [...dbTours, ...MOCK_TOURS];
+  }, [dbTours]);
+
   const selectedTour = useMemo(() => {
-    if (!myTours) return null;
-    if (selectedTourId) return myTours.find((t: any) => t.id === selectedTourId);
+    if (!myTours || myTours.length === 0) return null;
+    if (selectedTourId) return myTours.find((t: any) => t.id === selectedTourId) || myTours[0];
     return myTours[0];
   }, [myTours, selectedTourId]);
 
@@ -94,7 +126,7 @@ export default function GuideDashboard() {
         <Badge variant="outline" className="px-3 py-1 w-fit text-[10px] md:text-xs">Akses Pemandu Aktif</Badge>
       </div>
 
-      {loading ? (
+      {loading && (!dbTours || dbTours.length === 0) ? (
         <div className="flex flex-col items-center justify-center p-20">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
           <p className="mt-4 text-muted-foreground">Memuat jadwal tur Anda...</p>
@@ -119,7 +151,7 @@ export default function GuideDashboard() {
                         <p>{tour.createdAt?.toDate().toLocaleDateString('id-ID')}</p>
                       </div>
                       <Badge variant="default" className="text-[9px] md:text-[10px] px-1.5 bg-green-500">
-                        Aktif
+                        {tour.id.startsWith('mock') ? 'Demo' : 'Aktif'}
                       </Badge>
                     </div>
                   </CardContent>
