@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "tour-pacinan",
+      "description": "Historical Chinese district in Banjarmasin with vibrant colors and old architecture.",
+      "imageUrl": "https://picsum.photos/seed/pacinan/800/600",
+      "imageHint": "pacinan district"
+    },
+    {
+      "id": "tour-river",
+      "description": "Traditional floating market with boats and local merchants.",
+      "imageUrl": "https://images.unsplash.com/photo-1537482165635-f6fb126fbc01?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxmbG9hdGluZyUyMG1hcmtldHxlbnwwfHx8fDE3NzA2OTU3NjZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "floating market"
+    },
+    {
+      "id": "tour-mosque",
+      "description": "Grand mosque with stunning architecture at sunset.",
+      "imageUrl": "https://images.unsplash.com/photo-1591017683260-655b616bfb17?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxncmFuZCUyMG1vc3F1ZXxlbnwwfHx8fDE3NzA2OTU3NjZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "grand mosque"
+    },
+    {
+      "id": "hero-bg",
+      "description": "Wide shot of a walking tour group exploring a historical street.",
+      "imageUrl": "https://images.unsplash.com/photo-1536607961765-592e80bcc19e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx3YWxraW5nJTIwdG91cnxlbnwwfHx8fDE3NzA2OTU3NjZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "walking tour"
+    }
+  ]
 }

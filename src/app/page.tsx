@@ -45,15 +45,17 @@ export default function LandingPage() {
       <Navbar />
       
       {/* Hero Section */}
-      <section className="relative h-[600px] flex items-center justify-center text-center overflow-hidden">
-        <Image
-          src={heroImg?.imageUrl || ""}
-          alt="Hero background"
-          fill
-          className="object-cover brightness-50"
-          priority
-          data-ai-hint={heroImg?.imageHint}
-        />
+      <section className="relative h-[600px] flex items-center justify-center text-center overflow-hidden bg-slate-900">
+        {heroImg?.imageUrl && (
+          <Image
+            src={heroImg.imageUrl}
+            alt="Hero background"
+            fill
+            className="object-cover brightness-50"
+            priority
+            data-ai-hint={heroImg.imageHint}
+          />
+        )}
         <div className="relative z-10 container px-4 space-y-6">
           <h1 className="text-4xl md:text-6xl font-bold text-white font-headline max-w-3xl mx-auto leading-tight">
             Discover the Hidden Gems of <span className="text-primary">Banjarmasin</span>
@@ -91,14 +93,16 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {FEATURED_TOURS.map((tour) => (
               <Card key={tour.id} className="overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow group">
-                <div className="relative h-64">
-                  <Image
-                    src={tour.image || ""}
-                    alt={tour.title}
-                    fill
-                    className="object-cover transition-transform group-hover:scale-105"
-                    data-ai-hint={tour.hint}
-                  />
+                <div className="relative h-64 bg-slate-100">
+                  {tour.image && (
+                    <Image
+                      src={tour.image}
+                      alt={tour.title}
+                      fill
+                      className="object-cover transition-transform group-hover:scale-105"
+                      data-ai-hint={tour.hint}
+                    />
+                  )}
                   <div className="absolute top-4 right-4">
                     <Badge className="bg-white/90 text-black border-none backdrop-blur-sm">{tour.price}</Badge>
                   </div>
