@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -12,7 +12,8 @@ import { ChevronLeft, Sparkles, Send, RefreshCcw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { generateTourReport } from "@/ai/flows/tour-report-generation"
 
-export default function TourReportPage({ params }: { params: { id: string } }) {
+export default function TourReportPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: bookingId } = React.use(params);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     tourName: "Pacinan Walking Tour",

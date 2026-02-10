@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo } from "react"
+import React, { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Navbar } from "@/components/public/Navbar"
 import { Button } from "@/components/ui/button"
@@ -19,7 +19,8 @@ import { collection, addDoc, serverTimestamp, query, orderBy } from "firebase/fi
 import { errorEmitter } from "@/firebase/error-emitter"
 import { FirestorePermissionError } from "@/firebase/errors"
 
-export default function BookingPage({ params }: { params: { id: string } }) {
+export default function BookingPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: tourIdParam } = React.use(params);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [domicile, setDomicile] = useState("banjarmasin");
@@ -40,7 +41,7 @@ export default function BookingPage({ params }: { params: { id: string } }) {
     name: "",
     whatsapp: "",
     email: "",
-    tourId: params.id || "",
+    tourId: tourIdParam || "",
     pax: 1
   });
 
@@ -69,7 +70,6 @@ export default function BookingPage({ params }: { params: { id: string } }) {
       createdAt: serverTimestamp()
     };
 
-    // Non-blocking mutation
     addDoc(collection(db, "bookings"), bookingData)
       .catch(async (error) => {
         const permissionError = new FirestorePermissionError({
@@ -80,7 +80,6 @@ export default function BookingPage({ params }: { params: { id: string } }) {
         errorEmitter.emit("permission-error", permissionError);
       });
 
-    // Move to next step instantly for better UX
     setTimeout(() => {
       setLoading(false);
       setStep(3);
@@ -237,7 +236,7 @@ export default function BookingPage({ params }: { params: { id: string } }) {
                   <div className="flex items-center space-x-2 bg-primary/10 p-4 rounded-lg">
                     <Checkbox id="consent" required />
                     <Label htmlFor="consent" className="text-sm leading-tight font-normal">
-                      Saya bersedia berjalan kaki {selectedTour?.distance || "2-3 km"} dan akan menyiapkan alas kaki yang nyaman.
+                      Saya bersedia berjalan kaki dan akan menyiapkan alas kaki yang nyaman.
                     </Label>
                   </div>
                 </CardContent>
