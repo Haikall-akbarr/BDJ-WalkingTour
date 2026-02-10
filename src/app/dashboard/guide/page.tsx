@@ -2,11 +2,23 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Users, MapPin, CheckCircle2, MessageSquareText } from "lucide-react"
+import { Calendar, Users, MapPin, CheckCircle2, MessageSquareText, LogOut } from "lucide-react"
 import Link from "next/link"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const MY_SCHEDULE = [
   {
@@ -37,15 +49,53 @@ const MY_SCHEDULE = [
 
 export default function GuideDashboard() {
   const [selectedTour, setSelectedTour] = useState(MY_SCHEDULE[0]);
+  const router = useRouter();
+
+  const handleLogout = () => {
+    router.push("/");
+  };
 
   return (
     <div className="container mx-auto p-4 space-y-6 max-w-4xl">
+      <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
+        <div className="flex items-center gap-2">
+          <div className="bg-primary/20 p-2 rounded-lg">
+            <MapPin className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold font-headline leading-tight">BDJ WalkingTour</h1>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Pemandu Lokal</p>
+          </div>
+        </div>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50 gap-2">
+              <LogOut className="h-4 w-4" /> Keluar
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Apakah Anda yakin ingin keluar?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Pastikan Anda telah mengirimkan laporan tur jika ada tur yang baru saja selesai.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={handleLogout} className="bg-red-500 hover:bg-red-600">
+                Keluar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold font-headline">Dashboard Pemandu</h1>
           <p className="text-muted-foreground">Kelola tur jalan kaki Anda mendatang.</p>
         </div>
-        <Badge variant="outline" className="px-4 py-1">Akses Pemandu</Badge>
+        <Badge variant="outline" className="px-4 py-1">Akses Pemandu Aktif</Badge>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

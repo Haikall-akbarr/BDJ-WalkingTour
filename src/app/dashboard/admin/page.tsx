@@ -1,6 +1,8 @@
 
 "use client"
 
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,20 +17,72 @@ import {
   History,
   ShieldCheck,
   Check,
-  X
+  X,
+  LogOut,
+  MapPin
 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 export default function AdminDashboard() {
+  const router = useRouter();
+
+  const handleLogout = () => {
+    router.push("/");
+  };
+
   return (
     <div className="container mx-auto p-4 space-y-8">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold font-headline">Pusat Kontrol Admin</h1>
-          <p className="text-muted-foreground">Kelola pengguna sistem, tur, dan pengaturan global.</p>
+      <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
+        <div className="flex items-center gap-2">
+          <div className="bg-primary/20 p-2 rounded-lg">
+            <MapPin className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold font-headline leading-tight">BDJ WalkingTour</h1>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Admin Panel</p>
+          </div>
         </div>
-        <Button variant="outline" className="gap-2">
-          <History className="h-4 w-4" /> Log Sistem
-        </Button>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" className="hidden md:flex gap-2">
+            <History className="h-4 w-4" /> Log Sistem
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50 gap-2">
+                <LogOut className="h-4 w-4" /> Keluar
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Apakah Anda yakin ingin keluar?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Anda akan keluar dari dashboard admin dan kembali ke halaman utama.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogAction onClick={handleLogout} className="bg-red-500 hover:bg-red-600">
+                  Keluar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
+
+      <div className="grid gap-2">
+        <h2 className="text-3xl font-bold font-headline">Pusat Kontrol Admin</h2>
+        <p className="text-muted-foreground">Kelola pengguna sistem, tur, dan pengaturan global.</p>
       </div>
 
       <Tabs defaultValue="bookings" className="w-full">

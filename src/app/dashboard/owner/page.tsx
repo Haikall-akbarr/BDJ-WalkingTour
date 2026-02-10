@@ -2,6 +2,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,7 +13,9 @@ import {
   Map, 
   DollarSign, 
   CalendarClock,
-  UserPlus
+  UserPlus,
+  LogOut,
+  MapPin
 } from "lucide-react"
 import { 
   BarChart, 
@@ -23,6 +26,17 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from "recharts"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const STATS = [
   { label: "Total Pendapatan", value: "Rp 12,5 Juta", icon: DollarSign, trend: "+12%", color: "text-green-600" },
@@ -53,8 +67,47 @@ const GUIDES = [
 ];
 
 export default function OwnerDashboard() {
+  const router = useRouter();
+
+  const handleLogout = () => {
+    router.push("/");
+  };
+
   return (
     <div className="container mx-auto p-4 space-y-8">
+      <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
+        <div className="flex items-center gap-2">
+          <div className="bg-primary/20 p-2 rounded-lg">
+            <MapPin className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold font-headline leading-tight">BDJ WalkingTour</h1>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Business Insight</p>
+          </div>
+        </div>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50 gap-2">
+              <LogOut className="h-4 w-4" /> Keluar
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Apakah Anda yakin ingin keluar?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Sesi Anda akan berakhir dan Anda akan diarahkan ke halaman utama.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={handleLogout} className="bg-red-500 hover:bg-red-600">
+                Keluar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold font-headline">Pemantauan Bisnis</h1>
@@ -86,7 +139,6 @@ export default function OwnerDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Revenue Chart */}
         <Card className="border-none shadow-lg">
           <CardHeader>
             <CardTitle>Ikhtisar Pendapatan</CardTitle>
@@ -105,7 +157,6 @@ export default function OwnerDashboard() {
           </CardContent>
         </Card>
 
-        {/* Guide Assignment Section */}
         <Card className="border-none shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
