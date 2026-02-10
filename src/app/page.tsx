@@ -1,3 +1,187 @@
-export default function Home() {
-  return <></>;
+
+"use client"
+
+import Image from "next/image"
+import Link from "next/link"
+import { Navbar } from "@/components/public/Navbar"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Calendar, MapPin, Users, ArrowRight } from "lucide-react"
+import { PlaceHolderImages } from "@/lib/placeholder-images"
+
+const FEATURED_TOURS = [
+  {
+    id: "1",
+    title: "Pacinan Walking Tour",
+    price: "Rp 65.000",
+    date: "15 Jan 2024",
+    image: PlaceHolderImages.find(img => img.id === 'tour-pacinan')?.imageUrl,
+    hint: "pacinan district"
+  },
+  {
+    id: "2",
+    title: "Riverfront Discovery",
+    price: "Rp 75.000",
+    date: "18 Jan 2024",
+    image: PlaceHolderImages.find(img => img.id === 'tour-river')?.imageUrl,
+    hint: "riverfront boats"
+  },
+  {
+    id: "3",
+    title: "Heritage Trail",
+    price: "Rp 60.000",
+    date: "20 Jan 2024",
+    image: PlaceHolderImages.find(img => img.id === 'tour-mosque')?.imageUrl,
+    hint: "historical heritage"
+  }
+];
+
+export default function LandingPage() {
+  const heroImg = PlaceHolderImages.find(img => img.id === 'hero-bg');
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+      
+      {/* Hero Section */}
+      <section className="relative h-[600px] flex items-center justify-center text-center overflow-hidden">
+        <Image
+          src={heroImg?.imageUrl || ""}
+          alt="Hero background"
+          fill
+          className="object-cover brightness-50"
+          priority
+          data-ai-hint={heroImg?.imageHint}
+        />
+        <div className="relative z-10 container px-4 space-y-6">
+          <h1 className="text-4xl md:text-6xl font-bold text-white font-headline max-w-3xl mx-auto leading-tight">
+            Discover the Hidden Gems of <span className="text-primary">Banjarmasin</span>
+          </h1>
+          <p className="text-xl text-white/90 max-w-xl mx-auto">
+            Experience the culture, history, and vibrant life of the Thousand Rivers City through the eyes of local experts.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 rounded-full text-lg">
+              Explore Tours
+            </Button>
+            <Button size="lg" variant="outline" className="bg-white/10 text-white border-white/20 hover:bg-white/20 px-8 rounded-full text-lg backdrop-blur-sm">
+              Our Story
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Tours */}
+      <section className="py-20 bg-background" id="tours">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+            <div className="space-y-2">
+              <Badge variant="secondary" className="bg-primary/20 text-primary-foreground border-none">Upcoming Tours</Badge>
+              <h2 className="text-3xl font-bold font-headline">Popular Walking Routes</h2>
+              <p className="text-muted-foreground">Choose your next adventure and book your spot today.</p>
+            </div>
+            <Link href="/tours">
+              <Button variant="ghost" className="group gap-2 hover:bg-primary/10">
+                View All Tours <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {FEATURED_TOURS.map((tour) => (
+              <Card key={tour.id} className="overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow group">
+                <div className="relative h-64">
+                  <Image
+                    src={tour.image || ""}
+                    alt={tour.title}
+                    fill
+                    className="object-cover transition-transform group-hover:scale-105"
+                    data-ai-hint={tour.hint}
+                  />
+                  <div className="absolute top-4 right-4">
+                    <Badge className="bg-white/90 text-black border-none backdrop-blur-sm">{tour.price}</Badge>
+                  </div>
+                </div>
+                <CardHeader>
+                  <CardTitle className="font-headline text-xl">{tour.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    <span>{tour.date}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>Small group tour</span>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Link href={`/book/${tour.id}`} className="w-full">
+                    <Button className="w-full bg-secondary hover:bg-secondary/90 text-white rounded-full">
+                      Book Now
+                    </Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Interactive Map Section */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center space-y-4 mb-12">
+            <h2 className="text-3xl font-bold font-headline">Where We Walk</h2>
+            <p className="text-muted-foreground">Explore our common meeting points and popular heritage trails across the city.</p>
+          </div>
+          <div className="aspect-[21/9] bg-white rounded-2xl shadow-inner border overflow-hidden relative">
+            {/* Simple Map Placeholder */}
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-[url('https://picsum.photos/seed/map/1200/600')] bg-cover opacity-60">
+               <div className="bg-white/90 p-6 rounded-xl shadow-xl backdrop-blur-sm text-center">
+                  <MapPin className="h-10 w-10 text-secondary mx-auto mb-2 animate-bounce" />
+                  <p className="font-bold text-lg">Interactive Map Interface</p>
+                  <p className="text-sm text-muted-foreground">Meeting points and routes are shown here.</p>
+               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-slate-900 text-white py-12 mt-auto">
+        <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="col-span-1 md:col-span-2 space-y-4">
+            <div className="flex items-center gap-2 font-bold text-2xl tracking-tight">
+              <MapPin className="h-6 w-6 text-primary" />
+              <span className="font-headline">JelajahBorneoKu</span>
+            </div>
+            <p className="text-gray-400 max-w-sm">
+              Supporting sustainable local tourism in Banjarmasin since 2021. Join us for a walk you won't forget.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h4 className="font-bold">Links</h4>
+            <ul className="space-y-2 text-gray-400">
+              <li><Link href="/" className="hover:text-primary">Home</Link></li>
+              <li><Link href="/tours" className="hover:text-primary">All Tours</Link></li>
+              <li><Link href="/login" className="hover:text-primary">Staff Login</Link></li>
+            </ul>
+          </div>
+          <div className="space-y-4">
+            <h4 className="font-bold">Contact</h4>
+            <ul className="space-y-2 text-gray-400">
+              <li>Email: hello@jelajahborneoku.com</li>
+              <li>WA: +62 812-3456-7890</li>
+              <li>Jl. Ahmad Yani No. 123</li>
+            </ul>
+          </div>
+        </div>
+        <div className="container mx-auto px-4 mt-12 pt-8 border-t border-gray-800 text-center text-gray-500 text-sm">
+          &copy; 2024 BDJ Walking Tour Management System. All rights reserved.
+        </div>
+      </footer>
+    </div>
+  )
 }

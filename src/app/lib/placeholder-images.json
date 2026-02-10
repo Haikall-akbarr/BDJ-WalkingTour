@@ -1,0 +1,29 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "tour-pacinan",
+      "description": "Historical Chinese district in Banjarmasin with vibrant colors and old architecture.",
+      "imageUrl": "https://picsum.photos/seed/pacinan/800/600",
+      "imageHint": "pacinan district"
+    },
+    {
+      "id": "tour-river",
+      "description": "Traditional floating market with boats and local merchants.",
+      "imageUrl": "https://picsum.photos/seed/river/800/600",
+      "imageHint": "floating market"
+    },
+    {
+      "id": "tour-mosque",
+      "description": "Grand mosque with stunning architecture at sunset.",
+      "imageUrl": "https://picsum.photos/seed/mosque/800/600",
+      "imageHint": "grand mosque"
+    },
+    {
+      "id": "hero-bg",
+      "description": "Wide shot of a walking tour group exploring a historical street.",
+      "imageUrl": "https://picsum.photos/seed/hero/1920/1080",
+      "imageHint": "walking tour"
+    }
+  ]
+}
