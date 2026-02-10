@@ -15,7 +15,7 @@ import { Progress } from "@/components/ui/progress"
 import { CheckCircle2, ChevronLeft, ChevronRight, UploadCloud, QrCode, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useCollection } from "@/firebase"
-import { collection, addDoc, serverTimestamp, query, orderBy } from "firebase/firestore"
+import { collection, addDoc, serverTimestamp, query } from "firebase/firestore"
 import { errorEmitter } from "@/firebase/error-emitter"
 import { FirestorePermissionError } from "@/firebase/errors"
 
@@ -32,9 +32,10 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const { toast } = useToast();
   const router = useRouter();
 
+  // Ambil semua tur tanpa orderBy untuk menghindari masalah indeks di awal
   const toursQuery = useMemo(() => {
     if (!db) return null;
-    return query(collection(db, "tours"), orderBy("name", "asc"));
+    return query(collection(db, "tours"));
   }, [db]);
 
   const { data: tours, loading: toursLoading } = useCollection(toursQuery);
@@ -47,6 +48,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     pax: 1
   });
 
+  // Sinkronisasi tourId jika dipilih dari halaman utama
   useEffect(() => {
     if (tourIdParam && tourIdParam !== "new" && !formData.tourId) {
       setFormData(prev => ({ ...prev, tourId: tourIdParam }));
@@ -62,7 +64,14 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const handleBack = () => setStep(step - 1);
 
   const handleSubmit = () => {
-    if (!db || !selectedTour) return;
+    if (!db || !selectedTour) {
+      toast({
+        variant: "destructive",
+        title: "Gagal",
+        description: "Silakan pilih paket tur terlebih dahulu.",
+      });
+      return;
+    }
     setLoading(true);
 
     const bookingData = {
@@ -88,6 +97,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         errorEmitter.emit("permission-error", permissionError);
       });
 
+    // Simulasi proses cepat setelah penulisan Firestore (non-blocking)
     setTimeout(() => {
       setLoading(false);
       setStep(3);
@@ -95,7 +105,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         title: "Pendaftaran Berhasil!",
         description: "Data Anda telah tersimpan dan sedang menunggu verifikasi.",
       });
-    }, 100);
+    }, 500);
   };
 
   const progressValue = (step / 3) * 100;
@@ -127,119 +137,122 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                   <CardDescription>Beri tahu kami siapa Anda dan tur mana yang ingin Anda ikuti.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {toursLoading ? (
-                    <div className="flex justify-center p-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Nama Lengkap</Label>
+                      <Input 
+                        id="name" 
+                        placeholder="John Doe" 
+                        required 
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      />
                     </div>
-                  ) : (
-                    <>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="name">Nama Lengkap</Label>
-                          <Input 
-                            id="name" 
-                            placeholder="John Doe" 
-                            required 
-                            value={formData.name}
-                            onChange={(e) => setFormData({...formData, name: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="whatsapp">Nomor WhatsApp</Label>
-                          <Input 
-                            id="whatsapp" 
-                            type="tel" 
-                            placeholder="0812..." 
-                            required 
-                            value={formData.whatsapp}
-                            onChange={(e) => setFormData({...formData, whatsapp: e.target.value})}
-                          />
-                        </div>
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsapp">Nomor WhatsApp</Label>
+                      <Input 
+                        id="whatsapp" 
+                        type="tel" 
+                        placeholder="0812..." 
+                        required 
+                        value={formData.whatsapp}
+                        onChange={(e) => setFormData({...formData, whatsapp: e.target.value})}
+                      />
+                    </div>
+                  </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Alamat Email (Opsional)</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Alamat Email (Opsional)</Label>
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      placeholder="john@example.com" 
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label>Domisili Anda</Label>
+                    <RadioGroup 
+                      value={domicile} 
+                      onValueChange={setDomicile} 
+                      className="grid grid-cols-2 gap-4"
+                    >
+                      <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                        <RadioGroupItem value="banjarmasin" id="r1" />
+                        <Label htmlFor="r1" className="cursor-pointer">Banjarmasin</Label>
+                      </div>
+                      <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                        <RadioGroupItem value="banjarbaru" id="r2" />
+                        <Label htmlFor="r2" className="cursor-pointer">Banjarbaru</Label>
+                      </div>
+                      <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                        <RadioGroupItem value="martapura" id="r3" />
+                        <Label htmlFor="r3" className="cursor-pointer">Martapura</Label>
+                      </div>
+                      <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                        <RadioGroupItem value="others" id="r4" />
+                        <Label htmlFor="r4" className="cursor-pointer">Lainnya</Label>
+                      </div>
+                    </RadioGroup>
+
+                    {domicile === "others" && (
+                      <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <Label htmlFor="custom-domicile">Sebutkan Domisili Anda</Label>
                         <Input 
-                          id="email" 
-                          type="email" 
-                          placeholder="john@example.com" 
-                          value={formData.email}
-                          onChange={(e) => setFormData({...formData, email: e.target.value})}
+                          id="custom-domicile" 
+                          placeholder="Nama Kota atau Kabupaten" 
+                          required 
+                          value={customDomicile}
+                          onChange={(e) => setCustomDomicile(e.target.value)}
                         />
                       </div>
+                    )}
+                  </div>
 
-                      <div className="space-y-4">
-                        <Label>Domisili Anda</Label>
-                        <RadioGroup 
-                          value={domicile} 
-                          onValueChange={setDomicile} 
-                          className="grid grid-cols-2 gap-4"
-                        >
-                          <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                            <RadioGroupItem value="banjarmasin" id="r1" />
-                            <Label htmlFor="r1" className="cursor-pointer">Banjarmasin</Label>
-                          </div>
-                          <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                            <RadioGroupItem value="banjarbaru" id="r2" />
-                            <Label htmlFor="r2" className="cursor-pointer">Banjarbaru</Label>
-                          </div>
-                          <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                            <RadioGroupItem value="martapura" id="r3" />
-                            <Label htmlFor="r3" className="cursor-pointer">Martapura</Label>
-                          </div>
-                          <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                            <RadioGroupItem value="others" id="r4" />
-                            <Label htmlFor="r4" className="cursor-pointer">Lainnya</Label>
-                          </div>
-                        </RadioGroup>
-
-                        {domicile === "others" && (
-                          <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                            <Label htmlFor="custom-domicile">Sebutkan Domisili Anda</Label>
-                            <Input 
-                              id="custom-domicile" 
-                              placeholder="Nama Kota atau Kabupaten" 
-                              required 
-                              value={customDomicile}
-                              onChange={(e) => setCustomDomicile(e.target.value)}
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Paket Tur</Label>
-                          <Select 
-                            value={formData.tourId} 
-                            onValueChange={(val) => setFormData({...formData, tourId: val})}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Pilih tur" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {tours?.map((t: any) => (
-                                <SelectItem key={t.id} value={t.id}>
-                                  {t.name} - Rp {t.price?.toLocaleString('id-ID')}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="pax">Jumlah Peserta</Label>
-                          <Input 
-                            id="pax" 
-                            type="number" 
-                            min="1" 
-                            value={formData.pax}
-                            onChange={(e) => setFormData({...formData, pax: Number(e.target.value)})}
-                            required 
-                          />
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Paket Tur</Label>
+                      <Select 
+                        value={formData.tourId} 
+                        onValueChange={(val) => setFormData({...formData, tourId: val})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={toursLoading ? "Memuat tur..." : "Pilih tur"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {toursLoading ? (
+                            <div className="flex items-center justify-center p-4">
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              <span className="text-sm">Memuat paket tur...</span>
+                            </div>
+                          ) : tours && tours.length > 0 ? (
+                            tours.map((t: any) => (
+                              <SelectItem key={t.id} value={t.id}>
+                                {t.name} - Rp {t.price?.toLocaleString('id-ID')}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="p-4 text-center text-sm text-muted-foreground">
+                              Tidak ada paket tur tersedia.
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pax">Jumlah Peserta</Label>
+                      <Input 
+                        id="pax" 
+                        type="number" 
+                        min="1" 
+                        value={formData.pax}
+                        onChange={(e) => setFormData({...formData, pax: Number(e.target.value)})}
+                        required 
+                      />
+                    </div>
+                  </div>
 
                   <div className="flex items-center space-x-2 bg-primary/10 p-4 rounded-lg">
                     <Checkbox id="consent" required />
@@ -249,7 +262,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                   </div>
                 </CardContent>
                 <div className="flex p-6 pt-0">
-                  <Button type="submit" className="w-full bg-secondary hover:bg-secondary/90 text-white gap-2" disabled={toursLoading}>
+                  <Button type="submit" className="w-full bg-secondary hover:bg-secondary/90 text-white gap-2" disabled={toursLoading || !formData.tourId}>
                     Lanjut ke Pembayaran <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
