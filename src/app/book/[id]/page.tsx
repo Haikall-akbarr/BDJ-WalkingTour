@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Navbar } from "@/components/public/Navbar"
 import { Button } from "@/components/ui/button"
@@ -12,10 +12,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
-import { CheckCircle2, ChevronLeft, ChevronRight, UploadCloud, QrCode } from "lucide-react"
+import { CheckCircle2, ChevronLeft, ChevronRight, UploadCloud, QrCode, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useFirestore } from "@/firebase"
-import { collection, addDoc, serverTimestamp } from "firebase/firestore"
+import { useFirestore, useCollection } from "@/firebase"
+import { collection, addDoc, serverTimestamp, query, orderBy } from "firebase/firestore"
 import { errorEmitter } from "@/firebase/error-emitter"
 import { FirestorePermissionError } from "@/firebase/errors"
 
@@ -24,23 +24,36 @@ export default function BookingPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(false);
   const [domicile, setDomicile] = useState("banjarmasin");
   const [customDomicile, setCustomDomicile] = useState("");
+  
+  const db = useFirestore();
+  const { toast } = useToast();
+  const router = useRouter();
+
+  const toursQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, "tours"), orderBy("name", "asc"));
+  }, [db]);
+
+  const { data: tours, loading: toursLoading } = useCollection(toursQuery);
+
   const [formData, setFormData] = useState({
     name: "",
     whatsapp: "",
     email: "",
-    tourId: "pacinan",
+    tourId: params.id || "",
     pax: 1
   });
 
-  const { toast } = useToast();
-  const router = useRouter();
-  const db = useFirestore();
+  const selectedTour = useMemo(() => {
+    if (!tours || !formData.tourId) return null;
+    return tours.find((t: any) => t.id === formData.tourId);
+  }, [tours, formData.tourId]);
 
   const handleNext = () => setStep(step + 1);
   const handleBack = () => setStep(step - 1);
 
   const handleSubmit = () => {
-    if (!db) return;
+    if (!db || !selectedTour) return;
     setLoading(true);
 
     const bookingData = {
@@ -50,13 +63,13 @@ export default function BookingPage({ params }: { params: { id: string } }) {
       domicile: domicile,
       customDomicile: domicile === "others" ? customDomicile : "",
       tourId: formData.tourId,
-      tourName: formData.tourId === "pacinan" ? "Pacinan Walking Tour" : formData.tourId === "river" ? "Riverfront Discovery" : "Heritage Trail",
+      tourName: selectedTour.name,
       pax: Number(formData.pax),
       status: "pending",
       createdAt: serverTimestamp()
     };
 
-    // Optimistic UI: Proceed immediately without waiting for the promise
+    // Non-blocking mutation
     addDoc(collection(db, "bookings"), bookingData)
       .catch(async (error) => {
         const permissionError = new FirestorePermissionError({
@@ -67,7 +80,7 @@ export default function BookingPage({ params }: { params: { id: string } }) {
         errorEmitter.emit("permission-error", permissionError);
       });
 
-    // Move to next step instantly
+    // Move to next step instantly for better UX
     setTimeout(() => {
       setLoading(false);
       setStep(3);
@@ -107,120 +120,129 @@ export default function BookingPage({ params }: { params: { id: string } }) {
                   <CardDescription>Beri tahu kami siapa Anda dan tur mana yang ingin Anda ikuti.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Nama Lengkap</Label>
-                      <Input 
-                        id="name" 
-                        placeholder="John Doe" 
-                        required 
-                        value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      />
+                  {toursLoading ? (
+                    <div className="flex justify-center p-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="whatsapp">Nomor WhatsApp</Label>
-                      <Input 
-                        id="whatsapp" 
-                        type="tel" 
-                        placeholder="0812..." 
-                        required 
-                        value={formData.whatsapp}
-                        onChange={(e) => setFormData({...formData, whatsapp: e.target.value})}
-                      />
-                    </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Nama Lengkap</Label>
+                          <Input 
+                            id="name" 
+                            placeholder="John Doe" 
+                            required 
+                            value={formData.name}
+                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="whatsapp">Nomor WhatsApp</Label>
+                          <Input 
+                            id="whatsapp" 
+                            type="tel" 
+                            placeholder="0812..." 
+                            required 
+                            value={formData.whatsapp}
+                            onChange={(e) => setFormData({...formData, whatsapp: e.target.value})}
+                          />
+                        </div>
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Alamat Email (Opsional)</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      placeholder="john@example.com" 
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-4">
-                    <Label>Domisili Anda</Label>
-                    <RadioGroup 
-                      value={domicile} 
-                      onValueChange={setDomicile} 
-                      className="grid grid-cols-2 gap-4"
-                    >
-                      <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                        <RadioGroupItem value="banjarmasin" id="r1" />
-                        <Label htmlFor="r1" className="cursor-pointer">Banjarmasin</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                        <RadioGroupItem value="banjarbaru" id="r2" />
-                        <Label htmlFor="r2" className="cursor-pointer">Banjarbaru</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                        <RadioGroupItem value="martapura" id="r3" />
-                        <Label htmlFor="r3" className="cursor-pointer">Martapura</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                        <RadioGroupItem value="others" id="r4" />
-                        <Label htmlFor="r4" className="cursor-pointer">Lainnya</Label>
-                      </div>
-                    </RadioGroup>
-
-                    {domicile === "others" && (
-                      <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <Label htmlFor="custom-domicile">Sebutkan Domisili Anda</Label>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Alamat Email (Opsional)</Label>
                         <Input 
-                          id="custom-domicile" 
-                          placeholder="Nama Kota atau Kabupaten" 
-                          required 
-                          value={customDomicile}
-                          onChange={(e) => setCustomDomicile(e.target.value)}
+                          id="email" 
+                          type="email" 
+                          placeholder="john@example.com" 
+                          value={formData.email}
+                          onChange={(e) => setFormData({...formData, email: e.target.value})}
                         />
                       </div>
-                    )}
-                  </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Paket Tur</Label>
-                      <Select 
-                        value={formData.tourId} 
-                        onValueChange={(val) => setFormData({...formData, tourId: val})}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih tur" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pacinan">Pacinan - 15 Jan - Rp 65rb</SelectItem>
-                          <SelectItem value="river">River - 18 Jan - Rp 75rb</SelectItem>
-                          <SelectItem value="heritage">Heritage - 20 Jan - Rp 60rb</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pax">Jumlah Peserta</Label>
-                      <Input 
-                        id="pax" 
-                        type="number" 
-                        min="1" 
-                        value={formData.pax}
-                        onChange={(e) => setFormData({...formData, pax: Number(e.target.value)})}
-                        required 
-                      />
-                      <p className="text-[10px] text-muted-foreground">Pilih total peserta termasuk diri Anda sendiri.</p>
-                    </div>
-                  </div>
+                      <div className="space-y-4">
+                        <Label>Domisili Anda</Label>
+                        <RadioGroup 
+                          value={domicile} 
+                          onValueChange={setDomicile} 
+                          className="grid grid-cols-2 gap-4"
+                        >
+                          <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                            <RadioGroupItem value="banjarmasin" id="r1" />
+                            <Label htmlFor="r1" className="cursor-pointer">Banjarmasin</Label>
+                          </div>
+                          <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                            <RadioGroupItem value="banjarbaru" id="r2" />
+                            <Label htmlFor="r2" className="cursor-pointer">Banjarbaru</Label>
+                          </div>
+                          <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                            <RadioGroupItem value="martapura" id="r3" />
+                            <Label htmlFor="r3" className="cursor-pointer">Martapura</Label>
+                          </div>
+                          <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                            <RadioGroupItem value="others" id="r4" />
+                            <Label htmlFor="r4" className="cursor-pointer">Lainnya</Label>
+                          </div>
+                        </RadioGroup>
+
+                        {domicile === "others" && (
+                          <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <Label htmlFor="custom-domicile">Sebutkan Domisili Anda</Label>
+                            <Input 
+                              id="custom-domicile" 
+                              placeholder="Nama Kota atau Kabupaten" 
+                              required 
+                              value={customDomicile}
+                              onChange={(e) => setCustomDomicile(e.target.value)}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>Paket Tur</Label>
+                          <Select 
+                            value={formData.tourId} 
+                            onValueChange={(val) => setFormData({...formData, tourId: val})}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Pilih tur" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {tours?.map((t: any) => (
+                                <SelectItem key={t.id} value={t.id}>
+                                  {t.name} - Rp {t.price?.toLocaleString('id-ID')}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="pax">Jumlah Peserta</Label>
+                          <Input 
+                            id="pax" 
+                            type="number" 
+                            min="1" 
+                            value={formData.pax}
+                            onChange={(e) => setFormData({...formData, pax: Number(e.target.value)})}
+                            required 
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   <div className="flex items-center space-x-2 bg-primary/10 p-4 rounded-lg">
                     <Checkbox id="consent" required />
                     <Label htmlFor="consent" className="text-sm leading-tight font-normal">
-                      Saya bersedia berjalan kaki 2-3 km dan akan menyiapkan alas kaki yang nyaman.
+                      Saya bersedia berjalan kaki {selectedTour?.distance || "2-3 km"} dan akan menyiapkan alas kaki yang nyaman.
                     </Label>
                   </div>
                 </CardContent>
                 <div className="flex p-6 pt-0">
-                  <Button type="submit" className="w-full bg-secondary hover:bg-secondary/90 text-white gap-2">
+                  <Button type="submit" className="w-full bg-secondary hover:bg-secondary/90 text-white gap-2" disabled={toursLoading}>
                     Lanjut ke Pembayaran <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -247,6 +269,12 @@ export default function BookingPage({ params }: { params: { id: string } }) {
                       <p className="font-mono font-bold text-xl">BCA: 123 456 7890</p>
                       <p className="text-sm">A/N: BDJ WalkingTour</p>
                     </div>
+                    {selectedTour && (
+                      <div className="pt-2 border-t text-sm">
+                        <p className="text-muted-foreground">Total yang harus dibayar:</p>
+                        <p className="text-lg font-bold text-secondary">Rp {(selectedTour.price * formData.pax).toLocaleString('id-ID')}</p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-4">
@@ -292,7 +320,7 @@ export default function BookingPage({ params }: { params: { id: string } }) {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Tur:</span>
-                    <span>{formData.tourId === "pacinan" ? "Pacinan Walking Tour" : formData.tourId === "river" ? "Riverfront Discovery" : "Heritage Trail"}</span>
+                    <span>{selectedTour?.name}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status:</span>

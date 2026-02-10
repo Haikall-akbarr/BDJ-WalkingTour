@@ -1,43 +1,27 @@
 
 "use client"
 
+import { useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Navbar } from "@/components/public/Navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, Users, ArrowRight } from "lucide-react"
+import { Calendar, MapPin, Users, ArrowRight, Loader2, Clock, Map } from "lucide-react"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
-
-const FEATURED_TOURS = [
-  {
-    id: "1",
-    title: "Pacinan Walking Tour",
-    price: "Rp 65.000",
-    date: "15 Jan 2024",
-    image: PlaceHolderImages.find(img => img.id === 'tour-pacinan')?.imageUrl,
-    hint: "pacinan district"
-  },
-  {
-    id: "2",
-    title: "Riverfront Discovery",
-    price: "Rp 75.000",
-    date: "18 Jan 2024",
-    image: PlaceHolderImages.find(img => img.id === 'tour-river')?.imageUrl,
-    hint: "riverfront boats"
-  },
-  {
-    id: "3",
-    title: "Heritage Trail",
-    price: "Rp 60.000",
-    date: "20 Jan 2024",
-    image: PlaceHolderImages.find(img => img.id === 'tour-mosque')?.imageUrl,
-    hint: "historical heritage"
-  }
-];
+import { useFirestore, useCollection } from "@/firebase"
+import { collection, query, orderBy, limit } from "firebase/firestore"
 
 export default function LandingPage() {
+  const db = useFirestore();
+  
+  const toursQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, "tours"), limit(6));
+  }, [db]);
+
+  const { data: dynamicTours, loading: toursLoading } = useCollection(toursQuery);
   const heroImg = PlaceHolderImages.find(img => img.id === 'hero-bg');
 
   return (
@@ -92,46 +76,69 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {FEATURED_TOURS.map((tour) => (
-              <Card key={tour.id} className="overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow group">
-                <div className="relative h-64 bg-slate-100">
-                  {tour.image && (
-                    <Image
-                      src={tour.image}
-                      alt={tour.title}
-                      fill
-                      className="object-cover transition-transform group-hover:scale-105"
-                      data-ai-hint={tour.hint}
-                    />
-                  )}
-                  <div className="absolute top-4 right-4">
-                    <Badge className="bg-white/90 text-black border-none backdrop-blur-sm">{tour.price}</Badge>
-                  </div>
-                </div>
-                <CardHeader>
-                  <CardTitle className="font-headline text-xl">{tour.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>{tour.date}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>Tur grup kecil</span>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Link href={`/book/${tour.id}`} className="w-full">
-                    <Button className="w-full bg-secondary hover:bg-secondary/90 text-white rounded-full">
-                      Pesan Sekarang
-                    </Button>
-                  </Link>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
+          {toursLoading ? (
+            <div className="flex justify-center p-20">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+          ) : dynamicTours && dynamicTours.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {dynamicTours.map((tour: any, idx: number) => {
+                const tourImg = PlaceHolderImages[idx % PlaceHolderImages.length];
+                return (
+                  <Card key={tour.id} className="overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow group">
+                    <div className="relative h-64 bg-slate-100">
+                      <Image
+                        src={tourImg.imageUrl}
+                        alt={tour.name}
+                        fill
+                        className="object-cover transition-transform group-hover:scale-105"
+                        data-ai-hint={tourImg.imageHint}
+                      />
+                      <div className="absolute top-4 right-4">
+                        <Badge className="bg-white/90 text-black border-none backdrop-blur-sm">
+                          Rp {tour.price?.toLocaleString('id-ID')}
+                        </Badge>
+                      </div>
+                    </div>
+                    <CardHeader>
+                      <CardTitle className="font-headline text-xl">{tour.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>{tour.date || "Jadwal Fleksibel"}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
+                         <div className="flex items-center gap-1">
+                           <Map className="h-3.5 w-3.5 text-primary" />
+                           <span>{tour.distance}</span>
+                         </div>
+                         <div className="flex items-center gap-1">
+                           <Clock className="h-3.5 w-3.5 text-primary" />
+                           <span>{tour.duration}</span>
+                         </div>
+                         <div className="flex items-center gap-1">
+                           <Users className="h-3.5 w-3.5 text-primary" />
+                           <span>Grup Kecil</span>
+                         </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter>
+                      <Link href={`/book/${tour.id}`} className="w-full">
+                        <Button className="w-full bg-secondary hover:bg-secondary/90 text-white rounded-full">
+                          Pesan Sekarang
+                        </Button>
+                      </Link>
+                    </CardFooter>
+                  </Card>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="text-center p-20 border-2 border-dashed rounded-2xl bg-muted/20">
+              <p className="text-muted-foreground">Belum ada paket tur yang tersedia saat ini.</p>
+            </div>
+          )}
         </div>
       </section>
 

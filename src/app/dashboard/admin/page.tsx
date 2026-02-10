@@ -1,13 +1,15 @@
 
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { 
   Plus, 
   Search, 
@@ -20,7 +22,10 @@ import {
   X,
   LogOut,
   MapPin,
-  Loader2
+  Loader2,
+  Calendar as CalendarIcon,
+  Clock,
+  Map as MapIcon
 } from "lucide-react"
 import {
   AlertDialog,
@@ -33,15 +38,37 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { useFirestore, useCollection } from "@/firebase"
-import { collection, query, where, doc, updateDoc, orderBy } from "firebase/firestore"
+import { collection, query, where, doc, updateDoc, orderBy, addDoc, deleteDoc, serverTimestamp } from "firebase/firestore"
 import { errorEmitter } from "@/firebase/error-emitter"
 import { FirestorePermissionError } from "@/firebase/errors"
+import { useToast } from "@/hooks/use-toast"
 
 export default function AdminDashboard() {
   const router = useRouter();
   const db = useFirestore();
+  const { toast } = useToast();
 
+  const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
+  const [editingTour, setEditingTour] = useState<any>(null);
+  const [tourFormData, setTourFormData] = useState({
+    name: "",
+    price: "",
+    date: "",
+    description: "",
+    distance: "3 KM",
+    duration: "2 Jam"
+  });
+
+  // Queries
   const bookingsQuery = useMemo(() => {
     if (!db) return null;
     return query(
@@ -51,9 +78,16 @@ export default function AdminDashboard() {
     );
   }, [db]);
 
-  const { data: pendingBookings, loading } = useCollection(bookingsQuery);
+  const toursQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, "tours"), orderBy("name", "asc"));
+  }, [db]);
 
-  const handleUpdateStatus = (bookingId: string, newStatus: string) => {
+  const { data: pendingBookings, loading: bookingsLoading } = useCollection(bookingsQuery);
+  const { data: tours, loading: toursLoading } = useCollection(toursQuery);
+
+  // Handlers
+  const handleUpdateBookingStatus = (bookingId: string, newStatus: string) => {
     if (!db) return;
     const bookingRef = doc(db, "bookings", bookingId);
     
@@ -66,6 +100,89 @@ export default function AdminDashboard() {
         });
         errorEmitter.emit("permission-error", permissionError);
       });
+  };
+
+  const handleOpenAddTour = () => {
+    setEditingTour(null);
+    setTourFormData({
+      name: "",
+      price: "",
+      date: "",
+      description: "",
+      distance: "3 KM",
+      duration: "2 Jam"
+    });
+    setIsTourDialogOpen(true);
+  };
+
+  const handleOpenEditTour = (tour: any) => {
+    setEditingTour(tour);
+    setTourFormData({
+      name: tour.name || "",
+      price: tour.price?.toString() || "",
+      date: tour.date || "",
+      description: tour.description || "",
+      distance: tour.distance || "3 KM",
+      duration: tour.duration || "2 Jam"
+    });
+    setIsTourDialogOpen(true);
+  };
+
+  const handleSaveTour = () => {
+    if (!db) return;
+    
+    const data = {
+      ...tourFormData,
+      price: Number(tourFormData.price),
+      updatedAt: serverTimestamp()
+    };
+
+    if (editingTour) {
+      const tourRef = doc(db, "tours", editingTour.id);
+      updateDoc(tourRef, data).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: `tours/${editingTour.id}`,
+          operation: "update",
+          requestResourceData: data
+        });
+        errorEmitter.emit("permission-error", permissionError);
+      });
+    } else {
+      addDoc(collection(db, "tours"), {
+        ...data,
+        createdAt: serverTimestamp()
+      }).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: "tours",
+          operation: "create",
+          requestResourceData: data
+        });
+        errorEmitter.emit("permission-error", permissionError);
+      });
+    }
+
+    setIsTourDialogOpen(false);
+    toast({
+      title: editingTour ? "Tur Diperbarui" : "Tur Ditambahkan",
+      description: `Paket tur ${tourFormData.name} telah berhasil disimpan.`,
+    });
+  };
+
+  const handleDeleteTour = (tourId: string) => {
+    if (!db) return;
+    const tourRef = doc(db, "tours", tourId);
+    deleteDoc(tourRef).catch(async (error) => {
+      const permissionError = new FirestorePermissionError({
+        path: `tours/${tourId}`,
+        operation: "delete"
+      });
+      errorEmitter.emit("permission-error", permissionError);
+    });
+    toast({
+      title: "Tur Dihapus",
+      description: "Paket tur telah dihapus dari sistem.",
+      variant: "destructive"
+    });
   };
 
   const handleLogout = () => {
@@ -154,7 +271,7 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {loading ? (
+                    {bookingsLoading ? (
                       <tr>
                         <td colSpan={6} className="p-12 text-center">
                           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
@@ -183,7 +300,7 @@ export default function AdminDashboard() {
                               size="icon" 
                               variant="ghost" 
                               className="h-7 w-7 md:h-8 md:w-8 text-green-600 hover:bg-green-50"
-                              onClick={() => handleUpdateStatus(booking.id, "approved")}
+                              onClick={() => handleUpdateBookingStatus(booking.id, "approved")}
                             >
                               <Check className="h-4 w-4" />
                             </Button>
@@ -191,7 +308,7 @@ export default function AdminDashboard() {
                               size="icon" 
                               variant="ghost" 
                               className="h-7 w-7 md:h-8 md:w-8 text-red-600 hover:bg-red-50"
-                              onClick={() => handleUpdateStatus(booking.id, "rejected")}
+                              onClick={() => handleUpdateBookingStatus(booking.id, "rejected")}
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -214,26 +331,67 @@ export default function AdminDashboard() {
 
         <TabsContent value="tours" className="space-y-4 outline-none">
           <div className="flex justify-end">
-            <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
+            <Button 
+              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+              onClick={handleOpenAddTour}
+            >
               <Plus className="h-4 w-4" /> Paket Tur Baru
             </Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {[1, 2, 3].map(i => (
-              <Card key={i} className="overflow-hidden border-none shadow-md group">
-                <div className="h-32 md:h-40 bg-slate-200 flex items-center justify-center relative">
-                  <span className="text-muted-foreground text-xs">Thumbnail Tur</span>
-                  <div className="absolute top-2 right-2 flex gap-1">
-                    <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full shadow-sm"><Edit className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="destructive" className="h-8 w-8 rounded-full shadow-sm"><Trash2 className="h-4 w-4" /></Button>
+            {toursLoading ? (
+              <div className="col-span-full p-12 text-center">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                <p className="mt-2 text-muted-foreground">Memuat paket tur...</p>
+              </div>
+            ) : tours && tours.length > 0 ? (
+              tours.map((tour: any) => (
+                <Card key={tour.id} className="overflow-hidden border-none shadow-md group">
+                  <div className="h-32 md:h-40 bg-slate-200 flex items-center justify-center relative">
+                    <span className="text-muted-foreground text-xs italic">Thumbnail Tur</span>
+                    <div className="absolute top-2 right-2 flex gap-1">
+                      <Button 
+                        size="icon" 
+                        variant="secondary" 
+                        className="h-8 w-8 rounded-full shadow-sm"
+                        onClick={() => handleOpenEditTour(tour)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="icon" variant="destructive" className="h-8 w-8 rounded-full shadow-sm">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Hapus paket tur?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tindakan ini tidak dapat dibatalkan. Paket tur "{tour.name}" akan dihapus permanen.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteTour(tour.id)} className="bg-red-500 hover:bg-red-600">Hapus</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
-                </div>
-                <CardHeader className="p-4">
-                  <CardTitle className="text-base md:text-lg">Paket Alpha {i}</CardTitle>
-                  <CardDescription className="text-xs md:text-sm">Rp 65.000 • 3 KM • 2 Jam</CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
+                  <CardHeader className="p-4">
+                    <CardTitle className="text-base md:text-lg">{tour.name}</CardTitle>
+                    <CardDescription className="text-xs md:text-sm">
+                      Rp {tour.price?.toLocaleString('id-ID')} • {tour.distance} • {tour.duration}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full p-12 text-center text-muted-foreground border-2 border-dashed rounded-xl">
+                Belum ada paket tur yang dibuat. Klik "Paket Tur Baru" untuk memulai.
+              </div>
+            )}
           </div>
         </TabsContent>
 
@@ -269,6 +427,84 @@ export default function AdminDashboard() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Add/Edit Tour Dialog */}
+      <Dialog open={isTourDialogOpen} onOpenChange={setIsTourDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editingTour ? "Edit Paket Tur" : "Tambah Paket Tur Baru"}</DialogTitle>
+            <DialogDescription>
+              Lengkapi detail paket tur untuk ditampilkan kepada pengunjung.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="tour-name">Nama Tur</Label>
+              <Input 
+                id="tour-name" 
+                placeholder="misal: Pacinan Walking Tour"
+                value={tourFormData.name}
+                onChange={(e) => setTourFormData({...tourFormData, name: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="tour-price">Harga (Rp)</Label>
+                <Input 
+                  id="tour-price" 
+                  type="number"
+                  placeholder="65000"
+                  value={tourFormData.price}
+                  onChange={(e) => setTourFormData({...tourFormData, price: e.target.value})}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="tour-date">Tanggal Opsional</Label>
+                <Input 
+                  id="tour-date" 
+                  placeholder="15 Jan 2024"
+                  value={tourFormData.date}
+                  onChange={(e) => setTourFormData({...tourFormData, date: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="tour-distance">Jarak (KM)</Label>
+                <Input 
+                  id="tour-distance" 
+                  placeholder="3 KM"
+                  value={tourFormData.distance}
+                  onChange={(e) => setTourFormData({...tourFormData, distance: e.target.value})}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="tour-duration">Durasi</Label>
+                <Input 
+                  id="tour-duration" 
+                  placeholder="2 Jam"
+                  value={tourFormData.duration}
+                  onChange={(e) => setTourFormData({...tourFormData, duration: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="tour-desc">Deskripsi</Label>
+              <Textarea 
+                id="tour-desc" 
+                placeholder="Ceritakan sejarah singkat atau rute tur ini..."
+                className="min-h-[100px]"
+                value={tourFormData.description}
+                onChange={(e) => setTourFormData({...tourFormData, description: e.target.value})}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTourDialogOpen(false)}>Batal</Button>
+            <Button onClick={handleSaveTour} className="bg-primary text-primary-foreground">Simpan Perubahan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
