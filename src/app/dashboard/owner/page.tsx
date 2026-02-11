@@ -39,9 +39,10 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useFirestore, useCollection } from "@/firebase"
-import { collection, query, where, doc, updateDoc, orderBy } from "firebase/firestore"
+import { collection, query, where, doc, updateDoc } from "firebase/firestore"
 import { errorEmitter } from "@/firebase/error-emitter"
 import { FirestorePermissionError } from "@/firebase/errors"
+import { useToast } from "@/hooks/use-toast"
 
 const STATS = [
   { label: "Total Pendapatan", value: "Rp 12,5 Jt", icon: DollarSign, trend: "+12%", color: "text-green-600" },
@@ -65,10 +66,33 @@ const GUIDES = [
   { id: "g4", name: "Diana Putri" },
 ];
 
+const MOCK_BOOKINGS = [
+  { 
+    id: "mock-b1", 
+    tourName: "Pacinan Walking Tour", 
+    userName: "Rizky Ramadhan", 
+    pax: 2, 
+    createdAt: { toDate: () => new Date() }, 
+    status: "approved", 
+    guideId: null 
+  },
+  { 
+    id: "mock-b2", 
+    tourName: "Susur Sungai Martapura", 
+    userName: "Lutfi Hakim", 
+    pax: 1, 
+    createdAt: { toDate: () => new Date() }, 
+    status: "approved", 
+    guideId: null 
+  }
+];
+
 export default function OwnerDashboard() {
   const router = useRouter();
   const db = useFirestore();
+  const { toast } = useToast();
   const [selectedGuides, setSelectedGuides] = useState<Record<string, string>>({});
+  const [removedMockIds, setRemovedMockIds] = useState<string[]>([]);
 
   const unassignedQuery = useMemo(() => {
     if (!db) return null;
@@ -79,16 +103,34 @@ export default function OwnerDashboard() {
     );
   }, [db]);
 
-  const { data: unassignedBookings, loading } = useCollection(unassignedQuery);
+  const { data: dbBookings, loading } = useCollection(unassignedQuery);
+
+  const bookingsToDisplay = useMemo(() => {
+    const activeMocks = MOCK_BOOKINGS.filter(b => !removedMockIds.includes(b.id));
+    if (!dbBookings || dbBookings.length === 0) return activeMocks;
+    return [...dbBookings, ...activeMocks];
+  }, [dbBookings, removedMockIds]);
 
   const handleAssignGuide = (bookingId: string) => {
-    if (!db || !selectedGuides[bookingId]) return;
-    
     const guideId = selectedGuides[bookingId];
+    if (!guideId) return;
+
     const guideName = GUIDES.find(g => g.id === guideId)?.name;
+
+    // Handle Mock Data (Simulasi)
+    if (bookingId.startsWith('mock-')) {
+      setRemovedMockIds(prev => [...prev, bookingId]);
+      toast({
+        title: "Berhasil (Simulasi)",
+        description: `Pemandu ${guideName} telah ditugaskan (Hanya tampilan).`,
+      });
+      return;
+    }
+
+    // Handle Real Firestore Data
+    if (!db) return;
     const bookingRef = doc(db, "bookings", bookingId);
     
-    // Update Firestore without waiting (non-blocking)
     updateDoc(bookingRef, { 
       guideId: guideId,
       guideName: guideName
@@ -101,10 +143,10 @@ export default function OwnerDashboard() {
       errorEmitter.emit("permission-error", permissionError);
     });
 
-    // Update local state instantly for better UX
-    const newSelected = { ...selectedGuides };
-    delete newSelected[bookingId];
-    setSelectedGuides(newSelected);
+    toast({
+      title: "Penugasan Berhasil",
+      description: `Pemandu ${guideName} telah ditugaskan.`,
+    });
   };
 
   const handleLogout = () => {
@@ -150,10 +192,6 @@ export default function OwnerDashboard() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold font-headline">Pemantauan Bisnis</h1>
           <p className="text-sm md:text-base text-muted-foreground">Ringkasan real-time operasional.</p>
-        </div>
-        <div className="flex gap-2 w-full lg:w-auto">
-          <Button variant="outline" className="flex-1 lg:flex-none text-xs md:text-sm">Ekspor</Button>
-          <Button className="flex-1 lg:flex-none bg-primary hover:bg-primary/90 text-primary-foreground text-xs md:text-sm">Ringkasan</Button>
         </div>
       </div>
 
@@ -209,8 +247,8 @@ export default function OwnerDashboard() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-xs text-muted-foreground mt-2">Memuat data...</p>
               </div>
-            ) : unassignedBookings && unassignedBookings.length > 0 ? (
-              unassignedBookings.map((booking: any) => (
+            ) : bookingsToDisplay.length > 0 ? (
+              bookingsToDisplay.map((booking: any) => (
                 <div key={booking.id} className="flex flex-col gap-3 p-3 md:p-4 rounded-xl border bg-slate-50">
                   <div className="flex justify-between items-start">
                     <div className="space-y-1 min-w-0">
@@ -220,7 +258,9 @@ export default function OwnerDashboard() {
                         <span>•</span>
                         <span>{booking.createdAt?.toDate().toLocaleDateString('id-ID')}</span>
                         <span>•</span>
-                        <Badge variant="outline" className="text-[9px] md:text-[10px] py-0 px-1">{booking.pax} Pax</Badge>
+                        <Badge variant="outline" className="text-[9px] md:text-[10px] py-0 px-1">
+                          {booking.pax} Pax {booking.id.startsWith('mock-') && "(Simulasi)"}
+                        </Badge>
                       </div>
                     </div>
                   </div>
