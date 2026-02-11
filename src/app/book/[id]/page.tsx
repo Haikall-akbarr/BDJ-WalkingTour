@@ -19,6 +19,12 @@ import { collection, addDoc, serverTimestamp, query } from "firebase/firestore"
 import { errorEmitter } from "@/firebase/error-emitter"
 import { FirestorePermissionError } from "@/firebase/errors"
 
+const MOCK_TOURS = [
+  { id: "pacinan", name: "Pacinan Walking Tour", price: 65000 },
+  { id: "sungai", name: "Susur Sungai Martapura", price: 85000 },
+  { id: "kubah", name: "Wisata Religi Kubah Basirih", price: 50000 }
+];
+
 export default function BookingPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = React.use(params);
   const tourIdParam = unwrappedParams.id;
@@ -32,33 +38,36 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const { toast } = useToast();
   const router = useRouter();
 
-  // Ambil semua tur tanpa orderBy untuk menghindari masalah indeks di awal
   const toursQuery = useMemo(() => {
     if (!db) return null;
     return query(collection(db, "tours"));
   }, [db]);
 
-  const { data: tours, loading: toursLoading } = useCollection(toursQuery);
+  const { data: dbTours, loading: toursLoading } = useCollection(toursQuery);
 
   const [formData, setFormData] = useState({
     name: "",
     whatsapp: "",
     email: "",
-    tourId: tourIdParam === "new" ? "" : tourIdParam,
+    tourId: "",
     pax: 1
   });
 
-  // Sinkronisasi tourId jika dipilih dari halaman utama
+  const allTours = useMemo(() => {
+    if (!dbTours || dbTours.length === 0) return MOCK_TOURS;
+    return dbTours;
+  }, [dbTours]);
+
   useEffect(() => {
-    if (tourIdParam && tourIdParam !== "new" && !formData.tourId) {
+    if (tourIdParam && tourIdParam !== "new") {
       setFormData(prev => ({ ...prev, tourId: tourIdParam }));
     }
-  }, [tourIdParam, formData.tourId]);
+  }, [tourIdParam]);
 
   const selectedTour = useMemo(() => {
-    if (!tours || !formData.tourId) return null;
-    return tours.find((t: any) => t.id === formData.tourId);
-  }, [tours, formData.tourId]);
+    if (!allTours || !formData.tourId) return null;
+    return allTours.find((t: any) => t.id === formData.tourId);
+  }, [allTours, formData.tourId]);
 
   const handleNext = () => setStep(step + 1);
   const handleBack = () => setStep(step - 1);
@@ -97,7 +106,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         errorEmitter.emit("permission-error", permissionError);
       });
 
-    // Simulasi proses cepat setelah penulisan Firestore (non-blocking)
     setTimeout(() => {
       setLoading(false);
       setStep(3);
@@ -227,8 +235,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
                               <span className="text-sm">Memuat paket tur...</span>
                             </div>
-                          ) : tours && tours.length > 0 ? (
-                            tours.map((t: any) => (
+                          ) : allTours && allTours.length > 0 ? (
+                            allTours.map((t: any) => (
                               <SelectItem key={t.id} value={t.id}>
                                 {t.name} - Rp {t.price?.toLocaleString('id-ID')}
                               </SelectItem>
