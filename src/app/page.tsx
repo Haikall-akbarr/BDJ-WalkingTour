@@ -45,7 +45,7 @@ export default function LandingPage() {
             Temukan Permata Tersembunyi di <span className="text-primary">Banjarmasin</span>
           </h1>
           <p className="text-xl text-white/90 max-w-xl mx-auto">
-            Rasakan budaya, sejarah, dan kehidupan kota seribu sungai melalui kacamata pemandu lokal berpengalaman.
+            Rasakan keindahan sejarah dan budaya kota seribu sungai melalui kacamata pemandu lokal berpengalaman.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="#tours">
@@ -150,11 +150,11 @@ export default function LandingPage() {
             <p className="text-muted-foreground">Jelajahi titik temu dan rute warisan populer kami di seluruh kota.</p>
           </div>
           <div className="aspect-[21/9] bg-white rounded-2xl shadow-inner border overflow-hidden relative">
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-[url('https://picsum.photos/seed/map/1200/600')] bg-cover opacity-60">
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxjaXR5JTIwbWFwfGVufDB8fHx8MTc3MDY5NTc2Nnww&ixlib=rb-4.1.0&q=80&w=1200')] bg-cover opacity-60">
                <div className="bg-white/90 p-6 rounded-xl shadow-xl backdrop-blur-sm text-center">
                   <MapPin className="h-10 w-10 text-secondary mx-auto mb-2 animate-bounce" />
-                  <p className="font-bold text-lg">Peta Interaktif</p>
-                  <p className="text-sm text-muted-foreground">Titik temu dan rute akan ditampilkan di sini.</p>
+                  <p className="font-bold text-lg">Peta Eksplorasi</p>
+                  <p className="text-sm text-muted-foreground">Titik temu dan rute warisan akan ditampilkan di sini.</p>
                </div>
             </div>
           </div>

@@ -3,6 +3,7 @@
 
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -51,6 +52,7 @@ import { collection, query, where, doc, updateDoc, orderBy, addDoc, deleteDoc, s
 import { errorEmitter } from "@/firebase/error-emitter"
 import { FirestorePermissionError } from "@/firebase/errors"
 import { useToast } from "@/hooks/use-toast"
+import { PlaceHolderImages } from "@/lib/placeholder-images"
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -359,48 +361,57 @@ export default function AdminDashboard() {
                 <p className="mt-2 text-muted-foreground">Memuat paket tur...</p>
               </div>
             ) : tours && tours.length > 0 ? (
-              tours.map((tour: any) => (
-                <Card key={tour.id} className="overflow-hidden border-none shadow-md group">
-                  <div className="h-32 md:h-40 bg-slate-200 flex items-center justify-center relative">
-                    <span className="text-muted-foreground text-xs italic">Thumbnail Tur</span>
-                    <div className="absolute top-2 right-2 flex gap-1">
-                      <Button 
-                        size="icon" 
-                        variant="secondary" 
-                        className="h-8 w-8 rounded-full shadow-sm"
-                        onClick={() => handleOpenEditTour(tour)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="icon" variant="destructive" className="h-8 w-8 rounded-full shadow-sm">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Hapus paket tur?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tindakan ini tidak dapat dibatalkan. Paket tur "{tour.name}" akan dihapus permanen.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteTour(tour.id)} className="bg-red-500 hover:bg-red-600">Hapus</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+              tours.map((tour: any, idx: number) => {
+                const tourImg = PlaceHolderImages[idx % PlaceHolderImages.length];
+                return (
+                  <Card key={tour.id} className="overflow-hidden border-none shadow-md group">
+                    <div className="h-32 md:h-40 relative bg-slate-100">
+                      <Image
+                        src={tourImg.imageUrl}
+                        alt={tour.name}
+                        fill
+                        className="object-cover transition-transform group-hover:scale-105"
+                        data-ai-hint={tourImg.imageHint}
+                      />
+                      <div className="absolute top-2 right-2 flex gap-1 z-10">
+                        <Button 
+                          size="icon" 
+                          variant="secondary" 
+                          className="h-8 w-8 rounded-full shadow-sm bg-white/80 backdrop-blur-sm"
+                          onClick={() => handleOpenEditTour(tour)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="icon" variant="destructive" className="h-8 w-8 rounded-full shadow-sm">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Hapus paket tur?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tindakan ini tidak dapat dibatalkan. Paket tur "{tour.name}" akan dihapus permanen.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteTour(tour.id)} className="bg-red-500 hover:bg-red-600">Hapus</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
-                  </div>
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-base md:text-lg">{tour.name}</CardTitle>
-                    <CardDescription className="text-xs md:text-sm">
-                      Rp {tour.price?.toLocaleString('id-ID')} • {tour.distance} • {tour.duration}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-              ))
+                    <CardHeader className="p-4">
+                      <CardTitle className="text-base md:text-lg">{tour.name}</CardTitle>
+                      <CardDescription className="text-xs md:text-sm">
+                        Rp {tour.price?.toLocaleString('id-ID')} • {tour.distance} • {tour.duration}
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                )
+              })
             ) : (
               <div className="col-span-full p-12 text-center text-muted-foreground border-2 border-dashed rounded-xl">
                 Belum ada paket tur yang dibuat. Klik "Paket Tur Baru" untuk memulai.
