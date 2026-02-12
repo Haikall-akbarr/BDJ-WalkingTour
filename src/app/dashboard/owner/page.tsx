@@ -84,6 +84,24 @@ const MOCK_BOOKINGS = [
     createdAt: { toDate: () => new Date() }, 
     status: "approved", 
     guideId: null 
+  },
+  { 
+    id: "mock-b3", 
+    tourName: "Pacinan Walking Tour", 
+    userName: "Hendra Wijaya", 
+    pax: 3, 
+    createdAt: { toDate: () => new Date(Date.now() - 86400000) }, 
+    status: "approved", 
+    guideId: null 
+  },
+  { 
+    id: "mock-b4", 
+    tourName: "Susur Sungai Martapura", 
+    userName: "Anita Sari", 
+    pax: 2, 
+    createdAt: { toDate: () => new Date(Date.now() - 172800000) }, 
+    status: "approved", 
+    guideId: null 
   }
 ];
 
