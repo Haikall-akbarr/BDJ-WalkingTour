@@ -1,29 +1,28 @@
-
 {
   "placeholderImages": [
     {
       "id": "tour-pacinan",
-      "description": "Historical architecture of Pacinan district in Banjarmasin.",
-      "imageUrl": "https://picsum.photos/seed/pacinan-arch/800/600",
-      "imageHint": "historical building"
+      "description": "Arsitektur bersejarah di kawasan Pacinan Banjarmasin.",
+      "imageUrl": "https://picsum.photos/seed/pacinan/800/600",
+      "imageHint": "pacinan district"
     },
     {
       "id": "tour-river",
-      "description": "Calm river landscape in Banjarmasin at dawn.",
-      "imageUrl": "https://images.unsplash.com/photo-1501785888041-af3ef285b470?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxyaXZlciUyMGxhbmRzY2FwZXxlbnwwfHx8fDE3NzA2OTU3NjZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "Pemandangan sungai Martapura yang tenang di pagi hari.",
+      "imageUrl": "https://images.unsplash.com/photo-1537482165635-f6fb126fbc01?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxmbG9hdGluZyUyMG1hcmtldHxlbnwwfHx8fDE3NzA2OTU3NjZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "river landscape"
     },
     {
       "id": "tour-mosque",
-      "description": "Detailed architecture of a grand mosque.",
+      "description": "Detail arsitektur masjid raya yang megah.",
       "imageUrl": "https://images.unsplash.com/photo-1591017683260-655b616bfb17?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxncmFuZCUyMG1vc3F1ZXxlbnwwfHx8fDE3NzA2OTU3NjZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "mosque architecture"
+      "imageHint": "grand mosque"
     },
     {
       "id": "hero-bg",
-      "description": "Panoramic view of Banjarmasin city and its rivers.",
-      "imageUrl": "https://images.unsplash.com/photo-1449156001931-82992a47d060?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjaXR5JTIwbGFuZG1hcmt8ZW58MHx8fHwxNzcwNjk1NzY2fDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "city landmark"
+      "description": "Pemandangan ikonik Pasar Terapung Lok Baintan.",
+      "imageUrl": "https://si-praswita.banjarkab.go.id/assets/img/destinasi/Pasar_Terapung_Lokbaintan-gbr0.jpg",
+      "imageHint": "floating market"
     }
   ]
 }

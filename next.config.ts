@@ -28,6 +28,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'si-praswita.banjarkab.go.id',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };
