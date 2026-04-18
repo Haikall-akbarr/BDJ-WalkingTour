@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">BDJ WalkingTour</title>
+  <desc id="desc">A stylized tour pin icon for the BDJ WalkingTour site.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e" />
+      <stop offset="100%" stop-color="#14b8a6" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#bg)" />
+  <path d="M32 12c-7.2 0-13 5.8-13 13 0 9.1 13 27 13 27s13-17.9 13-27c0-7.2-5.8-13-13-13Zm0 19.3a6.3 6.3 0 1 1 0-12.6 6.3 6.3 0 0 1 0 12.6Z" fill="#f8fafc" />
+</svg>

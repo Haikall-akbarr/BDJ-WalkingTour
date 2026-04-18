@@ -1,19 +1,18 @@
-
 "use client"
 
 import { useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Navbar } from "@/components/public/Navbar"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, Users, ArrowRight, Loader2, Clock, Map } from "lucide-react"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Calendar, Users, ArrowRight, Clock, Map, ArrowUpRight } from "lucide-react"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
-import { useFirestore, useCollection } from "@/firebase"
-import { collection, query, orderBy, limit } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useAuth } from "@/firebase"
+import { collection, query, limit } from "firebase/firestore"
+import { signOut } from "firebase/auth"
 
-// Tur statis agar halaman tidak terlihat kosong
 const STATIC_TOURS = [
   {
     id: "st-1",
@@ -22,7 +21,7 @@ const STATIC_TOURS = [
     distance: "3 KM",
     duration: "2 Jam",
     date: "Minggu, 12 Okt",
-    imageHint: "historical building"
+    imageHint: "historical building",
   },
   {
     id: "st-2",
@@ -31,7 +30,7 @@ const STATIC_TOURS = [
     distance: "5 KM",
     duration: "3 Jam",
     date: "Sabtu, 18 Okt",
-    imageHint: "river landscape"
+    imageHint: "river landscape",
   },
   {
     id: "st-3",
@@ -40,188 +39,374 @@ const STATIC_TOURS = [
     distance: "2 KM",
     duration: "1.5 Jam",
     date: "Jumat, 24 Okt",
-    imageHint: "mosque architecture"
-  }
-];
+    imageHint: "mosque architecture",
+  },
+]
 
 export default function LandingPage() {
-  const db = useFirestore();
-  
+  const db = useFirestore()
+  const auth = useAuth()
+  const { user, loading: authLoading } = useUser()
+
   const toursQuery = useMemo(() => {
-    if (!db) return null;
-    return query(collection(db, "tours"), limit(6));
-  }, [db]);
+    if (!db) return null
+    return query(collection(db, "tours"), limit(6))
+  }, [db])
 
-  const { data: dbTours, loading: toursLoading } = useCollection(toursQuery);
-  
+  const { data: dbTours } = useCollection(toursQuery)
+
   const allTours = useMemo(() => {
-    const dbData = dbTours || [];
-    // Tampilkan data statis digabung dengan data DB
-    return [...dbData, ...STATIC_TOURS].slice(0, 6);
-  }, [dbTours]);
+    const dbData = dbTours || []
+    return [...dbData, ...STATIC_TOURS].slice(0, 6)
+  }, [dbTours])
 
-  const heroImg = PlaceHolderImages.find(img => img.id === 'hero-bg');
+  const heroImg = PlaceHolderImages.find((img) => img.id === "hero-bg")
+  const showcaseImages = PlaceHolderImages.slice(0, 3)
+
+  const stats = [
+    { value: "20K+", label: "Travelers Hosted" },
+    { value: "2K+", label: "Guided Walks" },
+    { value: "5K+", label: "Trusted Reviews" },
+  ]
+
+  const handleLogout = async () => {
+    if (!auth) return
+    await signOut(auth)
+  }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar />
-      
-      {/* Hero Section */}
-      <section className="relative h-[600px] flex items-center justify-center text-center overflow-hidden bg-slate-900">
-        {heroImg?.imageUrl && (
-          <Image
-            src={heroImg.imageUrl}
-            alt="Hero background"
-            fill
-            className="object-cover brightness-50"
-            priority
-            data-ai-hint="floating market"
-          />
-        )}
-        <div className="relative z-10 container px-4 space-y-6">
-          <h1 className="text-4xl md:text-6xl font-bold text-white font-headline max-w-3xl mx-auto leading-tight">
-            Temukan Permata Tersembunyi di <span className="text-primary">Banjarmasin</span>
-          </h1>
-          <p className="text-xl text-white/90 max-w-xl mx-auto">
-            Rasakan keindahan sejarah dan budaya kota seribu sungai melalui kacamata pemandu lokal berpengalaman.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="#tours">
-              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 rounded-full text-lg">
-                Jelajahi Tur
-              </Button>
-            </Link>
-            <Button size="lg" variant="outline" className="bg-white/10 text-white border-white/20 hover:bg-white/20 px-8 rounded-full text-lg backdrop-blur-sm">
-              Cerita Kami
-            </Button>
-          </div>
-        </div>
-      </section>
+    <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top,_rgba(152,221,202,0.18),_transparent_36%),linear-gradient(180deg,_#f7f4ee_0%,_#ecece7_100%)] text-zinc-900">
+      <main className="w-full space-y-8 md:space-y-12">
+        <section className="relative min-h-[calc(100vh-4rem)] overflow-hidden border-y border-black/5 md:min-h-[calc(100vh-4.5rem)]">
+          {heroImg?.imageUrl && (
+            <>
+              <Image
+                src={heroImg.imageUrl}
+                alt="Hero background"
+                fill
+                className="object-cover"
+                priority
+                data-ai-hint="floating market"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(18,28,26,0.28)_0%,rgba(18,28,26,0.42)_35%,rgba(18,28,26,0.84)_100%)]" />
+            </>
+          )}
 
-      {/* Featured Tours */}
-      <section className="py-20 bg-background" id="tours">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
-            <div className="space-y-2">
-              <Badge variant="secondary" className="bg-primary/20 text-primary-foreground border-none">Tur Mendatang</Badge>
-              <h2 className="text-3xl font-bold font-headline">Rute Jalan Kaki Populer</h2>
-              <p className="text-muted-foreground">Pilih petualangan Anda dan pesan tempat sekarang.</p>
-            </div>
-            <Link href="/tours">
-              <Button variant="ghost" className="group gap-2 hover:bg-primary/10">
-                Lihat Semua Tur <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </Link>
-          </div>
+          <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl flex-col justify-between px-4 py-6 md:min-h-[calc(100vh-4.5rem)] md:px-8 md:py-8">
+            <div className="flex w-full flex-col gap-3 rounded-[28px] border border-white/15 bg-black/20 px-4 py-3 backdrop-blur-md lg:flex-row lg:items-center lg:justify-between lg:rounded-full lg:px-5">
+              <Link href="/" className="flex items-center gap-3 text-white">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#98DDCA] text-[#16302c] shadow-sm">
+                  <Map className="h-5 w-5" />
+                </span>
+                <span className="flex flex-col leading-tight">
+                  <span className="text-[10px] uppercase tracking-[0.3em] text-white/65 md:text-[11px]">Banjarmasin Route</span>
+                  <span className="font-headline text-base font-bold text-white md:text-lg">BDJ WalkingTour</span>
+                </span>
+              </Link>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {allTours.map((tour: any, idx: number) => {
-              const tourImg = PlaceHolderImages[idx % PlaceHolderImages.length];
-              return (
-                <Card key={tour.id} className="overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow group">
-                  <div className="relative h-64 bg-slate-100">
-                    <Image
-                      src={tour.imageUrl || tourImg.imageUrl}
-                      alt={tour.name}
-                      fill
-                      className="object-cover transition-transform group-hover:scale-105"
-                      data-ai-hint={tour.imageHint || tourImg.imageHint}
-                    />
-                    <div className="absolute top-4 right-4">
-                      <Badge className="bg-white/90 text-black border-none backdrop-blur-sm">
-                        Rp {tour.price?.toLocaleString('id-ID')}
-                      </Badge>
-                    </div>
-                  </div>
-                  <CardHeader>
-                    <CardTitle className="font-headline text-xl">{tour.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>{tour.date || "Jadwal Fleksibel"}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
-                       <div className="flex items-center gap-1">
-                         <Map className="h-3.5 w-3.5 text-primary" />
-                         <span>{tour.distance}</span>
-                       </div>
-                       <div className="flex items-center gap-1">
-                         <Clock className="h-3.5 w-3.5 text-primary" />
-                         <span>{tour.duration}</span>
-                       </div>
-                       <div className="flex items-center gap-1">
-                         <Users className="h-3.5 w-3.5 text-primary" />
-                         <span>Grup Kecil</span>
-                       </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Link href={`/book/${tour.id}`} className="w-full">
-                      <Button className="w-full bg-secondary hover:bg-secondary/90 text-white rounded-full">
-                        Pesan Sekarang
+              <div className="flex flex-wrap items-center gap-1 text-sm font-medium text-white/85">
+                <Link href="/" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Beranda</Link>
+                <Link href="#tours" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Semua Tur</Link>
+                {!authLoading && !user && (
+                  <Link href="/login" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Login Staf</Link>
+                )}
+                <Link href="/book/1" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Pesan Sekarang</Link>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {!authLoading && !user && (
+                  <Link href="/login">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-full border-white/25 bg-white/10 px-3 text-xs text-white hover:bg-white/20 hover:text-white"
+                    >
+                      Log in
+                    </Button>
+                  </Link>
+                )}
+                {!authLoading && user && (
+                  <>
+                    <Link href="/dashboard/user">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 rounded-full border-white/25 bg-white/10 px-3 text-xs text-white hover:bg-white/20 hover:text-white"
+                      >
+                        Profil
                       </Button>
                     </Link>
-                  </CardFooter>
-                </Card>
-              )
-            })}
-          </div>
-        </div>
-      </section>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-full border-white/25 bg-white/10 px-3 text-xs text-white hover:bg-white/20 hover:text-white"
+                      onClick={handleLogout}
+                    >
+                      Keluar
+                    </Button>
+                  </>
+                )}
+                <Link href="#tours">
+                  <Button size="sm" className="h-8 rounded-full bg-[#98DDCA] px-3 text-xs font-semibold text-[#16302c] hover:bg-[#b8eadc]">
+                    Explore
+                  </Button>
+                </Link>
+              </div>
+            </div>
 
-      {/* Interactive Map Section */}
-      <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center space-y-4 mb-12">
-            <h2 className="text-3xl font-bold font-headline">Tempat Kami Menjelajah</h2>
-            <p className="text-muted-foreground">Jelajahi titik temu dan rute warisan populer kami di seluruh kota.</p>
-          </div>
-          <div className="aspect-[21/9] bg-white rounded-2xl shadow-inner border overflow-hidden relative">
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxjaXR5JTIwbWFwfGVufDB8fHx8MTc3MDY5NTc2Nnww&ixlib=rb-4.1.0&q=80&w=1200')] bg-cover opacity-60">
-               <div className="bg-white/90 p-6 rounded-xl shadow-xl backdrop-blur-sm text-center">
-                  <MapPin className="h-10 w-10 text-secondary mx-auto mb-2 animate-bounce" />
-                  <p className="font-bold text-lg">Peta Eksplorasi</p>
-                  <p className="text-sm text-muted-foreground">Titik temu dan rute warisan akan ditampilkan di sini.</p>
-               </div>
+            <div className="flex flex-1 items-center py-14 md:py-20 lg:py-24">
+              <div className="space-y-5">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/85 backdrop-blur-sm md:text-xs">
+                  Heritage Walks
+                </div>
+                <h1 className="max-w-4xl text-5xl font-black uppercase leading-[0.9] tracking-[0.08em] text-white sm:text-6xl md:text-7xl lg:text-[7.25rem]">
+                  Banjarmasin
+                  <span className="block text-[#98DDCA]">Walking Tour</span>
+                </h1>
+                <p className="max-w-2xl text-sm leading-7 text-white/88 md:text-lg">
+                  Rasakan keindahan sejarah, sungai, dan budaya kota seribu sungai melalui pengalaman berjalan kaki yang dipandu lokal berpengalaman.
+                </p>
+                <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                  <Link href="#tours">
+                    <Button className="h-11 rounded-full bg-[#98DDCA] px-6 text-xs font-bold uppercase text-[#16302c] hover:bg-[#b8eadc] md:px-7">
+                      Jelajahi Tur <ArrowUpRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                  {!authLoading && !user && (
+                    <Link href="/login">
+                      <Button
+                        variant="outline"
+                        className="h-11 rounded-full border-white/30 bg-white/5 px-6 text-xs font-bold uppercase text-white hover:bg-white/15 hover:text-white md:px-7"
+                      >
+                        Login Staf
+                      </Button>
+                    </Link>
+                  )}
+                  {!authLoading && user && (
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <Link href="/dashboard/user">
+                        <Button
+                          variant="outline"
+                          className="h-11 rounded-full border-white/30 bg-white/5 px-6 text-xs font-bold uppercase text-white hover:bg-white/15 hover:text-white md:px-7"
+                        >
+                          Profil Saya
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="outline"
+                        onClick={handleLogout}
+                        className="h-11 rounded-full border-white/30 bg-white/5 px-6 text-xs font-bold uppercase text-white hover:bg-white/15 hover:text-white md:px-7"
+                      >
+                        Keluar
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 pb-4 sm:grid-cols-3 md:pb-6">
+              {stats.map((stat) => (
+                <div key={stat.label} className="rounded-3xl border border-white/15 bg-black/20 p-4 backdrop-blur-md md:p-5">
+                  <p className="text-3xl font-bold text-white md:text-4xl">{stat.value}</p>
+                  <p className="mt-1 text-[11px] uppercase tracking-[0.25em] text-white/80 md:text-xs">{stat.label}</p>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Footer */}
-      <footer className="bg-slate-900 text-white py-12 mt-auto">
-        <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="col-span-1 md:col-span-2 space-y-4">
-            <div className="flex items-center gap-2 font-bold text-2xl tracking-tight">
-              <MapPin className="h-6 w-6 text-primary" />
-              <span className="font-headline">BDJ WalkingTour</span>
+        <section className="mx-auto w-full max-w-7xl px-4 md:px-8" id="tours">
+          <div className="rounded-[34px] bg-white p-6 shadow-sm md:p-10">
+            <div className="text-center">
+              <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Pilihan Tur</p>
+              <h2 className="mt-2 text-3xl font-black uppercase leading-tight md:text-5xl">
+                Temukan Rute Favorit untuk Perjalanan Berikutnya
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-sm text-zinc-600 md:text-base">
+                Pilih rute jalan kaki populer, lihat harga, dan pesan slot terbaik untuk jadwal kamu.
+              </p>
+              <Link href="/tours">
+                <Button variant="outline" className="mt-5 rounded-full border-zinc-900 px-6 text-xs font-bold uppercase">
+                  Lihat Semua Tur
+                </Button>
+              </Link>
             </div>
-            <p className="text-gray-400 max-w-sm">
-              Mendukung pariwisata lokal berkelanjutan di Banjarmasin sejak 2021. Mari melangkah bersama kami.
-            </p>
+
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {showcaseImages.map((item, index) => (
+                <div key={item.id} className="group relative h-56 overflow-hidden rounded-3xl">
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.description}
+                    fill
+                    className="object-cover transition duration-500 group-hover:scale-105"
+                    data-ai-hint={item.imageHint}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white">
+                    <p className="text-sm font-semibold">{["Bags", "Shoes", "Accessories"][index]}</p>
+                    <span className="rounded-full border border-white/50 px-2 py-0.5 text-[10px]">Shop</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="space-y-4">
-            <h4 className="font-bold">Tautan</h4>
-            <ul className="space-y-2 text-gray-400">
-              <li><Link href="/" className="hover:text-primary">Beranda</Link></li>
-              <li><Link href="/tours" className="hover:text-primary">Semua Tur</Link></li>
-              <li><Link href="/login" className="hover:text-primary">Login Staf</Link></li>
-            </ul>
+        </section>
+
+        <section className="w-full px-4 md:px-8">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+            <div className="space-y-6 lg:col-span-3">
+              <Card className="overflow-hidden rounded-[28px] border-none shadow-md">
+                <CardContent className="p-4 md:p-6">
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Rute Populer</p>
+                      <h3 className="text-2xl font-black uppercase md:text-4xl">Jelajah Kota dari Sudut Terbaik</h3>
+                    </div>
+                    <Button variant="outline" className="rounded-full text-xs">
+                      Explore Routes
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {allTours.slice(0, 4).map((tour: any, idx: number) => {
+                      const tourImg = PlaceHolderImages[idx % PlaceHolderImages.length]
+                      return (
+                        <Link key={tour.id} href={`/book/${tour.id}`} className="group">
+                          <div className="relative h-48 overflow-hidden rounded-2xl">
+                            <Image
+                              src={tour.imageUrl || tourImg.imageUrl}
+                              alt={tour.name}
+                              fill
+                              className="object-cover transition duration-500 group-hover:scale-105"
+                              data-ai-hint={tour.imageHint || tourImg.imageHint}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
+                            <div className="absolute bottom-3 left-3 right-3 text-white">
+                              <p className="truncate text-sm font-bold">{tour.name}</p>
+                              <p className="text-xs text-white/80">Rp {tour.price?.toLocaleString("id-ID")}</p>
+                            </div>
+                          </div>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-[28px] border-none bg-zinc-900 text-white shadow-md">
+                <CardContent className="p-4 md:p-6">
+                  <div className="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">Detail Paket Tur</p>
+                      <h4 className="text-xl font-black uppercase md:text-2xl">Pilihan Jadwal Terbaru</h4>
+                    </div>
+                    <Badge className="bg-white/10 text-white hover:bg-white/10">{allTours.length} Paket</Badge>
+                  </div>
+
+                  <div className="grid gap-3">
+                    {allTours.slice(0, 3).map((tour: any) => (
+                      <div key={tour.id} className="rounded-2xl border border-zinc-700 bg-zinc-800/50 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-bold md:text-base">{tour.name}</p>
+                          <Badge variant="outline" className="border-zinc-500 text-zinc-200">
+                            Rp {tour.price?.toLocaleString("id-ID")}
+                          </Badge>
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-zinc-300 md:grid-cols-4">
+                          <span className="inline-flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {tour.date || "Jadwal Fleksibel"}</span>
+                          <span className="inline-flex items-center gap-1"><Map className="h-3.5 w-3.5" /> {tour.distance}</span>
+                          <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {tour.duration}</span>
+                          <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> Grup Kecil</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-5">
+                    {!authLoading && !user && (
+                      <Link href="/login">
+                        <Button className="rounded-full bg-white text-zinc-900 hover:bg-white/90">
+                          Login Staf <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </Link>
+                    )}
+                    {!authLoading && user && (
+                      <div className="flex flex-wrap gap-2">
+                        <Link href="/dashboard/user">
+                          <Button className="rounded-full bg-white text-zinc-900 hover:bg-white/90">
+                            Profil Saya <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Button variant="outline" className="rounded-full border-zinc-300 text-zinc-900 hover:bg-zinc-100 hover:text-zinc-900" onClick={handleLogout}>
+                          Keluar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="rounded-[28px] border-none bg-white shadow-md lg:col-span-2">
+              <CardContent className="space-y-4 p-4 md:p-6">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">FAQ</p>
+                  <h4 className="text-2xl font-black uppercase">Pertanyaan Umum</h4>
+                </div>
+
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="item-1">
+                    <AccordionTrigger className="text-left">Do I need prior walking experience?</AccordionTrigger>
+                    <AccordionContent>No. Tur kami dirancang untuk pemula dan peserta berpengalaman.</AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="item-2">
+                    <AccordionTrigger className="text-left">How do I choose the right route for my trip?</AccordionTrigger>
+                    <AccordionContent>Pilih paket sesuai jarak, durasi, dan rekomendasi kebutuhan perjalanan.</AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="item-3">
+                    <AccordionTrigger className="text-left">Are your tours guided by local experts?</AccordionTrigger>
+                    <AccordionContent>Ya, setiap rute dipandu oleh tim lokal yang memahami cerita dan konteks tempat.</AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="item-4">
+                    <AccordionTrigger className="text-left">What if the route does not fit my needs?</AccordionTrigger>
+                    <AccordionContent>Tim kami membantu penyesuaian sebelum keberangkatan agar tetap nyaman.</AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </CardContent>
+            </Card>
           </div>
-          <div className="space-y-4">
-            <h4 className="font-bold">Kontak</h4>
-            <ul className="space-y-2 text-gray-400">
-              <li>Email: hello@bdjwalkingtour.com</li>
-              <li>WA: +62 812-3456-7890</li>
-              <li>Jl. Ahmad Yani No. 123</li>
-            </ul>
+        </section>
+
+        <section className="w-full px-4 pb-6 md:px-8 md:pb-10">
+          <div className="overflow-hidden rounded-[34px] border border-black/5">
+            <div className="relative h-[320px] md:h-[360px]">
+              {heroImg?.imageUrl && (
+                <Image
+                  src={heroImg.imageUrl}
+                  alt="Footer Banner"
+                  fill
+                  className="object-cover"
+                />
+              )}
+              <div className="absolute inset-0 bg-black/55" />
+              <div className="relative z-10 flex h-full flex-col justify-between p-6 text-white md:p-10">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-white/70">Follow @bdjwalkingtour</p>
+                  <h4 className="mt-2 max-w-xl text-3xl font-black uppercase leading-tight md:text-5xl">
+                    Where Every Walk Begins With The Right Step
+                  </h4>
+                </div>
+                <div className="flex flex-col gap-2 text-xs text-white/80 sm:flex-row sm:items-center sm:justify-between">
+                  <p>Navigation: Home - Tours - Login - Contact</p>
+                  <p>Stay Connected</p>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="container mx-auto px-4 mt-12 pt-8 border-t border-gray-800 text-center text-gray-500 text-sm">
-          &copy; 2024 BDJ WalkingTour Management System. Hak Cipta Dilindungi.
-        </div>
-      </footer>
+        </section>
+      </main>
     </div>
   )
 }

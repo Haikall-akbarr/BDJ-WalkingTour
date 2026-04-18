@@ -58,6 +58,9 @@ export default function AdminDashboard() {
   const router = useRouter();
   const db = useFirestore();
   const { toast } = useToast();
+  const heroImage = useMemo(() => {
+    return PlaceHolderImages.find((img) => img.id === "hero-bg")?.imageUrl || PlaceHolderImages[0]?.imageUrl;
+  }, []);
 
   const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
   const [editingTour, setEditingTour] = useState<any>(null);
@@ -201,61 +204,78 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="container mx-auto p-4 space-y-6 md:space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl shadow-sm border gap-4">
-        <div className="flex items-center gap-2">
-          <div className="bg-primary/20 p-2 rounded-lg">
-            <MapPin className="h-6 w-6 text-primary-foreground" />
+    <div className="min-h-screen bg-[#ecece7] text-zinc-900">
+      <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-10 space-y-8 md:space-y-10">
+        <section className="relative overflow-hidden rounded-[34px] border border-black/5 bg-white shadow-xl">
+          <div className="absolute inset-0">
+            <Image src={heroImage} alt="Admin Hero" fill className="object-cover" priority />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/70" />
           </div>
-          <div>
-            <h1 className="text-lg md:text-xl font-bold font-headline leading-tight">BDJ WalkingTour</h1>
-            <p className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-wider">Admin Panel</p>
+
+          <div className="relative z-10 p-4 md:p-8">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 backdrop-blur">
+                <MapPin className="h-4 w-4" />
+                <span className="text-xs font-semibold tracking-wide">BDJ WalkingTour</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" className="hidden rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white sm:flex gap-2">
+                  <History className="h-4 w-4" /> Log Sistem
+                </Button>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 rounded-full border-white/40 bg-white/10 text-xs text-white hover:bg-white/20 hover:text-white">
+                      <LogOut className="mr-1 h-3 w-3" /> Keluar
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="w-[90%] max-w-lg rounded-xl">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Apakah Anda yakin ingin keluar?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Anda akan keluar dari dashboard admin dan kembali ke halaman utama.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                      <AlertDialogCancel className="w-full sm:w-auto">Batal</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleLogout} className="bg-red-500 hover:bg-red-600 w-full sm:w-auto">
+                        Keluar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+
+            <div className="mt-8 space-y-3 md:mt-12">
+              <p className="text-[10px] uppercase tracking-[0.35em] text-white/75">Admin Dashboard</p>
+              <h1 className="max-w-3xl text-4xl font-extrabold uppercase leading-tight tracking-wide text-white sm:text-5xl md:text-6xl">
+                Control Center
+              </h1>
+              <p className="max-w-2xl text-xs text-white/90 md:text-sm">
+                Kelola pemesanan, paket tur, dan pengguna dalam panel visual yang seragam dengan dashboard lainnya.
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-          <Button variant="ghost" size="sm" className="hidden sm:flex gap-2">
-            <History className="h-4 w-4" /> Log Sistem
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50 gap-2 shrink-0">
-                <LogOut className="h-4 w-4" /> Keluar
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="w-[90%] max-w-lg rounded-xl">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Apakah Anda yakin ingin keluar?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Anda akan keluar dari dashboard admin dan kembali ke halaman utama.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                <AlertDialogCancel className="w-full sm:w-auto">Batal</AlertDialogCancel>
-                <AlertDialogAction onClick={handleLogout} className="bg-red-500 hover:bg-red-600 w-full sm:w-auto">
-                  Keluar
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </div>
+        </section>
 
-      <div className="space-y-1">
-        <h2 className="text-2xl md:text-3xl font-bold font-headline">Pusat Kontrol Admin</h2>
-        <p className="text-sm md:text-base text-muted-foreground">Kelola pengguna sistem, tur, dan pengaturan global.</p>
-      </div>
+        <div className="rounded-2xl bg-white p-4 shadow-sm md:p-6">
+          <h2 className="text-2xl font-black uppercase md:text-3xl">Pusat Kontrol Admin</h2>
+          <p className="text-sm text-zinc-600">Kelola pengguna sistem, tur, dan pengaturan global.</p>
+        </div>
 
-      <Tabs defaultValue="bookings" className="w-full">
+        <Tabs defaultValue="bookings" className="w-full rounded-[30px] bg-white p-4 shadow-md md:p-6">
         <div className="overflow-x-auto pb-2 scrollbar-hide">
-          <TabsList className="bg-white border w-max sm:w-full justify-start p-1 h-auto mb-4">
-            <TabsTrigger value="bookings" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground py-2 px-4 md:px-6 text-xs md:text-sm">Pemesanan Pending</TabsTrigger>
-            <TabsTrigger value="tours" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground py-2 px-4 md:px-6 text-xs md:text-sm">Kelola Tur</TabsTrigger>
-            <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground py-2 px-4 md:px-6 text-xs md:text-sm">Kelola Pengguna</TabsTrigger>
+          <TabsList className="h-auto w-max justify-start rounded-full border bg-zinc-50 p-1 sm:w-full mb-4">
+            <TabsTrigger value="bookings" className="rounded-full px-4 py-2 text-xs md:px-6 md:text-sm data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Pemesanan Pending</TabsTrigger>
+            <TabsTrigger value="tours" className="rounded-full px-4 py-2 text-xs md:px-6 md:text-sm data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Kelola Tur</TabsTrigger>
+            <TabsTrigger value="users" className="rounded-full px-4 py-2 text-xs md:px-6 md:text-sm data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Kelola Pengguna</TabsTrigger>
           </TabsList>
         </div>
 
         <TabsContent value="bookings" className="space-y-4 outline-none">
-          <Card className="border-none shadow-lg overflow-hidden">
+          <Card className="overflow-hidden rounded-[24px] border border-zinc-200 shadow-none">
             <CardHeader className="p-4 md:p-6 space-y-4">
               <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
                 <div>
@@ -348,7 +368,7 @@ export default function AdminDashboard() {
         <TabsContent value="tours" className="space-y-4 outline-none">
           <div className="flex justify-end">
             <Button 
-              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+              className="w-full sm:w-auto rounded-full bg-zinc-900 hover:bg-zinc-800 text-white gap-2"
               onClick={handleOpenAddTour}
             >
               <Plus className="h-4 w-4" /> Paket Tur Baru
@@ -364,7 +384,7 @@ export default function AdminDashboard() {
               tours.map((tour: any, idx: number) => {
                 const tourImg = PlaceHolderImages[idx % PlaceHolderImages.length];
                 return (
-                  <Card key={tour.id} className="overflow-hidden border-none shadow-md group">
+                  <Card key={tour.id} className="overflow-hidden border border-zinc-200 shadow-none group rounded-2xl">
                     <div className="h-32 md:h-40 relative bg-slate-100">
                       <Image
                         src={tourImg.imageUrl}
@@ -377,7 +397,7 @@ export default function AdminDashboard() {
                         <Button 
                           size="icon" 
                           variant="secondary" 
-                          className="h-8 w-8 rounded-full shadow-sm bg-white/80 backdrop-blur-sm"
+                          className="h-8 w-8 rounded-full bg-white/80 backdrop-blur-sm"
                           onClick={() => handleOpenEditTour(tour)}
                         >
                           <Edit className="h-4 w-4" />
@@ -421,7 +441,7 @@ export default function AdminDashboard() {
         </TabsContent>
 
         <TabsContent value="users" className="space-y-4 outline-none">
-          <Card className="border-none shadow-lg">
+          <Card className="rounded-[24px] border border-zinc-200 shadow-none">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <CardTitle className="text-lg md:text-xl">Manajemen Pengguna</CardTitle>
@@ -435,10 +455,10 @@ export default function AdminDashboard() {
                 { name: "Admin Alpha", role: "Admin", icon: Settings },
                 { name: "Andi Saputra", role: "Guide", icon: Plus }
               ].map((user, i) => (
-                <div key={i} className="flex items-center justify-between p-3 md:p-4 rounded-xl border hover:bg-muted/10 transition-colors gap-2">
+                <div key={i} className="flex items-center justify-between p-3 md:p-4 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-colors gap-2">
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 md:h-10 md:w-10 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
-                      <user.icon className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                    <div className="h-8 w-8 md:h-10 md:w-10 bg-zinc-100 rounded-full flex items-center justify-center shrink-0">
+                      <user.icon className="h-4 w-4 md:h-5 md:w-5 text-zinc-700" />
                     </div>
                     <div className="min-w-0">
                       <p className="font-bold text-sm truncate">{user.name}</p>
@@ -526,10 +546,11 @@ export default function AdminDashboard() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsTourDialogOpen(false)}>Batal</Button>
-            <Button onClick={handleSaveTour} className="bg-primary text-primary-foreground">Simpan Perubahan</Button>
+            <Button onClick={handleSaveTour} className="bg-zinc-900 text-white hover:bg-zinc-800">Simpan Perubahan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   )
 }

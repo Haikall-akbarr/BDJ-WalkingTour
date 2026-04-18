@@ -7,6 +7,9 @@ import { FirebaseClientProvider } from "@/firebase";
 export const metadata: Metadata = {
   title: 'BDJ WalkingTour | Jelajahi Banjarmasin',
   description: 'Rasakan keindahan lokal Banjarmasin melalui tur jalan kaki yang dikurasi.',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({

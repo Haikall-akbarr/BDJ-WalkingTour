@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Navbar } from "@/components/public/Navbar"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,12 +12,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
-import { CheckCircle2, ChevronLeft, ChevronRight, UploadCloud, QrCode, Loader2 } from "lucide-react"
+import { CheckCircle2, ChevronLeft, ChevronRight, QrCode, Loader2, CreditCard } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useCollection } from "@/firebase"
-import { collection, addDoc, serverTimestamp, query } from "firebase/firestore"
-import { errorEmitter } from "@/firebase/error-emitter"
-import { FirestorePermissionError } from "@/firebase/errors"
+import { collection, query } from "firebase/firestore"
 
 const MOCK_TOURS = [
   { id: "pacinan", name: "Pacinan Walking Tour", price: 65000 },
@@ -73,7 +71,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const handleBack = () => setStep(step - 1);
 
   const handleSubmit = () => {
-    if (!db || !selectedTour) {
+    if (!selectedTour) {
       toast({
         variant: "destructive",
         title: "Gagal",
@@ -83,48 +81,79 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     }
     setLoading(true);
 
-    const bookingData = {
-      userName: formData.name,
-      userWhatsApp: formData.whatsapp,
-      userEmail: formData.email,
-      domicile: domicile,
-      customDomicile: domicile === "others" ? customDomicile : "",
-      tourId: formData.tourId,
-      tourName: selectedTour.name,
-      pax: Number(formData.pax),
-      status: "pending",
-      createdAt: serverTimestamp()
-    };
+    fetch("/api/payments/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: formData.name,
+        whatsapp: formData.whatsapp,
+        email: formData.email,
+        domicile,
+        customDomicile,
+        tourId: formData.tourId,
+        tourName: selectedTour.name,
+        tourPrice: Number(selectedTour.price || 0),
+        pax: Number(formData.pax),
+      }),
+    })
+      .then(async (response) => {
+        const result = await response.json();
 
-    addDoc(collection(db, "bookings"), bookingData)
-      .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: "bookings",
-          operation: "create",
-          requestResourceData: bookingData
+        if (!response.ok) {
+          throw new Error(result?.error || "Gagal membuat pembayaran.");
+        }
+
+        if (!result.checkoutUrl) {
+          throw new Error("Checkout URL tidak tersedia.");
+        }
+
+        toast({
+          title: "Mengalihkan ke pembayaran",
+          description: "Setelah pembayaran berhasil, barcode akan dikirim ke email pembeli.",
         });
-        errorEmitter.emit("permission-error", permissionError);
-      });
 
-    setTimeout(() => {
-      setLoading(false);
-      setStep(3);
-      toast({
-        title: "Pendaftaran Berhasil!",
-        description: "Data Anda telah tersimpan dan sedang menunggu verifikasi.",
+        window.location.href = result.checkoutUrl;
+      })
+      .catch((error) => {
+        toast({
+          variant: "destructive",
+          title: "Pembayaran gagal dibuat",
+          description: error?.message || "Silakan coba lagi atau cek konfigurasi payment gateway.",
+        });
+      })
+      .finally(() => {
+        setLoading(false);
       });
-    }, 500);
   };
 
   const progressValue = (step / 3) * 100;
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <Navbar />
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-2xl mx-auto space-y-8">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(152,221,202,0.18),_transparent_36%),linear-gradient(180deg,_#f7f4ee_0%,_#ecece7_100%)] px-4 py-6 md:px-8 md:py-10">
+      <div className="mx-auto max-w-5xl space-y-8">
+        <div className="flex w-full flex-col gap-3 rounded-[28px] border border-white/15 bg-[#10221f]/85 px-4 py-3 text-white shadow-md backdrop-blur-md lg:flex-row lg:items-center lg:justify-between lg:rounded-full lg:px-5">
+          <Link href="/" className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#98DDCA] text-[#16302c] shadow-sm">
+              <QrCode className="h-5 w-5" />
+            </span>
+            <span className="flex flex-col leading-tight">
+              <span className="text-[10px] uppercase tracking-[0.3em] text-white/65 md:text-[11px]">Booking Flow</span>
+              <span className="font-headline text-base font-bold text-white md:text-lg">BDJ WalkingTour</span>
+            </span>
+          </Link>
+
+          <div className="flex flex-wrap items-center gap-1 text-sm font-medium text-white/85">
+            <Link href="/" className="rounded-full px-4 py-2 transition-colors hover:bg-white/10 hover:text-white">Beranda</Link>
+            <Link href="/#tours" className="rounded-full px-4 py-2 transition-colors hover:bg-white/10 hover:text-white">Semua Tur</Link>
+            <Link href="/book/new" className="rounded-full bg-[#98DDCA] px-4 py-2 text-[#16302c] transition-colors hover:bg-[#b8eadc]">Pesan Tur</Link>
+          </div>
+        </div>
+
+        <div className="max-w-3xl mx-auto space-y-8">
           <div className="space-y-2 text-center">
-            <h1 className="text-3xl font-bold font-headline">Pesan Tur Anda</h1>
+            <h1 className="text-3xl font-black uppercase tracking-wide">Pesan Tur Anda</h1>
             <p className="text-muted-foreground">Hanya beberapa langkah dari petualangan Anda berikutnya.</p>
           </div>
 
@@ -137,7 +166,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             </div>
           </div>
 
-          <Card className="shadow-xl border-none">
+          <Card className="rounded-[28px] border-none bg-white/90 shadow-[0_24px_80px_rgba(16,34,31,0.12)] backdrop-blur">
             {step === 1 && (
               <form onSubmit={(e) => { e.preventDefault(); handleNext(); }}>
                 <CardHeader>
@@ -170,13 +199,14 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Alamat Email (Opsional)</Label>
+                    <Label htmlFor="email">Alamat Email</Label>
                     <Input 
                       id="email" 
                       type="email" 
                       placeholder="john@example.com" 
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      required
                     />
                   </div>
 
@@ -262,7 +292,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2 bg-primary/10 p-4 rounded-lg">
+                  <div className="flex items-center space-x-2 bg-primary/10 p-4 rounded-xl">
                     <Checkbox id="consent" required />
                     <Label htmlFor="consent" className="text-sm leading-tight font-normal">
                       Saya bersedia berjalan kaki dan akan menyiapkan alas kaki yang nyaman.
@@ -280,38 +310,25 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             {step === 2 && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <CardHeader>
-                  <CardTitle>Konfirmasi Pembayaran</CardTitle>
-                  <CardDescription>Selesaikan pembayaran Anda untuk mengamankan tempat.</CardDescription>
+                  <CardTitle>Konfirmasi Pembayaran Gateway</CardTitle>
+                  <CardDescription>Selesaikan pembayaran Anda untuk mengamankan tempat. Barcode akan dikirim otomatis ke email setelah pembayaran berhasil.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
-                  <div className="bg-slate-50 p-6 rounded-xl border-2 border-dashed border-slate-200 text-center space-y-4">
-                    <div className="mx-auto bg-white p-4 w-32 h-32 flex items-center justify-center rounded-lg shadow-sm">
-                      <QrCode className="h-24 w-24 text-slate-400" />
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-6 space-y-4 text-center">
+                    <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-2xl bg-white shadow-sm">
+                      <CreditCard className="h-14 w-14 text-[#98DDCA]" />
                     </div>
                     <div className="space-y-1">
-                      <p className="font-bold text-lg">PINDAI QRIS</p>
-                      <p className="text-sm text-muted-foreground">BDJ WalkingTour (JelajahBorneoKu)</p>
-                    </div>
-                    <div className="pt-2">
-                      <p className="text-xs text-muted-foreground uppercase tracking-widest">Transfer Bank</p>
-                      <p className="font-mono font-bold text-xl">BCA: 123 456 7890</p>
-                      <p className="text-sm">A/N: BDJ WalkingTour</p>
+                      <p className="font-bold text-lg">Checkout Payment Gateway</p>
+                      <p className="text-sm text-muted-foreground">Midtrans akan membuka halaman pembayaran resmi setelah Anda klik tombol di bawah.</p>
                     </div>
                     {selectedTour && (
-                      <div className="pt-2 border-t text-sm">
+                      <div className="rounded-2xl bg-white p-4 text-sm">
                         <p className="text-muted-foreground">Total yang harus dibayar:</p>
-                        <p className="text-lg font-bold text-secondary">Rp {(selectedTour.price * formData.pax).toLocaleString('id-ID')}</p>
+                        <p className="text-xl font-black text-zinc-900">Rp {(selectedTour.price * formData.pax).toLocaleString('id-ID')}</p>
+                        <p className="mt-2 text-xs text-muted-foreground">Setelah pembayaran berhasil, barcode absensi akan dikirim ke email pembeli.</p>
                       </div>
                     )}
-                  </div>
-
-                  <div className="space-y-4">
-                    <Label className="block text-center mb-4">Unggah Bukti Pembayaran</Label>
-                    <div className="border-2 border-dashed border-primary/30 bg-primary/5 rounded-xl p-8 text-center cursor-pointer hover:bg-primary/10 transition-colors space-y-2">
-                      <UploadCloud className="h-10 w-10 text-primary mx-auto" />
-                      <p className="font-medium">Klik untuk unggah gambar</p>
-                      <p className="text-xs text-muted-foreground">JPG, PNG hingga 5MB</p>
-                    </div>
                   </div>
                 </CardContent>
                 <div className="flex gap-4 p-6 pt-0">
@@ -319,11 +336,11 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     <ChevronLeft className="h-4 w-4 mr-2" /> Kembali
                   </Button>
                   <Button 
-                    className="flex-[2] bg-secondary hover:bg-secondary/90 text-white" 
+                    className="flex-[2] bg-[#98DDCA] text-[#16302c] hover:bg-[#b8eadc]" 
                     onClick={handleSubmit}
                     disabled={loading}
                   >
-                    {loading ? "Memproses..." : "Saya Sudah Bayar / Unggah Bukti"}
+                    {loading ? "Menghubungkan Payment Gateway..." : "Bayar Sekarang"}
                   </Button>
                 </div>
               </div>

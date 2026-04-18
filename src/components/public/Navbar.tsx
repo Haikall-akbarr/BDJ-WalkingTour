@@ -1,4 +1,3 @@
-
 "use client"
 
 import Link from "next/link"
@@ -14,48 +13,57 @@ import {
 
 export function Navbar() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between px-4 mx-auto">
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl text-primary-foreground">
-          <MapPin className="h-6 w-6 text-primary" />
-          <span className="font-headline">BDJ WalkingTour</span>
+    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#10221f]/85 text-white shadow-[0_10px_30px_rgba(0,0,0,0.12)] backdrop-blur-xl supports-[backdrop-filter]:bg-[#10221f]/75">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-8">
+        <Link href="/" className="flex items-center gap-3 rounded-full px-2 py-1 transition-colors hover:bg-white/8">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#98DDCA] text-[#10221f] shadow-sm">
+            <MapPin className="h-5 w-5" />
+          </span>
+          <span className="flex flex-col leading-tight">
+            <span className="text-[10px] uppercase tracking-[0.3em] text-white/65">Banjarmasin Route</span>
+            <span className="font-headline text-base font-bold text-white md:text-lg">BDJ WalkingTour</span>
+          </span>
         </Link>
 
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
-          <Link href="/" className="hover:text-primary transition-colors font-body">Beranda</Link>
-          <Link href="/#tours" className="hover:text-primary transition-colors font-body">Semua Tur</Link>
-          <Link href="/login" className="hover:text-primary transition-colors font-body">Login Staf</Link>
-          <Link href="/book/1">
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6 font-body">Pesan Sekarang</Button>
+        <nav className="hidden items-center gap-1 text-sm font-medium md:flex">
+          <Link href="/" className="rounded-full px-4 py-2 text-white/80 transition-colors hover:bg-white/8 hover:text-white">Beranda</Link>
+          <Link href="/#tours" className="rounded-full px-4 py-2 text-white/80 transition-colors hover:bg-white/8 hover:text-white">Semua Tur</Link>
+          <Link href="/login" className="rounded-full px-4 py-2 text-white/80 transition-colors hover:bg-white/8 hover:text-white">Login Staf</Link>
+          <Link href="/book/1" className="ml-2">
+            <Button className="rounded-full bg-[#98DDCA] px-6 text-[#10221f] hover:bg-[#b8eadc]">
+              Pesan Sekarang
+            </Button>
           </Link>
         </nav>
 
-        {/* Mobile Nav */}
         <div className="md:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="rounded-full text-white hover:bg-white/10 hover:text-white">
                 <Menu className="h-6 w-6" />
                 <span className="sr-only">Buka Menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+            <SheetContent side="right" className="w-[300px] border-l border-white/10 bg-[#10221f]/96 text-white sm:w-[400px]">
               <div className="flex flex-col gap-4">
-                <SheetTitle className="font-headline text-2xl flex items-center gap-2">
-                  <MapPin className="h-6 w-6 text-primary" />
-                  BDJ WalkingTour
+                <SheetTitle className="flex items-center gap-3 text-2xl font-headline text-white">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#98DDCA] text-[#10221f]">
+                    <MapPin className="h-6 w-6" />
+                  </span>
+                  <span className="leading-tight">BDJ WalkingTour</span>
                 </SheetTitle>
-                <SheetDescription className="font-body">
+                <SheetDescription className="text-white/70">
                   Menu navigasi untuk menjelajahi layanan kami.
                 </SheetDescription>
               </div>
-              <nav className="flex flex-col gap-6 mt-12">
-                <Link href="/" className="text-lg font-medium hover:text-primary transition-colors font-body">Beranda</Link>
-                <Link href="/#tours" className="text-lg font-medium hover:text-primary transition-colors font-body">Semua Tur</Link>
-                <Link href="/login" className="text-lg font-medium hover:text-primary transition-colors font-body">Login Staf</Link>
+              <nav className="mt-12 flex flex-col gap-3">
+                <Link href="/" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-base font-medium transition-colors hover:bg-white/10 hover:text-white">Beranda</Link>
+                <Link href="/#tours" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-base font-medium transition-colors hover:bg-white/10 hover:text-white">Semua Tur</Link>
+                <Link href="/login" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-base font-medium transition-colors hover:bg-white/10 hover:text-white">Login Staf</Link>
                 <Link href="/book/1">
-                  <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-full font-body">Pesan Sekarang</Button>
+                  <Button className="w-full rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc]">
+                    Pesan Sekarang
+                  </Button>
                 </Link>
               </nav>
             </SheetContent>
