@@ -15,19 +15,39 @@ export const FirebaseClientProvider = ({ children }: { children: ReactNode }) =>
     firestore: Firestore;
     auth: Auth;
   } | null>(null);
+  const [firebaseReady, setFirebaseReady] = useState(false);
+  const [firebaseAvailable, setFirebaseAvailable] = useState(false);
+  const [firebaseError, setFirebaseError] = useState<string | null>(null);
 
   useEffect(() => {
-    const { firebaseApp, firestore, auth } = initializeFirebase();
-    setInstances({ firebaseApp, firestore, auth });
+    try {
+      const initialized = initializeFirebase();
+      if (initialized) {
+        setInstances(initialized);
+        setFirebaseAvailable(true);
+        setFirebaseError(null);
+      } else {
+        setFirebaseAvailable(false);
+        setFirebaseError("Konfigurasi Firebase client belum lengkap di .env.local");
+      }
+    } catch (err) {
+      setInstances(null);
+      setFirebaseAvailable(false);
+      const message = err instanceof Error ? err.message : String(err);
+      setFirebaseError(message || "Inisialisasi Firebase gagal");
+    } finally {
+      setFirebaseReady(true);
+    }
   }, []);
-
-  if (!instances) return null;
 
   return (
     <FirebaseProvider
-      firebaseApp={instances.firebaseApp}
-      firestore={instances.firestore}
-      auth={instances.auth}
+      firebaseApp={instances?.firebaseApp ?? null}
+      firestore={instances?.firestore ?? null}
+      auth={instances?.auth ?? null}
+      firebaseReady={firebaseReady}
+      firebaseAvailable={firebaseAvailable}
+      firebaseError={firebaseError}
     >
       <FirebaseErrorListener />
       {children}

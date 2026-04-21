@@ -107,14 +107,14 @@ export default function LandingPage() {
               <div className="flex flex-wrap items-center gap-1 text-sm font-medium text-white/85">
                 <Link href="/" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Beranda</Link>
                 <Link href="#tours" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Semua Tur</Link>
-                {!authLoading && !user && (
+                {(!authLoading || !auth) && !user && (
                   <Link href="/login" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Login Staf</Link>
                 )}
                 <Link href="/book/1" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Pesan Sekarang</Link>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                {!authLoading && !user && (
+                {((!authLoading || !auth) && !user) && (
                   <Link href="/login">
                     <Button
                       variant="outline"
@@ -142,7 +142,7 @@ export default function LandingPage() {
                       className="h-8 rounded-full border-white/25 bg-white/10 px-3 text-xs text-white hover:bg-white/20 hover:text-white"
                       onClick={handleLogout}
                     >
-                      Keluar
+                      keluar
                     </Button>
                   </>
                 )}

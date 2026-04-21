@@ -1,18 +1,26 @@
 
 'use client';
 
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
-import { firebaseConfig } from './config';
+import { getFirebaseConfig } from './config';
+
+const FIREBASE_CLIENT_APP_NAME = 'bdj-walkingtour-client';
 
 export function initializeFirebase(): {
   firebaseApp: FirebaseApp;
   firestore: Firestore;
   auth: Auth;
-} {
-  const firebaseApp =
-    getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+} | null {
+  const firebaseConfig = getFirebaseConfig();
+
+  if (!firebaseConfig) {
+    return null;
+  }
+
+  const existingApp = getApps().find((app) => app.name === FIREBASE_CLIENT_APP_NAME);
+  const firebaseApp = existingApp ?? initializeApp(firebaseConfig, FIREBASE_CLIENT_APP_NAME);
   const firestore = getFirestore(firebaseApp);
   const auth = getAuth(firebaseApp);
 

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/firebase"
+import { useAuth, useFirebaseStatus } from "@/firebase"
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
 
@@ -30,6 +30,7 @@ const DASHBOARD_ROUTES: Record<string, string> = {
 
 export default function LoginPage() {
   const auth = useAuth();
+  const { firebaseReady, firebaseAvailable, firebaseError } = useFirebaseStatus();
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -67,11 +68,28 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
+    if (!firebaseReady) {
+      toast({
+        title: "Firebase sedang menyiapkan",
+        description: "Tunggu sebentar lalu coba login Google lagi.",
+      });
+      return;
+    }
+
+    if (!firebaseAvailable) {
+      toast({
+        variant: "destructive",
+        title: "Firebase belum aktif",
+        description: firebaseError || "Inisialisasi Firebase gagal. Periksa API key, auth domain, dan aktifkan Google provider di Firebase Auth.",
+      });
+      return;
+    }
+
     if (!auth) {
       toast({
         variant: "destructive",
         title: "Firebase belum siap",
-        description: "Pastikan Firebase client provider aktif sebelum memakai login Google.",
+        description: "Provider Firebase belum menyediakan auth instance. Refresh halaman lalu coba lagi.",
       });
       return;
     }
@@ -172,10 +190,10 @@ export default function LoginPage() {
                     variant="outline"
                     className="h-11 w-full justify-center gap-2 rounded-full border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-50"
                     onClick={handleGoogleLogin}
-                    disabled={googleLoading || loading}
+                    disabled={googleLoading || loading || !firebaseReady}
                   >
                     <Chrome className="h-4 w-4" />
-                    {googleLoading ? "Menghubungkan Google..." : "Lanjutkan dengan Google"}
+                    {googleLoading ? "Menghubungkan Google..." : !firebaseReady ? "Menyiapkan Firebase..." : "Lanjutkan dengan Google"}
                   </Button>
 
                   <div className="relative w-full">

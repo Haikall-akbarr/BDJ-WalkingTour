@@ -1,20 +1,34 @@
 
-function requireFirebaseEnv(name: string) {
-  const value = process.env[name as keyof NodeJS.ProcessEnv];
+export type FirebaseConfig = {
+  apiKey: string;
+  authDomain: string;
+  databaseURL?: string;
+  projectId: string;
+  storageBucket: string;
+  messagingSenderId: string;
+  appId: string;
+};
 
-  if (!value) {
-    throw new Error(`Missing Firebase environment variable: ${name}. Set it in .env.local and in Vercel.`);
+export function getFirebaseConfig(): FirebaseConfig | null {
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim();
+  const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim();
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
+  const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim();
+  const messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID?.trim();
+  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID?.trim();
+  const databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL?.trim();
+
+  if (!apiKey || !authDomain || !projectId || !storageBucket || !messagingSenderId || !appId) {
+    return null;
   }
 
-  return value;
+  return {
+    apiKey,
+    authDomain,
+    databaseURL,
+    projectId,
+    storageBucket,
+    messagingSenderId,
+    appId,
+  };
 }
-
-export const firebaseConfig = {
-  apiKey: requireFirebaseEnv("NEXT_PUBLIC_FIREBASE_API_KEY"),
-  authDomain: requireFirebaseEnv("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"),
-  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
-  projectId: requireFirebaseEnv("NEXT_PUBLIC_FIREBASE_PROJECT_ID"),
-  storageBucket: requireFirebaseEnv("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET"),
-  messagingSenderId: requireFirebaseEnv("NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID"),
-  appId: requireFirebaseEnv("NEXT_PUBLIC_FIREBASE_APP_ID"),
-};
