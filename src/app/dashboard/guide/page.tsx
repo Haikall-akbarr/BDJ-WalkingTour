@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar, Users, MapPin, CheckCircle2, MessageSquareText, LogOut, Loader2, ArrowUpRight, QrCode, Camera, Download } from "lucide-react"
 import Link from "next/link"
 import { BrowserMultiFormatReader } from "@zxing/browser"
+import type { IScannerControls } from "@zxing/browser/es2015/common/IScannerControls"
 import * as XLSX from "xlsx"
 import {
   AlertDialog,
@@ -23,8 +24,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { useFirestore, useCollection } from "@/firebase"
-import { collection, query, where } from "firebase/firestore"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
 import { useToast } from "@/hooks/use-toast"
 
@@ -68,7 +67,6 @@ const MOCK_TOURS = [
 
 export default function GuideDashboard() {
   const router = useRouter();
-  const db = useFirestore();
   const { toast } = useToast();
   const heroImage = useMemo(() => {
     return PlaceHolderImages.find((img) => img.id === "hero-bg")?.imageUrl || PlaceHolderImages[0]?.imageUrl;
@@ -81,29 +79,16 @@ export default function GuideDashboard() {
   const [scanHistory, setScanHistory] = useState<ScanHistoryItem[]>([]);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const scannerControlsRef = useRef<IScannerControls | null>(null);
   const scanGuardRef = useRef(false);
-  
+
   // ID Pemandu simulasi (dari login)
   const currentGuideId = "g1"; 
   const historyStorageKey = `guide-scan-history-${currentGuideId}`;
-
-  const scheduleQuery = useMemo(() => {
-    if (!db) return null;
-    return query(
-      collection(db, "bookings"), 
-      where("guideId", "==", currentGuideId),
-      where("status", "==", "approved")
-    );
-  }, [db]);
-
-  const { data: dbTours, loading } = useCollection(scheduleQuery);
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
 
-  // Gabungkan data DB dengan data mock jika DB kosong
-  const myTours = useMemo(() => {
-    if (!dbTours || dbTours.length === 0) return MOCK_TOURS;
-    return [...dbTours, ...MOCK_TOURS];
-  }, [dbTours]);
+  // Gunakan data mock sebagai fallback stabil jika Firestore tidak dibutuhkan/terbatas
+  const myTours = useMemo(() => MOCK_TOURS, []);
 
   const selectedTour = useMemo(() => {
     if (!myTours || myTours.length === 0) return null;
@@ -132,7 +117,8 @@ export default function GuideDashboard() {
   }, [historyStorageKey, scanHistory]);
 
   const stopCameraScanner = () => {
-    scannerRef.current?.reset();
+    scannerControlsRef.current?.stop();
+    scannerControlsRef.current = null;
     scannerRef.current = null;
     scanGuardRef.current = false;
     setCameraActive(false);
@@ -140,7 +126,9 @@ export default function GuideDashboard() {
 
   useEffect(() => {
     return () => {
-      stopCameraScanner();
+      scannerControlsRef.current?.stop();
+      scannerControlsRef.current = null;
+      scannerRef.current = null;
     };
   }, []);
 
@@ -209,38 +197,59 @@ export default function GuideDashboard() {
 
   const handleStartCamera = async () => {
     if (cameraActive) return;
+    setScanResult(null);
+    setCameraActive(true);
+  };
+
+  useEffect(() => {
+    if (!cameraActive) return;
     if (!videoRef.current) return;
 
-    try {
-      const scanner = new BrowserMultiFormatReader();
-      scannerRef.current = scanner;
+    let mounted = true;
+
+    const startScanner = async () => {
+      try {
+        const scanner = new BrowserMultiFormatReader();
+        scannerRef.current = scanner;
+        scanGuardRef.current = false;
+
+        scannerControlsRef.current = await scanner.decodeFromVideoDevice(undefined, videoRef.current!, async (result, error) => {
+          if (!mounted) return;
+
+          if (result && !scanGuardRef.current) {
+            scanGuardRef.current = true;
+            const decoded = result.getText();
+            stopCameraScanner();
+            setScanCode(decoded);
+            await verifyAttendanceCode(decoded, "camera");
+            return;
+          }
+
+          if (error && (error as { name?: string })?.name !== "NotFoundException") {
+            setScanResult("Kamera aktif, tetapi kode belum terbaca jelas. Coba arahkan ulang kamera.");
+          }
+        });
+      } catch (error: any) {
+        if (!mounted) return;
+        setCameraActive(false);
+        toast({
+          variant: "destructive",
+          title: "Kamera tidak bisa dibuka",
+          description: error?.message || "Pastikan izin kamera di browser sudah diberikan.",
+        });
+      }
+    };
+
+    startScanner();
+
+    return () => {
+      mounted = false;
+      scannerControlsRef.current?.stop();
+      scannerControlsRef.current = null;
+      scannerRef.current = null;
       scanGuardRef.current = false;
-      setScanResult(null);
-      setCameraActive(true);
-
-      await scanner.decodeFromVideoDevice(undefined, videoRef.current, async (result, error) => {
-        if (result && !scanGuardRef.current) {
-          scanGuardRef.current = true;
-          const decoded = result.getText();
-          stopCameraScanner();
-          setScanCode(decoded);
-          await verifyAttendanceCode(decoded, "camera");
-          return;
-        }
-
-        if (error && (error as { name?: string })?.name !== "NotFoundException") {
-          setScanResult("Kamera aktif, tetapi kode belum terbaca jelas. Coba arahkan ulang kamera.");
-        }
-      });
-    } catch (error: any) {
-      setCameraActive(false);
-      toast({
-        variant: "destructive",
-        title: "Kamera tidak bisa dibuka",
-        description: error?.message || "Pastikan izin kamera di browser sudah diberikan.",
-      });
-    }
-  };
+    };
+  }, [cameraActive, toast]);
 
   const handleDownloadExcel = () => {
     if (scanHistory.length === 0) {
@@ -423,12 +432,7 @@ export default function GuideDashboard() {
           </CardContent>
         </Card>
 
-        {loading && (!dbTours || dbTours.length === 0) ? (
-          <div className="flex flex-col items-center justify-center rounded-[28px] bg-white p-20">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">Memuat jadwal tur Anda...</p>
-          </div>
-        ) : myTours && myTours.length > 0 ? (
+        {myTours && myTours.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Card className="rounded-[28px] border-none bg-white shadow-md lg:col-span-1">
               <CardHeader>
