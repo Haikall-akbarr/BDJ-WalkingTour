@@ -395,6 +395,15 @@ export default function GuideDashboard() {
                 <p className="pt-2 text-xs text-zinc-500">Arahkan kamera ke barcode/QR peserta sampai terbaca otomatis.</p>
               </div>
             )}
+
+            <div className="rounded-2xl bg-blue-50 border border-blue-200 p-3">
+              <p className="text-xs font-semibold text-blue-900 mb-2">💡 Kode Test Tersedia:</p>
+              <div className="space-y-1 text-xs text-blue-800">
+                <p>• <code className="bg-white px-2 py-1 rounded">BDJ-LOCAL-08-A1B2C3</code> - Budi Santoso (Susur Sungai)</p>
+                <p>• <code className="bg-white px-2 py-1 rounded">BDJ-LOCAL-09-D4E5F6</code> - Siti Rahma (Pacinan Walking)</p>
+                <p>• <code className="bg-white px-2 py-1 rounded">BDJ-LOCAL-10-G7H8I9</code> - Ahmad Wijaya (Susur Sungai)</p>
+              </div>
+            </div>
           </CardContent>
           {scanResult && (
             <CardFooter className="pt-0">
