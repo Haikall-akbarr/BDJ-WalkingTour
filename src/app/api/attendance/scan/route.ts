@@ -4,6 +4,7 @@ import { getServerFirestore, serverTimestamp } from '@/lib/server-firebase';
 
 export const runtime = 'nodejs';
 
+// POST endpoint for scanning attendance codes
 export async function POST(request: NextRequest) {
   try {
     // Initialize dummy bookings on first call
