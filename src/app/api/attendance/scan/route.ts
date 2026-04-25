@@ -4,6 +4,11 @@ import { getServerFirestore, serverTimestamp } from '@/lib/server-firebase';
 
 export const runtime = 'nodejs';
 
+// GET endpoint for health check
+export async function GET(request: NextRequest) {
+  return NextResponse.json({ status: 'ok', message: 'Attendance scan endpoint is ready' });
+}
+
 // POST endpoint for scanning attendance codes
 export async function POST(request: NextRequest) {
   try {
