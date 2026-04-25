@@ -28,7 +28,7 @@ export const FirebaseClientProvider = ({ children }: { children: ReactNode }) =>
         setFirebaseError(null);
       } else {
         setFirebaseAvailable(false);
-        setFirebaseError("Konfigurasi Firebase client belum lengkap di .env.local");
+        setFirebaseError("Konfigurasi Firebase client belum lengkap. Pastikan env vars NEXT_PUBLIC_FIREBASE_* sudah diset di Vercel atau .env.local.");
       }
     } catch (err) {
       setInstances(null);

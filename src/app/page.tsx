@@ -9,8 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Calendar, Users, ArrowRight, Clock, Map, ArrowUpRight } from "lucide-react"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
-import { useFirestore, useCollection, useUser, useAuth } from "@/firebase"
-import { collection, query, limit } from "firebase/firestore"
+import { useUser, useAuth } from "@/firebase"
 import { signOut } from "firebase/auth"
 
 const STATIC_TOURS = [
@@ -44,21 +43,9 @@ const STATIC_TOURS = [
 ]
 
 export default function LandingPage() {
-  const db = useFirestore()
   const auth = useAuth()
   const { user, loading: authLoading } = useUser()
-
-  const toursQuery = useMemo(() => {
-    if (!db) return null
-    return query(collection(db, "tours"), limit(6))
-  }, [db])
-
-  const { data: dbTours } = useCollection(toursQuery)
-
-  const allTours = useMemo(() => {
-    const dbData = dbTours || []
-    return [...dbData, ...STATIC_TOURS].slice(0, 6)
-  }, [dbTours])
+  const allTours = useMemo(() => STATIC_TOURS, [])
 
   const heroImg = PlaceHolderImages.find((img) => img.id === "hero-bg")
   const showcaseImages = PlaceHolderImages.slice(0, 3)

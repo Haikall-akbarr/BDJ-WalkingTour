@@ -80,7 +80,7 @@ export default function LoginPage() {
       toast({
         variant: "destructive",
         title: "Firebase belum aktif",
-        description: firebaseError || "Inisialisasi Firebase gagal. Periksa API key, auth domain, dan aktifkan Google provider di Firebase Auth.",
+        description: firebaseError || "Inisialisasi Firebase gagal. Periksa env vars NEXT_PUBLIC_FIREBASE_* di Vercel, pastikan auth domain benar, dan aktifkan Google provider di Firebase Auth.",
       });
       return;
     }
@@ -110,10 +110,27 @@ export default function LoginPage() {
 
       router.push(route);
     } catch (error) {
+      const firebaseError = error as { code?: string; message?: string };
+      const code = firebaseError?.code || "unknown";
+      const hostname = typeof window !== "undefined" ? window.location.hostname : "unknown-host";
+
+      let description = "Aktifkan Google sign-in di Firebase Console, pastikan authorized domains berisi domain Vercel Anda, dan cek config Firebase valid.";
+
+      if (code === "auth/unauthorized-domain") {
+        description = `Domain ${hostname} belum diizinkan di Firebase Authentication > Settings > Authorized domains.`;
+      } else if (code === "auth/popup-blocked") {
+        description = "Popup login diblokir browser. Izinkan pop-up untuk situs ini lalu coba lagi.";
+      } else if (code === "auth/popup-closed-by-user") {
+        description = "Popup login ditutup sebelum selesai. Coba login Google sekali lagi.";
+      } else if (firebaseError?.message) {
+        description = `${firebaseError.message} (code: ${code})`;
+      }
+
+      console.error("Google login error", { code, message: firebaseError?.message, hostname });
       toast({
         variant: "destructive",
         title: "Google login gagal",
-        description: "Aktifkan Google sign-in di Firebase Console dan pastikan config Firebase valid.",
+        description,
       });
     } finally {
       setGoogleLoading(false);
