@@ -2,7 +2,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Chrome, ArrowLeft, Info, Lock, Mail, MapPin, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -36,21 +36,22 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  const nextRoute = (() => {
-    const candidate = searchParams.get("next");
+  const getSafeNextRoute = () => {
+    if (typeof window === "undefined") return "/";
+    const candidate = new URLSearchParams(window.location.search).get("next");
     if (!candidate) return "/";
     if (!candidate.startsWith("/") || candidate.startsWith("//")) return "/";
     return candidate;
-  })();
+  };
 
   const heroImage = PlaceHolderImages.find((img) => img.id === "hero-bg")?.imageUrl || PlaceHolderImages[0]?.imageUrl;
 
   const handleLogin = (role: string) => {
     setLoading(true);
     setTimeout(() => {
+      const nextRoute = getSafeNextRoute();
       router.push(nextRoute || DASHBOARD_ROUTES[role] || "/dashboard/owner");
     }, 1000);
   };
@@ -63,6 +64,7 @@ export default function LoginPage() {
 
     setTimeout(() => {
       if (user) {
+        const nextRoute = getSafeNextRoute();
         router.push(nextRoute || DASHBOARD_ROUTES[user.role] || "/dashboard/owner");
       } else {
         setLoading(false);
@@ -109,6 +111,7 @@ export default function LoginPage() {
       provider.setCustomParameters({ prompt: "select_account" });
 
       const result = await signInWithPopup(auth, provider);
+      const nextRoute = getSafeNextRoute();
       const route = nextRoute || "/";
 
       toast({
