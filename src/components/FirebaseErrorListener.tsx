@@ -17,11 +17,9 @@ export function FirebaseErrorListener() {
         title: "Permission Denied",
         description: error.message,
       });
-      
-      // Throwing the error here allows the Next.js error overlay to catch it in development
-      if (process.env.NODE_ENV === 'development') {
-        throw error;
-      }
+
+      // Keep the app running in dev/prod; Firestore permission issues should surface as UI feedback only.
+      console.warn("Firestore permission error", error);
     };
 
     errorEmitter.on('permission-error', handlePermissionError);

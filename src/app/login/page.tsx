@@ -38,11 +38,11 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const getSafeNextRoute = () => {
-    if (typeof window === "undefined") return "/";
+  const getSafeNextRoute = (): string | null => {
+    if (typeof window === "undefined") return null;
     const candidate = new URLSearchParams(window.location.search).get("next");
-    if (!candidate) return "/";
-    if (!candidate.startsWith("/") || candidate.startsWith("//")) return "/";
+    if (!candidate) return null;
+    if (!candidate.startsWith("/") || candidate.startsWith("//")) return null;
     return candidate;
   };
 
@@ -52,7 +52,7 @@ export default function LoginPage() {
     setLoading(true);
     setTimeout(() => {
       const nextRoute = getSafeNextRoute();
-      router.push(nextRoute || DASHBOARD_ROUTES[role] || "/dashboard/owner");
+      router.push(nextRoute ?? DASHBOARD_ROUTES[role] ?? "/dashboard/owner");
     }, 1000);
   };
 
@@ -65,7 +65,7 @@ export default function LoginPage() {
     setTimeout(() => {
       if (user) {
         const nextRoute = getSafeNextRoute();
-        router.push(nextRoute || DASHBOARD_ROUTES[user.role] || "/dashboard/owner");
+        router.push(nextRoute ?? DASHBOARD_ROUTES[user.role] ?? "/dashboard/owner");
       } else {
         setLoading(false);
         toast({
@@ -112,7 +112,7 @@ export default function LoginPage() {
 
       const result = await signInWithPopup(auth, provider);
       const nextRoute = getSafeNextRoute();
-      const route = nextRoute || "/";
+      const route = nextRoute ?? "/";
 
       toast({
         title: "Login Google berhasil",
