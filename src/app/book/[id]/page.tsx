@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
 import { CheckCircle2, ChevronLeft, ChevronRight, QrCode, Loader2, CreditCard } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useFirestore, useCollection } from "@/firebase"
+import { useFirestore, useCollection, useUser } from "@/firebase"
 import { collection, query } from "firebase/firestore"
 
 const MOCK_TOURS = [
@@ -33,6 +33,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const [customDomicile, setCustomDomicile] = useState("");
   
   const db = useFirestore();
+  const { user, loading: userLoading } = useUser();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -56,11 +57,26 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     return dbTours;
   }, [dbTours]);
 
+  const nextAfterLogin = useMemo(() => {
+    const safeId = tourIdParam && tourIdParam !== "new" ? tourIdParam : "new";
+    return `/book/${safeId}`;
+  }, [tourIdParam]);
+
   useEffect(() => {
     if (tourIdParam && tourIdParam !== "new") {
       setFormData(prev => ({ ...prev, tourId: tourIdParam }));
     }
   }, [tourIdParam]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      name: prev.name || user.displayName || "",
+      email: prev.email || user.email || "",
+    }));
+  }, [user]);
 
   const selectedTour = useMemo(() => {
     if (!allTours || !formData.tourId) return null;
@@ -129,6 +145,44 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   };
 
   const progressValue = (step / 3) * 100;
+
+  if (userLoading) {
+    return (
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(152,221,202,0.18),_transparent_36%),linear-gradient(180deg,_#f7f4ee_0%,_#ecece7_100%)] px-4 py-6 md:px-8 md:py-10">
+        <div className="mx-auto flex min-h-[50vh] max-w-3xl items-center justify-center rounded-[28px] border border-black/5 bg-white/80 p-8 text-center shadow-sm backdrop-blur">
+          <div className="space-y-3">
+            <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#16302c]" />
+            <p className="text-sm text-zinc-600">Memeriksa sesi login...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(152,221,202,0.18),_transparent_36%),linear-gradient(180deg,_#f7f4ee_0%,_#ecece7_100%)] px-4 py-6 md:px-8 md:py-10">
+        <div className="mx-auto max-w-3xl">
+          <Card className="rounded-[28px] border-none bg-white/90 shadow-[0_24px_80px_rgba(16,34,31,0.12)] backdrop-blur">
+            <CardHeader>
+              <CardTitle className="text-2xl">Login Diperlukan</CardTitle>
+              <CardDescription>
+                Untuk membuka form pemesanan tur, silakan login terlebih dahulu.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3 sm:flex-row">
+              <Link href={`/login?next=${encodeURIComponent(nextAfterLogin)}`} className="w-full sm:w-auto">
+                <Button className="w-full rounded-full bg-[#16302c] text-white hover:bg-[#0f211d]">Login untuk Pesan Tur</Button>
+              </Link>
+              <Link href="/" className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full rounded-full">Kembali ke Beranda</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(152,221,202,0.18),_transparent_36%),linear-gradient(180deg,_#f7f4ee_0%,_#ecece7_100%)] px-4 py-6 md:px-8 md:py-10">

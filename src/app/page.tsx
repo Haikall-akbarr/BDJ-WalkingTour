@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Calendar, Users, ArrowRight, Clock, Map, ArrowUpRight } from "lucide-react"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
 import { useUser, useAuth } from "@/firebase"
@@ -49,6 +50,7 @@ export default function LandingPage() {
   const { toast } = useToast()
   const allTours = useMemo(() => STATIC_TOURS, [])
   const [newsletterEmail, setNewsletterEmail] = useState("")
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
 
   const heroImg = PlaceHolderImages.find((img) => img.id === "hero-bg")
   const showcaseImages = PlaceHolderImages.slice(0, 3)
@@ -118,9 +120,6 @@ export default function LandingPage() {
               <div className="flex flex-wrap items-center gap-1 text-sm font-medium text-white/85">
                 <Link href="/" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Beranda</Link>
                 <Link href="#tours" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Semua Tur</Link>
-                {(!authLoading || !auth) && !user && (
-                  <Link href="/login" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Login Staf</Link>
-                )}
                 <Link href="/book/1" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Pesan Sekarang</Link>
               </div>
 
@@ -128,9 +127,8 @@ export default function LandingPage() {
                 {((!authLoading || !auth) && !user) && (
                   <Link href="/login">
                     <Button
-                      variant="outline"
                       size="sm"
-                      className="h-8 rounded-full border-white/25 bg-white/10 px-3 text-xs text-white hover:bg-white/20 hover:text-white"
+                      className="h-8 rounded-full bg-[#98DDCA] px-3 text-xs font-semibold text-[#16302c] hover:bg-[#b8eadc]"
                     >
                       Log in
                     </Button>
@@ -148,10 +146,9 @@ export default function LandingPage() {
                       </Button>
                     </Link>
                     <Button
-                      variant="outline"
                       size="sm"
-                      className="h-8 rounded-full border-white/25 bg-white/10 px-3 text-xs text-white hover:bg-white/20 hover:text-white"
-                      onClick={handleLogout}
+                      className="h-8 rounded-full bg-[#e15959] px-3 text-xs font-semibold text-white hover:bg-[#c84a4a]"
+                      onClick={() => setLogoutDialogOpen(true)}
                     >
                       keluar
                     </Button>
@@ -174,7 +171,7 @@ export default function LandingPage() {
                   Banjarmasin
                   <span className="block text-[#98DDCA]">Walking Tour</span>
                 </h1>
-                <p className="max-w-2xl text-sm leading-7 text-white/88 md:text-lg">
+                <p className="max-w-2xl text-sm leading-7 text-white/88 md:text-lg text-white/80">
                   Rasakan keindahan sejarah, sungai, dan budaya kota seribu sungai melalui pengalaman berjalan kaki yang dipandu lokal berpengalaman.
                 </p>
                 <div className="flex flex-col gap-3 pt-2 sm:flex-row">
@@ -193,25 +190,7 @@ export default function LandingPage() {
                       </Button>
                     </Link>
                   )}
-                  {!authLoading && user && (
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                      <Link href="/dashboard/user">
-                        <Button
-                          variant="outline"
-                          className="h-11 rounded-full border-white/30 bg-white/5 px-6 text-xs font-bold uppercase text-white hover:bg-white/15 hover:text-white md:px-7"
-                        >
-                          Profil Saya
-                        </Button>
-                      </Link>
-                      <Button
-                        variant="outline"
-                        onClick={handleLogout}
-                        className="h-11 rounded-full border-white/30 bg-white/5 px-6 text-xs font-bold uppercase text-white hover:bg-white/15 hover:text-white md:px-7"
-                      >
-                        Keluar
-                      </Button>
-                    </div>
-                  )}
+                  {!authLoading && user && null}
                 </div>
               </div>
             </div>
@@ -445,6 +424,26 @@ export default function LandingPage() {
           <p className="mt-12 text-center text-base text-[#667665] md:text-lg">© 2026 BDJ Walking Tour. Hak cipta dilindungi.</p>
         </section>
       </main>
+
+      <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Yakin ingin keluar?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sesi Anda akan diakhiri dan perlu login kembali untuk mengakses fitur akun.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#16302c] text-white hover:bg-[#0f211d]"
+              onClick={handleLogout}
+            >
+              Ya, Keluar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
