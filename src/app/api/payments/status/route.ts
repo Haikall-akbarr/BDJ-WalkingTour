@@ -182,7 +182,37 @@ export async function GET(request: NextRequest) {
 
       const localBooking = getDummyBooking(bookingId);
       if (!localBooking) {
-        return NextResponse.json({ error: 'Booking tidak ditemukan.' }, { status: 404 });
+        // Booking tidak ada di dummy store, tapi mungkin ada di Pakasir
+        // Buatlah placeholder booking dan query Pakasir langsung
+        const placeholderBooking = {
+          id: bookingId,
+          paymentStatus: 'pending_payment',
+          status: 'pending_payment',
+          paymentGateway: 'pakasir',
+          paymentCheckoutUrl: null,
+          attendanceCode: null,
+          attendanceQrImageUrl: null,
+          attendanceScannedAt: null,
+          attendanceScannedBy: null,
+          paidAt: null,
+          barcodeSentAt: null,
+          tourName: null,
+          userName: null,
+          userEmail: null,
+          grossAmount: null,
+        };
+
+        const syncedBooking = await syncFromPakasir({
+          bookingId,
+          booking: placeholderBooking,
+          source: 'local',
+        });
+
+        return NextResponse.json({
+          source: 'unknown',
+          bookingId,
+          booking: syncedBooking || placeholderBooking,
+        });
       }
 
       const syncedBooking = await syncFromPakasir({
@@ -237,7 +267,36 @@ export async function GET(request: NextRequest) {
 
       const booking = getDummyBooking(bookingId);
       if (!booking) {
-        return NextResponse.json({ error: 'Booking tidak ditemukan.' }, { status: 404 });
+        // Booking tidak ada di dummy store, buatlah placeholder dan query Pakasir
+        const placeholderBooking = {
+          id: bookingId,
+          paymentStatus: 'pending_payment',
+          status: 'pending_payment',
+          paymentGateway: 'pakasir',
+          paymentCheckoutUrl: null,
+          attendanceCode: null,
+          attendanceQrImageUrl: null,
+          attendanceScannedAt: null,
+          attendanceScannedBy: null,
+          paidAt: null,
+          barcodeSentAt: null,
+          tourName: null,
+          userName: null,
+          userEmail: null,
+          grossAmount: null,
+        };
+
+        const syncedBooking = await syncFromPakasir({
+          bookingId,
+          booking: placeholderBooking,
+          source: 'local',
+        });
+
+        return NextResponse.json({
+          source: 'unknown',
+          bookingId,
+          booking: syncedBooking || placeholderBooking,
+        });
       }
 
       const syncedBooking = await syncFromPakasir({
