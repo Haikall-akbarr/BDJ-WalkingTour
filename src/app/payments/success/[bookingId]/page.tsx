@@ -121,39 +121,41 @@ export default function PaymentSuccessPage() {
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Memuat status pembayaran...
               </div>
+            ) : isPaid ? (
+              !hasBarcode ? (
+                <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
+                  Pembayaran sudah diterima, barcode sedang dibuat. Tunggu sebentar atau klik refresh.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                    <p className="font-semibold">Barcode sudah aktif</p>
+                    <p>Tunjukkan barcode ini ke guide saat check-in. Barcode juga dikirim ke email pembeli.</p>
+                    {booking?.attendanceCode && (
+                      <p>Kode Absensi: <span className="font-mono font-semibold">{booking.attendanceCode}</span></p>
+                    )}
+                    {booking?.attendanceScannedAt && (
+                      <p>Status guide: sudah dipindai oleh {booking.attendanceScannedBy || 'guide'}.</p>
+                    )}
+                  </div>
+                  <div className="mx-auto h-56 w-56 overflow-hidden rounded-2xl border bg-white p-3">
+                    <Image
+                      src={booking.attendanceQrImageUrl!}
+                      alt="Barcode Absensi"
+                      width={224}
+                      height={224}
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                </div>
+              )
             ) : error ? (
               <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                 {error}
               </div>
-            ) : !isPaid ? (
+            ) : (
               <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
                 Pembayaran belum terverifikasi. Halaman ini akan otomatis mengecek status setiap beberapa detik.
-              </div>
-            ) : !hasBarcode ? (
-              <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
-                Pembayaran sudah diterima, barcode sedang dibuat. Tunggu sebentar atau klik refresh.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-                  <p className="font-semibold">Barcode sudah aktif</p>
-                  <p>Tunjukkan barcode ini ke guide saat check-in. Barcode juga dikirim ke email pembeli.</p>
-                  {booking?.attendanceCode && (
-                    <p>Kode Absensi: <span className="font-mono font-semibold">{booking.attendanceCode}</span></p>
-                  )}
-                  {booking?.attendanceScannedAt && (
-                    <p>Status guide: sudah dipindai oleh {booking.attendanceScannedBy || 'guide'}.</p>
-                  )}
-                </div>
-                <div className="mx-auto h-56 w-56 overflow-hidden rounded-2xl border bg-white p-3">
-                  <Image
-                    src={booking.attendanceQrImageUrl!}
-                    alt="Barcode Absensi"
-                    width={224}
-                    height={224}
-                    className="h-full w-full object-contain"
-                  />
-                </div>
               </div>
             )}
           </CardContent>
@@ -164,7 +166,6 @@ export default function PaymentSuccessPage() {
             <Button onClick={() => router.push('/')} variant="outline" className="w-full rounded-full">
               Kembali ke Beranda
             </Button>
-            <Link href="/dashboard/guide" className="text-xs text-zinc-500 hover:text-zinc-700">Buka dashboard guide</Link>
           </CardFooter>
         </Card>
       </div>
