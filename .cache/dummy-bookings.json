@@ -153,5 +153,31 @@
     "createdAt": "2026-05-02T05:02:59.597Z",
     "updatedAt": "2026-05-02T05:03:16.849Z",
     "paidAt": "2026-05-02T05:03:06.034Z"
+  },
+  {
+    "id": "local-452b0ac9697a4cc6bea0",
+    "userName": "Haikal Akbar",
+    "userWhatsApp": "08123454355",
+    "userEmail": "haikalakbar4554@gmail.com",
+    "domicile": "banjarmasin",
+    "customDomicile": "",
+    "tourId": "sungai",
+    "tourName": "Susur Sungai Martapura",
+    "pax": 1,
+    "pricePerPax": 85000,
+    "grossAmount": 85000,
+    "status": "paid",
+    "paymentStatus": "paid",
+    "paymentGateway": "pakasir",
+    "paymentOrderId": "local-452b0ac9697a4cc6bea0",
+    "paymentTransactionId": "pakasir-local-452b0ac9697a4cc6bea0",
+    "paymentCheckoutUrl": "https://app.pakasir.com/pay/bdj-walking/85000?order_id=local-452b0ac9697a4cc6bea0&redirect=http%3A%2F%2Flocalhost%3A9002%2Fpayments%2Fsuccess%2Flocal-452b0ac9697a4cc6bea0&qris_only=1",
+    "attendanceCode": "BDJ-LOCAL-45-214237",
+    "attendanceQrImageUrl": "https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=BDJ-LOCAL-45-214237",
+    "attendanceScannedAt": null,
+    "attendanceScannedBy": null,
+    "createdAt": "2026-05-02T06:30:17.363Z",
+    "updatedAt": "2026-05-02T06:32:14.752Z",
+    "paidAt": "2026-05-02T06:32:02.167Z"
   }
 ]

@@ -10,17 +10,21 @@ function splitInstructions(raw: string | undefined) {
 }
 
 function getResolvedPaymentMode() {
-  const explicitMode = (process.env.PAYMENT_MODE || '').trim().toLowerCase();
-  if (explicitMode) {
-    return explicitMode;
-  }
-
   const hasPakasirCredentials = Boolean(
     (process.env.PAKASIR_PROJECT_SLUG || process.env.PAKASIR_PROJECT) && process.env.PAKASIR_API_KEY
   );
 
   if (hasPakasirCredentials) {
     return 'pakasir';
+  }
+
+  const explicitMode = (process.env.PAYMENT_MODE || '').trim().toLowerCase();
+  if (explicitMode === 'manual' || explicitMode === 'dummy') {
+    return explicitMode;
+  }
+
+  if (explicitMode === 'midtrans' && process.env.MIDTRANS_SERVER_KEY) {
+    return 'midtrans';
   }
 
   const hasManualConfig = Boolean(
@@ -34,7 +38,7 @@ function getResolvedPaymentMode() {
     return 'manual';
   }
 
-  return process.env.MIDTRANS_SERVER_KEY ? 'midtrans' : 'dummy';
+  return 'dummy';
 }
 
 export async function GET() {
