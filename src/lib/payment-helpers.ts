@@ -76,18 +76,29 @@ function buildAttendanceEmailHtml(params: {
   qrSrc: string;
 }) {
   return `
-      <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10221f">
-        <h2>Pembayaran berhasil</h2>
+      <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10221f;max-width:600px;margin:0 auto;">
+        <h2 style="margin-bottom:20px;">Pembayaran berhasil</h2>
+        
         <p>Halo ${params.name}, pembayaran untuk <strong>${params.tourName}</strong> telah kami terima.</p>
-        <p><strong>Order ID:</strong> ${params.orderId}<br/>
-        <strong>Total:</strong> Rp ${params.totalAmount.toLocaleString('id-ID')}</p>
-        <p>Barcode/QR Anda di bawah ini dan bisa dipakai guide untuk absensi peserta.</p>
-        <p>
-          <img src="${params.qrSrc}" alt="Attendance QR" width="280" height="280" style="display:block;border:0;max-width:100%;height:auto;" />
-        </p>
-        <p><strong>Kode Absensi:</strong> ${params.attendanceCode}</p>
-        <p>Jika gambar tidak tampil, buka tautan ini: <a href="${params.qrImageUrl}">${params.qrImageUrl}</a></p>
-        <p style="font-size:12px;color:#666">BDJ WalkingTour • ${params.appBaseUrl}</p>
+        
+        <div style="background-color:#f5f5f5;padding:15px;border-radius:8px;margin:20px 0;">
+          <p style="margin:0;"><strong>Order ID:</strong> ${params.orderId}</p>
+          <p style="margin:8px 0 0 0;"><strong>Total:</strong> Rp ${params.totalAmount.toLocaleString('id-ID')}</p>
+        </div>
+        
+        <h3 style="margin-top:25px;margin-bottom:10px;">Barcode/QR Absensi</h3>
+        <p style="margin-top:0;font-size:14px;color:#666;">Tunjukkan barcode di bawah kepada guide untuk absensi peserta.</p>
+        
+        <div style="text-align:center;margin:20px 0;">
+          <img src="${params.qrSrc}" alt="Attendance QR" width="400" height="400" style="display:inline-block;border:2px solid #ddd;padding:10px;background-color:#fff;border-radius:8px;max-width:100%;height:auto;" />
+        </div>
+        
+        <div style="background-color:#f0f8ff;padding:15px;border-radius:8px;margin:20px 0;border-left:4px solid #16302c;">
+          <p style="margin:0;"><strong>Kode Absensi:</strong> <span style="font-family:monospace;font-size:16px;font-weight:bold;color:#16302c;">${params.attendanceCode}</span></p>
+        </div>
+        
+        <p style="font-size:12px;color:#999;margin-top:25px;">Jika gambar tidak tampil, buka tautan ini: <a href="${params.qrImageUrl}" style="color:#16302c;text-decoration:none;">${params.qrImageUrl}</a></p>
+        <p style="font-size:11px;color:#ccc;text-align:center;margin-top:20px;border-top:1px solid #eee;padding-top:10px;">BDJ WalkingTour • ${params.appBaseUrl}</p>
       </div>
     `;
 }
