@@ -50,6 +50,48 @@ function getEmailProvider() {
   return (process.env.EMAIL_PROVIDER || '').trim().toLowerCase();
 }
 
+async function fetchQrImageAttachment(qrImageUrl: string) {
+  const response = await fetch(qrImageUrl);
+
+  if (!response.ok) {
+    throw new Error(`Gagal mengambil QR image: ${response.status}`);
+  }
+
+  return {
+    filename: 'attendance-qr.png',
+    content: Buffer.from(await response.arrayBuffer()),
+    contentType: response.headers.get('content-type') || 'image/png',
+    cid: 'attendance-qr',
+  };
+}
+
+function buildAttendanceEmailHtml(params: {
+  name: string;
+  tourName: string;
+  attendanceCode: string;
+  qrImageUrl: string;
+  orderId: string;
+  totalAmount: number;
+  appBaseUrl: string;
+  qrSrc: string;
+}) {
+  return `
+      <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10221f">
+        <h2>Pembayaran berhasil</h2>
+        <p>Halo ${params.name}, pembayaran untuk <strong>${params.tourName}</strong> telah kami terima.</p>
+        <p><strong>Order ID:</strong> ${params.orderId}<br/>
+        <strong>Total:</strong> Rp ${params.totalAmount.toLocaleString('id-ID')}</p>
+        <p>Barcode/QR Anda di bawah ini dan bisa dipakai guide untuk absensi peserta.</p>
+        <p>
+          <img src="${params.qrSrc}" alt="Attendance QR" width="280" height="280" style="display:block;border:0;max-width:100%;height:auto;" />
+        </p>
+        <p><strong>Kode Absensi:</strong> ${params.attendanceCode}</p>
+        <p>Jika gambar tidak tampil, buka tautan ini: <a href="${params.qrImageUrl}">${params.qrImageUrl}</a></p>
+        <p style="font-size:12px;color:#666">BDJ WalkingTour • ${params.appBaseUrl}</p>
+      </div>
+    `;
+}
+
 function getSmtpConfig() {
   const host = (process.env.SMTP_HOST || '').trim();
   const port = Number(process.env.SMTP_PORT || 587);
@@ -86,6 +128,8 @@ async function sendAttendanceEmailViaSmtp(params: {
     return { skipped: true, provider: 'smtp' as const };
   }
 
+  const qrAttachment = await fetchQrImageAttachment(params.qrImageUrl);
+
   const transporter = nodemailer.createTransport({
     host: smtpConfig.host,
     port: smtpConfig.port,
@@ -100,21 +144,12 @@ async function sendAttendanceEmailViaSmtp(params: {
     from: smtpConfig.fromEmail,
     to: params.to,
     subject: 'Pembayaran Berhasil - BDJ WalkingTour',
-    html: `
-      <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10221f">
-        <h2>Pembayaran berhasil</h2>
-        <p>Halo ${params.name}, pembayaran untuk <strong>${params.tourName}</strong> telah kami terima.</p>
-        <p><strong>Order ID:</strong> ${params.orderId}<br/>
-        <strong>Total:</strong> Rp ${params.totalAmount.toLocaleString('id-ID')}</p>
-        <p>Barcode/QR Anda di bawah ini dan bisa dipakai guide untuk absensi peserta.</p>
-        <p>
-          <img src="${params.qrImageUrl}" alt="Attendance QR" width="280" height="280" style="display:block;border:0;max-width:100%;height:auto;" />
-        </p>
-        <p><strong>Kode Absensi:</strong> ${params.attendanceCode}</p>
-        <p>Jika gambar tidak tampil, buka tautan ini: <a href="${params.qrImageUrl}">${params.qrImageUrl}</a></p>
-        <p style="font-size:12px;color:#666">BDJ WalkingTour • ${getAppBaseUrl()}</p>
-      </div>
-    `,
+    html: buildAttendanceEmailHtml({
+      ...params,
+      appBaseUrl: getAppBaseUrl(),
+      qrSrc: 'cid:attendance-qr',
+    }),
+    attachments: [qrAttachment],
   });
 
   return {
@@ -150,21 +185,19 @@ async function sendAttendanceEmailViaResend(params: {
       from: fromEmail,
       to: [params.to],
       subject: 'Pembayaran Berhasil - BDJ WalkingTour',
-      html: `
-        <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10221f">
-          <h2>Pembayaran berhasil</h2>
-          <p>Halo ${params.name}, pembayaran untuk <strong>${params.tourName}</strong> telah kami terima.</p>
-          <p><strong>Order ID:</strong> ${params.orderId}<br/>
-          <strong>Total:</strong> Rp ${params.totalAmount.toLocaleString('id-ID')}</p>
-          <p>Barcode/QR Anda di bawah ini dan bisa dipakai guide untuk absensi peserta.</p>
-          <p>
-            <img src="${params.qrImageUrl}" alt="Attendance QR" width="280" height="280" style="display:block;border:0;max-width:100%;height:auto;" />
-          </p>
-          <p><strong>Kode Absensi:</strong> ${params.attendanceCode}</p>
-          <p>Jika gambar tidak tampil, buka tautan ini: <a href="${params.qrImageUrl}">${params.qrImageUrl}</a></p>
-          <p style="font-size:12px;color:#666">BDJ WalkingTour • ${appBaseUrl}</p>
-        </div>
-      `,
+      html: buildAttendanceEmailHtml({
+        ...params,
+        appBaseUrl,
+        qrSrc: 'cid:attendance-qr',
+      }),
+      attachments: [
+        {
+          filename: 'attendance-qr.png',
+          content: Buffer.from(await (await fetch(params.qrImageUrl)).arrayBuffer()).toString('base64'),
+          contentDisposition: 'inline',
+          contentId: 'attendance-qr',
+        },
+      ],
     }),
   });
 
