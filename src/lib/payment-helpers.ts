@@ -65,6 +65,17 @@ async function fetchQrImageAttachment(qrImageUrl: string) {
   };
 }
 
+async function fetchQrImageAsBase64(qrImageUrl: string) {
+  const response = await fetch(qrImageUrl);
+
+  if (!response.ok) {
+    throw new Error(`Gagal mengambil QR image: ${response.status}`);
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return `data:image/png;base64,${buffer.toString('base64')}`;
+}
+
 function buildAttendanceEmailHtml(params: {
   name: string;
   tourName: string;
@@ -161,6 +172,12 @@ async function sendAttendanceEmailViaSmtp(params: {
       qrSrc: 'cid:attendance-qr',
     }),
     attachments: [qrAttachment],
+    headers: {
+      'List-Unsubscribe': '<mailto:support@bdj-walking-tour.local?subject=unsubscribe>',
+      'X-Mailer': 'BDJ-WalkingTour/1.0',
+      'X-Priority': '3',
+      'Importance': 'normal',
+    },
   });
 
   return {
@@ -186,6 +203,9 @@ async function sendAttendanceEmailViaResend(params: {
     return { skipped: true, provider: 'resend' as const };
   }
 
+  // Fetch QR as base64 for inline embedding (Resend doesn't support CID well)
+  const qrBase64 = await fetchQrImageAsBase64(params.qrImageUrl);
+
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -199,16 +219,13 @@ async function sendAttendanceEmailViaResend(params: {
       html: buildAttendanceEmailHtml({
         ...params,
         appBaseUrl,
-        qrSrc: 'cid:attendance-qr',
+        qrSrc: qrBase64,
       }),
-      attachments: [
-        {
-          filename: 'attendance-qr.png',
-          content: Buffer.from(await (await fetch(params.qrImageUrl)).arrayBuffer()).toString('base64'),
-          contentDisposition: 'inline',
-          contentId: 'attendance-qr',
-        },
-      ],
+      headers: {
+        'List-Unsubscribe': '<mailto:support@bdj-walking-tour.local?subject=unsubscribe>',
+        'X-Mailer': 'BDJ-WalkingTour/1.0',
+        'X-Priority': '3',
+      },
     }),
   });
 
