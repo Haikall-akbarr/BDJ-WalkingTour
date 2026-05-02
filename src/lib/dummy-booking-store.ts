@@ -35,8 +35,16 @@ const DUMMY_BOOKINGS = new Map<string, DummyBooking>();
 const DUMMY_BOOKINGS_FILE = path.join(process.cwd(), '.cache', 'dummy-bookings.json');
 let hasLoadedFromDisk = false;
 
+// In-memory fallback cache for production/serverless where file persistence may fail
+const RUNTIME_MEMORY_CACHE = new Map<string, { data: DummyBooking; expiry: number }>();
+const RUNTIME_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
 function ensureCacheDir() {
-  fs.mkdirSync(path.dirname(DUMMY_BOOKINGS_FILE), { recursive: true });
+  try {
+    fs.mkdirSync(path.dirname(DUMMY_BOOKINGS_FILE), { recursive: true });
+  } catch {
+    // Ignore errors if directory creation fails (e.g., read-only filesystem)
+  }
 }
 
 function loadBookingsFromDisk() {
@@ -76,8 +84,16 @@ function saveBookingsToDisk() {
     ensureCacheDir();
     fs.writeFileSync(DUMMY_BOOKINGS_FILE, JSON.stringify(Array.from(DUMMY_BOOKINGS.values()), null, 2), 'utf8');
   } catch (error) {
-    console.error('[dummy-booking-store] Failed to save local bookings:', (error as any)?.message);
+    // Silently fail on read-only filesystems (e.g., Vercel production)
+    console.warn('[dummy-booking-store] Failed to save to disk, using runtime memory cache:', (error as any)?.message);
   }
+}
+
+function addToRuntimeCache(booking: DummyBooking) {
+  RUNTIME_MEMORY_CACHE.set(booking.id, {
+    data: booking,
+    expiry: Date.now() + RUNTIME_CACHE_TTL,
+  });
 }
 
 function nowIso() {
@@ -102,13 +118,27 @@ export function createDummyBooking(data: Omit<DummyBooking, 'id' | 'createdAt' |
   };
 
   DUMMY_BOOKINGS.set(id, booking);
+  addToRuntimeCache(booking);
   saveBookingsToDisk();
   return booking;
 }
 
 export function getDummyBooking(id: string) {
   loadBookingsFromDisk();
-  return DUMMY_BOOKINGS.get(id) || null;
+  
+  // Check in-memory Map first
+  const fromMap = DUMMY_BOOKINGS.get(id);
+  if (fromMap) {
+    return fromMap;
+  }
+
+  // Fallback to runtime memory cache (for production/serverless)
+  const cached = RUNTIME_MEMORY_CACHE.get(id);
+  if (cached && cached.expiry > Date.now()) {
+    return cached.data;
+  }
+
+  return null;
 }
 
 export function updateDummyBooking(id: string, patch: Partial<DummyBooking>) {
@@ -124,6 +154,7 @@ export function updateDummyBooking(id: string, patch: Partial<DummyBooking>) {
   };
 
   DUMMY_BOOKINGS.set(id, next);
+  addToRuntimeCache(next);
   saveBookingsToDisk();
   return next;
 }
@@ -131,9 +162,17 @@ export function updateDummyBooking(id: string, patch: Partial<DummyBooking>) {
 export function findDummyBookingByAttendanceCode(attendanceCode: string) {
   loadBookingsFromDisk();
 
+  // Check in-memory Map first
   for (const booking of DUMMY_BOOKINGS.values()) {
     if (booking.attendanceCode === attendanceCode) {
       return booking;
+    }
+  }
+
+  // Fallback to runtime memory cache
+  for (const cached of RUNTIME_MEMORY_CACHE.values()) {
+    if (cached.expiry > Date.now() && cached.data.attendanceCode === attendanceCode) {
+      return cached.data;
     }
   }
 
