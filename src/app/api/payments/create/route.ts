@@ -11,6 +11,14 @@ function getGatewayBaseUrl() {
     : 'https://app.sandbox.midtrans.com';
 }
 
+function getPublicBaseUrl(request: NextRequest) {
+  return new URL(request.url).origin;
+}
+
+function buildPublicUrl(request: NextRequest, path: string) {
+  return new URL(path, getPublicBaseUrl(request)).toString();
+}
+
 function buildBasicAuthHeader(serverKey: string) {
   return `Basic ${Buffer.from(`${serverKey}:`).toString('base64')}`;
 }
@@ -128,13 +136,12 @@ export async function POST(request: NextRequest) {
         phone: body.whatsapp,
       },
       callbacks: {
-        finish: `${process.env.APP_BASE_URL || 'http://localhost:9002'}/book/${body.tourId}`,
+        finish: buildPublicUrl(request, `/book/${body.tourId}`),
       },
     };
 
     if (useDummyMode) {
-      const baseUrl = process.env.APP_BASE_URL || 'http://localhost:9002';
-      const dummyCheckoutUrl = `${baseUrl}/payments/dummy/${orderId}`;
+      const dummyCheckoutUrl = buildPublicUrl(request, `/payments/dummy/${orderId}`);
 
       if (db) {
         await db.collection('bookings').doc(orderId).update({

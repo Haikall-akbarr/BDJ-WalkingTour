@@ -33,6 +33,18 @@ export function verifyMidtransSignature(input: {
   return expected === input.signatureKey;
 }
 
+function getAppBaseUrl() {
+  if (process.env.APP_BASE_URL) {
+    return process.env.APP_BASE_URL;
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  return 'http://localhost:9002';
+}
+
 export async function sendAttendanceEmail(params: {
   to: string;
   name: string;
@@ -44,7 +56,7 @@ export async function sendAttendanceEmail(params: {
 }) {
   const resendKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.RESEND_FROM_EMAIL;
-  const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:9002';
+  const appBaseUrl = getAppBaseUrl();
 
   if (!resendKey || !fromEmail) {
     console.warn('[sendAttendanceEmail] Missing RESEND_API_KEY or RESEND_FROM_EMAIL. Skipping email send.');
