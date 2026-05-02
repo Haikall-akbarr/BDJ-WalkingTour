@@ -1,4 +1,6 @@
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 
 type DummyBooking = {
   id: string;
@@ -30,6 +32,53 @@ type DummyBooking = {
 };
 
 const DUMMY_BOOKINGS = new Map<string, DummyBooking>();
+const DUMMY_BOOKINGS_FILE = path.join(process.cwd(), '.cache', 'dummy-bookings.json');
+let hasLoadedFromDisk = false;
+
+function ensureCacheDir() {
+  fs.mkdirSync(path.dirname(DUMMY_BOOKINGS_FILE), { recursive: true });
+}
+
+function loadBookingsFromDisk() {
+  if (hasLoadedFromDisk) {
+    return;
+  }
+
+  hasLoadedFromDisk = true;
+
+  try {
+    if (!fs.existsSync(DUMMY_BOOKINGS_FILE)) {
+      return;
+    }
+
+    const raw = fs.readFileSync(DUMMY_BOOKINGS_FILE, 'utf8');
+    if (!raw.trim()) {
+      return;
+    }
+
+    const parsed = JSON.parse(raw) as DummyBooking[];
+    if (!Array.isArray(parsed)) {
+      return;
+    }
+
+    for (const booking of parsed) {
+      if (booking?.id) {
+        DUMMY_BOOKINGS.set(booking.id, booking);
+      }
+    }
+  } catch (error) {
+    console.error('[dummy-booking-store] Failed to load local bookings:', (error as any)?.message);
+  }
+}
+
+function saveBookingsToDisk() {
+  try {
+    ensureCacheDir();
+    fs.writeFileSync(DUMMY_BOOKINGS_FILE, JSON.stringify(Array.from(DUMMY_BOOKINGS.values()), null, 2), 'utf8');
+  } catch (error) {
+    console.error('[dummy-booking-store] Failed to save local bookings:', (error as any)?.message);
+  }
+}
 
 function nowIso() {
   return new Date().toISOString();
@@ -40,6 +89,8 @@ function buildId() {
 }
 
 export function createDummyBooking(data: Omit<DummyBooking, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }) {
+  loadBookingsFromDisk();
+
   const id = data.id || buildId();
   const createdAt = nowIso();
 
@@ -51,14 +102,18 @@ export function createDummyBooking(data: Omit<DummyBooking, 'id' | 'createdAt' |
   };
 
   DUMMY_BOOKINGS.set(id, booking);
+  saveBookingsToDisk();
   return booking;
 }
 
 export function getDummyBooking(id: string) {
+  loadBookingsFromDisk();
   return DUMMY_BOOKINGS.get(id) || null;
 }
 
 export function updateDummyBooking(id: string, patch: Partial<DummyBooking>) {
+  loadBookingsFromDisk();
+
   const current = DUMMY_BOOKINGS.get(id);
   if (!current) return null;
 
@@ -69,10 +124,13 @@ export function updateDummyBooking(id: string, patch: Partial<DummyBooking>) {
   };
 
   DUMMY_BOOKINGS.set(id, next);
+  saveBookingsToDisk();
   return next;
 }
 
 export function findDummyBookingByAttendanceCode(attendanceCode: string) {
+  loadBookingsFromDisk();
+
   for (const booking of DUMMY_BOOKINGS.values()) {
     if (booking.attendanceCode === attendanceCode) {
       return booking;
@@ -88,6 +146,8 @@ function generateAttendanceCode(orderId: string) {
 }
 
 export function initializeDummyBookings() {
+  loadBookingsFromDisk();
+
   // Jika sudah ada booking, jangan reinitialize
   if (DUMMY_BOOKINGS.size > 0) {
     return;

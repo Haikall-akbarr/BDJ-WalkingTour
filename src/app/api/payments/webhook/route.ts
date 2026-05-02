@@ -4,6 +4,30 @@ import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail, veri
 
 export const runtime = 'nodejs';
 
+export async function GET() {
+  return NextResponse.json({ ok: true, message: 'Webhook endpoint is ready' });
+}
+
+export async function HEAD() {
+  return new NextResponse(null, { status: 200 });
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204 });
+}
+
+export async function PUT() {
+  return NextResponse.json({ ok: true, message: 'Webhook endpoint is ready' });
+}
+
+export async function PATCH() {
+  return NextResponse.json({ ok: true, message: 'Webhook endpoint is ready' });
+}
+
+export async function DELETE() {
+  return NextResponse.json({ ok: true, message: 'Webhook endpoint is ready' });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json();

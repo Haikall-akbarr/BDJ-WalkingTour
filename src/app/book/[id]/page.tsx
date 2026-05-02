@@ -364,7 +364,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             {step === 2 && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <CardHeader>
-                  <CardTitle>Konfirmasi Pembayaran Gateway</CardTitle>
+                  <CardTitle>Konfirmasi Pembayaran</CardTitle>
                   <CardDescription>Selesaikan pembayaran Anda untuk mengamankan tempat. Barcode akan dikirim otomatis ke email setelah pembayaran berhasil.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
@@ -373,8 +373,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                       <CreditCard className="h-14 w-14 text-[#98DDCA]" />
                     </div>
                     <div className="space-y-1">
-                      <p className="font-bold text-lg">Checkout Payment Gateway</p>
-                      <p className="text-sm text-muted-foreground">Midtrans akan membuka halaman pembayaran resmi setelah Anda klik tombol di bawah.</p>
+                      <p className="font-bold text-lg">Checkout Payment</p>
+                      <p className="text-sm text-muted-foreground">Metode pembayaran aktif akan membuka halaman lanjutan setelah Anda klik tombol di bawah.</p>
                     </div>
                     {selectedTour && (
                       <div className="rounded-2xl bg-white p-4 text-sm">

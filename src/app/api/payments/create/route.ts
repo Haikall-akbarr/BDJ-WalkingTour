@@ -11,6 +11,10 @@ function getGatewayBaseUrl() {
     : 'https://app.sandbox.midtrans.com';
 }
 
+function getPakasirBaseUrl() {
+  return process.env.PAKASIR_BASE_URL || 'https://app.pakasir.com';
+}
+
 function getPublicBaseUrl(request: NextRequest) {
   return new URL(request.url).origin;
 }
@@ -34,6 +38,8 @@ export async function POST(request: NextRequest) {
     const serverKey = process.env.MIDTRANS_SERVER_KEY;
     const paymentMode = (process.env.PAYMENT_MODE || '').toLowerCase();
     const useDummyMode = paymentMode === 'dummy' || !serverKey;
+    const useManualMode = paymentMode === 'manual';
+    const usePakasirMode = paymentMode === 'pakasir';
 
     let db: ReturnType<typeof getServerFirestore> | null = null;
     let tourName = body.tourName;
@@ -71,7 +77,7 @@ export async function POST(request: NextRequest) {
         grossAmount,
         status: 'pending_payment',
         paymentStatus: 'pending_payment',
-        paymentGateway: useDummyMode ? 'dummy' : 'midtrans',
+        paymentGateway: usePakasirMode ? 'pakasir' : useManualMode ? 'manual' : useDummyMode ? 'dummy' : 'midtrans',
         paymentOrderId: null,
         paymentTransactionId: null,
         paymentCheckoutUrl: null,
@@ -86,7 +92,7 @@ export async function POST(request: NextRequest) {
       orderId = bookingRef.id;
     }
 
-    if (!orderId && useDummyMode) {
+    if (!orderId && (useDummyMode || useManualMode || usePakasirMode)) {
       const localBooking = createDummyBooking({
         userName: body.name,
         userWhatsApp: body.whatsapp,
@@ -100,7 +106,7 @@ export async function POST(request: NextRequest) {
         grossAmount,
         status: 'pending_payment',
         paymentStatus: 'pending_payment',
-        paymentGateway: 'dummy',
+        paymentGateway: usePakasirMode ? 'pakasir' : useManualMode ? 'manual' : 'dummy',
         paymentOrderId: null,
         paymentTransactionId: null,
         paymentCheckoutUrl: null,
@@ -136,9 +142,117 @@ export async function POST(request: NextRequest) {
         phone: body.whatsapp,
       },
       callbacks: {
-        finish: buildPublicUrl(request, `/book/${body.tourId}`),
+        finish: buildPublicUrl(request, `/payments/success/${orderId}`),
       },
     };
+
+    if (useManualMode) {
+      const manualCheckoutUrl = buildPublicUrl(request, `/payments/manual/${orderId}`);
+
+      if (db) {
+        await db.collection('bookings').doc(orderId).update({
+          paymentOrderId: orderId,
+          paymentCheckoutUrl: manualCheckoutUrl,
+          paymentStatus: 'pending_payment',
+          paymentGateway: 'manual',
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        createDummyBooking({
+          id: orderId,
+          userName: body.name,
+          userWhatsApp: body.whatsapp,
+          userEmail: body.email || '',
+          domicile: body.domicile,
+          customDomicile: body.customDomicile || '',
+          tourId: body.tourId,
+          tourName,
+          pax: Number(body.pax),
+          pricePerPax: tourPrice,
+          grossAmount,
+          status: 'pending_payment',
+          paymentStatus: 'pending_payment',
+          paymentGateway: 'manual',
+          paymentOrderId: orderId,
+          paymentTransactionId: null,
+          paymentCheckoutUrl: manualCheckoutUrl,
+          attendanceCode: null,
+          attendanceQrImageUrl: null,
+          attendanceScannedAt: null,
+          attendanceScannedBy: null,
+        });
+      }
+
+      return NextResponse.json({
+        bookingId: orderId,
+        checkoutUrl: manualCheckoutUrl,
+        paymentGateway: 'manual',
+        grossAmount,
+      });
+    }
+
+    if (usePakasirMode) {
+      const pakasirProject = process.env.PAKASIR_PROJECT_SLUG || process.env.PAKASIR_PROJECT || '';
+      const pakasirApiKey = process.env.PAKASIR_API_KEY || '';
+      const pakasirBaseUrl = getPakasirBaseUrl();
+      const pakasirRedirectUrl = buildPublicUrl(request, `/payments/success/${orderId}`);
+      const pakasirUrl = new URL(`/pay/${pakasirProject}/${grossAmount}`, pakasirBaseUrl);
+
+      pakasirUrl.searchParams.set('order_id', orderId);
+      pakasirUrl.searchParams.set('redirect', pakasirRedirectUrl);
+
+      if ((process.env.PAKASIR_QRIS_ONLY || '').toLowerCase() === 'true') {
+        pakasirUrl.searchParams.set('qris_only', '1');
+      }
+
+      if (!pakasirProject || !pakasirApiKey) {
+        return NextResponse.json(
+          { error: 'Pakasir mode membutuhkan PAKASIR_PROJECT_SLUG dan PAKASIR_API_KEY.' },
+          { status: 400 }
+        );
+      }
+
+      if (db) {
+        await db.collection('bookings').doc(orderId).update({
+          paymentOrderId: orderId,
+          paymentCheckoutUrl: pakasirUrl.toString(),
+          paymentStatus: 'pending_payment',
+          paymentGateway: 'pakasir',
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        createDummyBooking({
+          id: orderId,
+          userName: body.name,
+          userWhatsApp: body.whatsapp,
+          userEmail: body.email || '',
+          domicile: body.domicile,
+          customDomicile: body.customDomicile || '',
+          tourId: body.tourId,
+          tourName,
+          pax: Number(body.pax),
+          pricePerPax: tourPrice,
+          grossAmount,
+          status: 'pending_payment',
+          paymentStatus: 'pending_payment',
+          paymentGateway: 'pakasir',
+          paymentOrderId: orderId,
+          paymentTransactionId: null,
+          paymentCheckoutUrl: pakasirUrl.toString(),
+          attendanceCode: null,
+          attendanceQrImageUrl: null,
+          attendanceScannedAt: null,
+          attendanceScannedBy: null,
+        });
+      }
+
+      return NextResponse.json({
+        bookingId: orderId,
+        checkoutUrl: pakasirUrl.toString(),
+        paymentGateway: 'pakasir',
+        grossAmount,
+      });
+    }
 
     if (useDummyMode) {
       const dummyCheckoutUrl = buildPublicUrl(request, `/payments/dummy/${orderId}`);
