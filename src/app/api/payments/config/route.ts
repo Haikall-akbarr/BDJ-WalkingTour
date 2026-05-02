@@ -48,7 +48,7 @@ export async function GET() {
       title: process.env.PAYMENT_MANUAL_TITLE || 'Manual Payment Checkout',
       description:
         process.env.PAYMENT_MANUAL_DESCRIPTION ||
-        'Gunakan mode ini untuk transfer manual saat Midtrans belum aktif atau masih menunggu verifikasi.',
+        'Gunakan mode ini untuk transfer manual jika Anda memilih pembayaran non-gateway.',
       instructions: splitInstructions(
         process.env.PAYMENT_MANUAL_INSTRUCTIONS ||
           'Transfer sesuai nominal yang tampil di halaman booking.\nSimpan bukti transfer untuk arsip Anda.\nKlik tombol konfirmasi setelah transfer selesai.'
