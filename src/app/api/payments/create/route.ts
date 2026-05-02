@@ -94,58 +94,53 @@ export async function POST(request: NextRequest) {
     }
 
     const grossAmount = tourPrice * Number(body.pax);
+    const bookingPayload = {
+      userName: body.name,
+      userWhatsApp: body.whatsapp,
+      userEmail: body.email || '',
+      domicile: body.domicile,
+      customDomicile: body.customDomicile || '',
+      tourId: body.tourId,
+      tourName,
+      pax: Number(body.pax),
+      pricePerPax: tourPrice,
+      grossAmount,
+      status: 'pending_payment',
+      paymentStatus: 'pending_payment',
+      paymentGateway: usePakasirMode ? 'pakasir' : useManualMode ? 'manual' : 'dummy',
+      paymentOrderId: null,
+      paymentTransactionId: null,
+      paymentCheckoutUrl: null,
+      attendanceCode: null,
+      attendanceQrImageUrl: null,
+      attendanceScannedAt: null,
+      attendanceScannedBy: null,
+    } as const;
 
     if (db) {
-      const bookingRef = await db.collection('bookings').add({
-        userName: body.name,
-        userWhatsApp: body.whatsapp,
-        userEmail: body.email || '',
-        domicile: body.domicile,
-        customDomicile: body.customDomicile || '',
-        tourId: body.tourId,
-        tourName,
-        pax: Number(body.pax),
-        pricePerPax: tourPrice,
-        grossAmount,
-        status: 'pending_payment',
-        paymentStatus: 'pending_payment',
-        paymentGateway: usePakasirMode ? 'pakasir' : useManualMode ? 'manual' : useDummyMode ? 'dummy' : 'midtrans',
-        paymentOrderId: null,
-        paymentTransactionId: null,
-        paymentCheckoutUrl: null,
-        attendanceCode: null,
-        attendanceQrImageUrl: null,
-        attendanceScannedAt: null,
-        attendanceScannedBy: null,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      try {
+        const bookingRef = await db.collection('bookings').add({
+          ...bookingPayload,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
 
-      orderId = bookingRef.id;
+        orderId = bookingRef.id;
+      } catch (bookingWriteError) {
+        if (!isFirebaseAdminUnavailableError(bookingWriteError)) {
+          throw bookingWriteError;
+        }
+
+        db = null;
+      }
     }
 
     if (!orderId && (useDummyMode || useManualMode || usePakasirMode)) {
       const localBooking = createDummyBooking({
-        userName: body.name,
-        userWhatsApp: body.whatsapp,
-        userEmail: body.email || '',
-        domicile: body.domicile,
-        customDomicile: body.customDomicile || '',
-        tourId: body.tourId,
-        tourName,
-        pax: Number(body.pax),
-        pricePerPax: tourPrice,
-        grossAmount,
-        status: 'pending_payment',
-        paymentStatus: 'pending_payment',
-        paymentGateway: usePakasirMode ? 'pakasir' : useManualMode ? 'manual' : 'dummy',
+        ...bookingPayload,
         paymentOrderId: null,
         paymentTransactionId: null,
         paymentCheckoutUrl: null,
-        attendanceCode: null,
-        attendanceQrImageUrl: null,
-        attendanceScannedAt: null,
-        attendanceScannedBy: null,
       });
 
       orderId = localBooking.id;
