@@ -27,6 +27,34 @@ function buildBasicAuthHeader(serverKey: string) {
   return `Basic ${Buffer.from(`${serverKey}:`).toString('base64')}`;
 }
 
+function getResolvedPaymentMode() {
+  const explicitMode = (process.env.PAYMENT_MODE || '').trim().toLowerCase();
+  if (explicitMode) {
+    return explicitMode;
+  }
+
+  const hasPakasirCredentials = Boolean(
+    (process.env.PAKASIR_PROJECT_SLUG || process.env.PAKASIR_PROJECT) && process.env.PAKASIR_API_KEY
+  );
+
+  if (hasPakasirCredentials) {
+    return 'pakasir';
+  }
+
+  const hasManualConfig = Boolean(
+    process.env.PAYMENT_MANUAL_BANK_NAME ||
+    process.env.PAYMENT_MANUAL_ACCOUNT_NAME ||
+    process.env.PAYMENT_MANUAL_ACCOUNT_NUMBER ||
+    process.env.PAYMENT_MANUAL_QR_IMAGE_URL
+  );
+
+  if (hasManualConfig) {
+    return 'manual';
+  }
+
+  return process.env.MIDTRANS_SERVER_KEY ? 'midtrans' : 'dummy';
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as BookingPaymentPayload;
@@ -36,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     const serverKey = process.env.MIDTRANS_SERVER_KEY;
-    const paymentMode = (process.env.PAYMENT_MODE || '').toLowerCase();
+    const paymentMode = getResolvedPaymentMode();
     const useDummyMode = paymentMode === 'dummy' || !serverKey;
     const useManualMode = paymentMode === 'manual';
     const usePakasirMode = paymentMode === 'pakasir';

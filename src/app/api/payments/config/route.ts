@@ -9,9 +9,37 @@ function splitInstructions(raw: string | undefined) {
     .filter(Boolean);
 }
 
+function getResolvedPaymentMode() {
+  const explicitMode = (process.env.PAYMENT_MODE || '').trim().toLowerCase();
+  if (explicitMode) {
+    return explicitMode;
+  }
+
+  const hasPakasirCredentials = Boolean(
+    (process.env.PAKASIR_PROJECT_SLUG || process.env.PAKASIR_PROJECT) && process.env.PAKASIR_API_KEY
+  );
+
+  if (hasPakasirCredentials) {
+    return 'pakasir';
+  }
+
+  const hasManualConfig = Boolean(
+    process.env.PAYMENT_MANUAL_BANK_NAME ||
+    process.env.PAYMENT_MANUAL_ACCOUNT_NAME ||
+    process.env.PAYMENT_MANUAL_ACCOUNT_NUMBER ||
+    process.env.PAYMENT_MANUAL_QR_IMAGE_URL
+  );
+
+  if (hasManualConfig) {
+    return 'manual';
+  }
+
+  return process.env.MIDTRANS_SERVER_KEY ? 'midtrans' : 'dummy';
+}
+
 export async function GET() {
   return NextResponse.json({
-    mode: (process.env.PAYMENT_MODE || 'dummy').toLowerCase(),
+    mode: getResolvedPaymentMode(),
     manual: {
       title: process.env.PAYMENT_MANUAL_TITLE || 'Manual Payment Checkout',
       description:
