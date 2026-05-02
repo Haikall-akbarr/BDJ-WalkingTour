@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       tourName = tourDoc.exists ? (tourData?.name || body.tourName) : body.tourName;
       tourPrice = tourDoc.exists ? Number(tourData?.price || body.tourPrice) : Number(body.tourPrice);
     } catch (dbInitError) {
-      if (!(useDummyMode && isFirebaseAdminUnavailableError(dbInitError))) {
+      if (!isFirebaseAdminUnavailableError(dbInitError)) {
         throw dbInitError;
       }
 
