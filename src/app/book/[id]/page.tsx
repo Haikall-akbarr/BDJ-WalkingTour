@@ -99,12 +99,12 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     if (!user) return;
 
-    // Selalu gunakan email dari user yang login (jangan dari form state lama)
-    // Name boleh diubah, tapi email harus sesuai dengan login user
+    // Selalu gunakan nama & email dari user yang login (jangan dari form state lama)
+    // Ini memastikan ketika user berbeda login, data otomatis update sesuai user baru
     setFormData((prev) => ({
       ...prev,
-      name: prev.name || user.name || "",
-      email: user.email || "", // Selalu gunakan email user yang login
+      name: user.name || "",
+      email: user.email || "",
     }));
   }, [user]);
 
@@ -126,7 +126,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       return;
     }
     
-    // Pastikan email selalu dari user yang login
+    // Pastikan nama dan email selalu dari user yang login
+    const nameToSubmit = user?.name || formData.name;
     const emailToSubmit = user?.email || formData.email;
     
     setLoading(true);
@@ -137,7 +138,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        name: formData.name,
+        name: nameToSubmit,
         whatsapp: formData.whatsapp,
         email: emailToSubmit,
         domicile,
@@ -270,8 +271,13 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                         placeholder="John Doe" 
                         required 
                         value={formData.name}
+                        disabled={!!user}
+                        readOnly={!!user}
                         onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className={user ? "bg-slate-100 cursor-not-allowed" : ""}
+                        title={user ? "Nama dari akun login Anda" : ""}
                       />
+                      {user && <p className="text-xs text-slate-500">Nama dari akun login Anda</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="whatsapp">Nomor WhatsApp</Label>
