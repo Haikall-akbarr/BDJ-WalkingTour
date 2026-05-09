@@ -18,7 +18,14 @@ export function useSessionUser() {
 
     const load = async () => {
       try {
-        const response = await fetch('/api/auth/me', { cache: 'no-store' });
+        const response = await fetch('/api/auth/me', {
+          cache: 'no-store',
+          credentials: 'include',
+          headers: {
+            'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
+            Pragma: 'no-cache',
+          },
+        });
         const text = await response.text();
         const result = text ? JSON.parse(text) : null;
 
