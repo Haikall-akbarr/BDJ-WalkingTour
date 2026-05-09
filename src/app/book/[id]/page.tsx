@@ -99,10 +99,12 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     if (!user) return;
 
+    // Selalu gunakan email dari user yang login (jangan dari form state lama)
+    // Name boleh diubah, tapi email harus sesuai dengan login user
     setFormData((prev) => ({
       ...prev,
       name: prev.name || user.name || "",
-      email: prev.email || user.email || "",
+      email: user.email || "", // Selalu gunakan email user yang login
     }));
   }, [user]);
 
@@ -123,6 +125,10 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       });
       return;
     }
+    
+    // Pastikan email selalu dari user yang login
+    const emailToSubmit = user?.email || formData.email;
+    
     setLoading(true);
 
     fetch("/api/payments/create", {
@@ -133,7 +139,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       body: JSON.stringify({
         name: formData.name,
         whatsapp: formData.whatsapp,
-        email: formData.email,
+        email: emailToSubmit,
         domicile,
         customDomicile,
         tourId: formData.tourId,
@@ -287,9 +293,14 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                       type="email" 
                       placeholder="john@example.com" 
                       value={formData.email}
+                      disabled={!!user}
+                      readOnly={!!user}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
                       required
+                      className={user ? "bg-slate-100 cursor-not-allowed" : ""}
+                      title={user ? "Email diambil dari akun login Anda" : ""}
                     />
+                    {user && <p className="text-xs text-slate-500">Email terkunci dari akun login Anda</p>}
                   </div>
 
                   <div className="space-y-4">
