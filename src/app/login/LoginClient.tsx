@@ -68,7 +68,17 @@ export default function LoginPage() {
 
   const routeAfterLogin = (role: string) => {
     const nextRoute = getSafeNextRoute()
-    router.replace(nextRoute ?? DASHBOARD_ROUTES[role] ?? "/dashboard/user")
+    if (nextRoute) {
+      router.replace(nextRoute)
+      return
+    }
+
+    if (role === "user") {
+      router.replace("/")
+      return
+    }
+
+    router.replace(DASHBOARD_ROUTES[role] ?? "/")
   }
 
   const loginWithEmail = async (emailValue: string, passwordValue: string) => {

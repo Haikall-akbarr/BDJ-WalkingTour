@@ -99,8 +99,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     if (!user) return;
 
-    // Selalu gunakan nama & email dari user yang login (jangan dari form state lama)
-    // Ini memastikan ketika user berbeda login, data otomatis update sesuai user baru
+    // Sinkronkan identitas login aktif ke form booking
     setFormData((prev) => ({
       ...prev,
       name: user.name || "",
@@ -246,6 +245,23 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             <p className="text-muted-foreground">Hanya beberapa langkah dari petualangan Anda berikutnya.</p>
           </div>
 
+          <Card className="rounded-[24px] border border-black/5 bg-white/80 shadow-sm backdrop-blur">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-black uppercase tracking-wide">Akun Login Aktif</CardTitle>
+              <CardDescription>Data di bawah mengikuti akun yang sedang login.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-black/5 bg-[#f7f4ee] p-4">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-zinc-500">Nama</p>
+                <p className="mt-1 text-base font-semibold text-zinc-900">{user?.name || formData.name || "-"}</p>
+              </div>
+              <div className="rounded-2xl border border-black/5 bg-[#f7f4ee] p-4">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-zinc-500">Email</p>
+                <p className="mt-1 text-base font-semibold text-zinc-900">{user?.email || formData.email || "-"}</p>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="space-y-4">
             <Progress value={progressValue} className="h-2 bg-slate-200" />
             <div className="flex justify-between text-xs font-medium text-muted-foreground">
@@ -271,13 +287,12 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                         placeholder="John Doe" 
                         required 
                         value={formData.name}
-                        disabled={!!user}
                         readOnly={!!user}
                         onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        className={user ? "bg-slate-100 cursor-not-allowed" : ""}
-                        title={user ? "Nama dari akun login Anda" : ""}
+                        className={user ? "bg-white" : ""}
+                        title={user ? "Nama mengikuti akun login aktif" : ""}
                       />
-                      {user && <p className="text-xs text-slate-500">Nama dari akun login Anda</p>}
+                      {user && <p className="text-xs text-slate-500">Nama mengikuti akun login aktif</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="whatsapp">Nomor WhatsApp</Label>
@@ -299,14 +314,13 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                       type="email" 
                       placeholder="john@example.com" 
                       value={formData.email}
-                      disabled={!!user}
                       readOnly={!!user}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
                       required
-                      className={user ? "bg-slate-100 cursor-not-allowed" : ""}
-                      title={user ? "Email diambil dari akun login Anda" : ""}
+                      className={user ? "bg-white" : ""}
+                      title={user ? "Email mengikuti akun login aktif" : ""}
                     />
-                    {user && <p className="text-xs text-slate-500">Email terkunci dari akun login Anda</p>}
+                    {user && <p className="text-xs text-slate-500">Email mengikuti akun login aktif</p>}
                   </div>
 
                   <div className="space-y-4">
