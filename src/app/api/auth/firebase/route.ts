@@ -110,7 +110,12 @@ async function verifyFirebaseIdToken(idToken: string) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[Firebase Auth] POST request received');
+    console.log('[Firebase Auth] DB_PROVIDER:', process.env.DB_PROVIDER);
+    console.log('[Firebase Auth] isMySqlEnabled:', isMySqlEnabled());
+
     if (!isMySqlEnabled()) {
+      console.error('[Firebase Auth] MySQL not enabled');
       return NextResponse.json({ error: 'MySQL backend belum aktif.' }, { status: 400 });
     }
 
@@ -118,10 +123,13 @@ export async function POST(request: NextRequest) {
     const idToken = String(body?.idToken || '').trim();
 
     if (!idToken) {
+      console.error('[Firebase Auth] No idToken provided');
       return NextResponse.json({ error: 'Firebase ID token wajib diisi.' }, { status: 400 });
     }
 
+    console.log('[Firebase Auth] Verifying Firebase token...');
     const firebaseUser = await verifyFirebaseIdToken(idToken);
+    console.log('[Firebase Auth] Token verified for email:', firebaseUser.email);
     const email = firebaseUser.email!.toLowerCase();
     const existing = await getUserByEmail(email);
 
@@ -177,6 +185,8 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error: any) {
+    console.error('[Firebase Auth] Error:', error?.message);
+    console.error('[Firebase Auth] Stack:', error?.stack);
     return NextResponse.json({ error: error?.message || 'Login Firebase gagal.' }, { status: 500 });
   }
 }

@@ -196,14 +196,27 @@ export default function LoginPage() {
   useEffect(() => {
     let mounted = true
     ;(async () => {
-      if (!FIREBASE_API_KEY) return
+      console.log('[LoginClient] useEffect mounted, checking Firebase redirect result...')
+      if (!FIREBASE_API_KEY) {
+        console.log('[LoginClient] No FIREBASE_API_KEY, skipping')
+        return
+      }
       const helper = await ensureFirebaseHelper()
-      if (!helper || !helper.handleFirebaseRedirectResult) return
+      if (!helper || !helper.handleFirebaseRedirectResult) {
+        console.log('[LoginClient] Helper not available')
+        return
+      }
 
       try {
+        console.log('[LoginClient] Calling handleFirebaseRedirectResult...')
         const data = await helper.handleFirebaseRedirectResult()
-        if (!data || !data.firebaseIdToken) return
+        console.log('[LoginClient] Redirect result data:', { hasData: !!data, hasToken: !!data?.firebaseIdToken })
+        if (!data || !data.firebaseIdToken) {
+          console.log('[LoginClient] No redirect result or token')
+          return
+        }
 
+        console.log('[LoginClient] Posting token to /api/auth/firebase...')
         const response = await fetch("/api/auth/firebase", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -211,12 +224,18 @@ export default function LoginPage() {
         })
 
         const result = await response.json()
+        console.log('[LoginClient] Firebase auth response:', { status: response.status, user: result?.user?.email, error: result?.error })
+        
         if (!response.ok) {
           throw new Error(result?.error || "Login Firebase gagal.")
         }
 
-        if (mounted) routeAfterLogin(result?.user?.role || "user")
+        if (mounted) {
+          console.log('[LoginClient] Login success, routing to dashboard...')
+          routeAfterLogin(result?.user?.role || "user")
+        }
       } catch (err: any) {
+        console.error('[LoginClient] Error:', err?.message)
         toast({
           variant: "destructive",
           title: "Firebase login gagal",
