@@ -1,7 +1,7 @@
-
+﻿
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -40,10 +40,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { useFirestore, useCollection } from "@/firebase"
-import { collection, query, where, doc, updateDoc } from "firebase/firestore"
-import { errorEmitter } from "@/firebase/error-emitter"
-import { FirestorePermissionError } from "@/firebase/errors"
 import { useToast } from "@/hooks/use-toast"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
 
@@ -110,10 +106,11 @@ const MOCK_BOOKINGS = [
 
 export default function OwnerDashboard() {
   const router = useRouter();
-  const db = useFirestore();
   const { toast } = useToast();
   const [selectedGuides, setSelectedGuides] = useState<Record<string, string>>({});
   const [removedMockIds, setRemovedMockIds] = useState<string[]>([]);
+  const [dbBookings, setDbBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const heroImage = useMemo(() => {
     return PlaceHolderImages.find((img) => img.id === "hero-bg")?.imageUrl || PlaceHolderImages[0]?.imageUrl;
@@ -123,16 +120,32 @@ export default function OwnerDashboard() {
     return PlaceHolderImages.slice(0, 3);
   }, []);
 
-  const unassignedQuery = useMemo(() => {
-    if (!db) return null;
-    return query(
-      collection(db, "bookings"), 
-      where("status", "==", "approved"),
-      where("guideId", "==", null)
-    );
-  }, [db]);
+  const loadUnassignedBookings = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/bookings?status=approved&unassigned=true", { cache: "no-store" });
+      const result = await response.json();
 
-  const { data: dbBookings, loading } = useCollection(unassignedQuery);
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal memuat booking owner.");
+      }
+
+      setDbBookings(Array.isArray(result?.bookings) ? result.bookings : []);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal memuat data",
+        description: error?.message || "Periksa backend MySQL.",
+      });
+      setDbBookings([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUnassignedBookings();
+  }, []);
 
   const bookingsToDisplay = useMemo(() => {
     const activeMocks = MOCK_BOOKINGS.filter(b => !removedMockIds.includes(b.id));
@@ -140,7 +153,7 @@ export default function OwnerDashboard() {
     return [...dbBookings, ...activeMocks];
   }, [dbBookings, removedMockIds]);
 
-  const handleAssignGuide = (bookingId: string) => {
+  const handleAssignGuide = async (bookingId: string) => {
     const guideId = selectedGuides[bookingId];
     if (!guideId) return;
 
@@ -156,30 +169,42 @@ export default function OwnerDashboard() {
       return;
     }
 
-    // Handle Real Firestore Data
-    if (!db) return;
-    const bookingRef = doc(db, "bookings", bookingId);
-    
-    updateDoc(bookingRef, { 
-      guideId: guideId,
-      guideName: guideName
-    }).catch(async (error) => {
-      const permissionError = new FirestorePermissionError({
-        path: `bookings/${bookingId}`,
-        operation: "update",
-        requestResourceData: { guideId, guideName }
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          guideId,
+          guideName,
+          status: "assigned",
+        }),
       });
-      errorEmitter.emit("permission-error", permissionError);
-    });
 
-    toast({
-      title: "Penugasan Berhasil",
-      description: `Pemandu ${guideName} telah ditugaskan.`,
-    });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal menugaskan pemandu.");
+      }
+
+      await loadUnassignedBookings();
+      toast({
+        title: "Penugasan Berhasil",
+        description: `Pemandu ${guideName} telah ditugaskan.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal menugaskan pemandu",
+        description: error?.message || "Coba lagi beberapa saat.",
+      });
+    }
   };
 
   const handleLogout = () => {
-    router.push("/");
+    fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+      router.push("/");
+    });
   };
 
   return (
@@ -413,8 +438,8 @@ export default function OwnerDashboard() {
                       <p className="truncate text-sm font-bold">{booking.tourName}</p>
                       <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-500">
                         <span className="font-semibold text-zinc-800">{booking.userName}</span>
-                        <span>•</span>
-                        <span>{booking.createdAt?.toDate().toLocaleDateString("id-ID")}</span>
+                        <span>â€¢</span>
+                        <span>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString("id-ID") : "-"}</span>
                         <Badge variant="outline" className="h-5 rounded-full px-2 text-[10px]">
                           {booking.pax} Pax {booking.id.startsWith("mock-") && "(Simulasi)"}
                         </Badge>
@@ -496,7 +521,7 @@ export default function OwnerDashboard() {
                     Semua Tur
                   </Link>
                   <Link href="/login" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10 hover:text-white">
-                    Login Staf
+                    Heritage Walks
                   </Link>
                   <Link href="/book/1" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10 hover:text-white">
                     Pesan Sekarang
@@ -524,7 +549,7 @@ export default function OwnerDashboard() {
             </div>
 
             <div className="relative z-10 mt-8 flex flex-col gap-3 border-t border-white/10 pt-5 text-xs text-white/55 sm:flex-row sm:items-center sm:justify-between">
-              <p>© 2026 BDJ WalkingTour. All rights reserved.</p>
+              <p>Â© 2026 BDJ WalkingTour. All rights reserved.</p>
               <p className="uppercase tracking-[0.25em]">Owner Dashboard UI Refresh</p>
             </div>
           </div>
@@ -533,3 +558,4 @@ export default function OwnerDashboard() {
     </div>
   )
 }
+

@@ -11,7 +11,9 @@ export default function UserDashboardPage() {
   const router = useRouter()
 
   const handleLogout = () => {
-    router.push("/")
+    fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+      router.push("/")
+    })
   }
 
   return (

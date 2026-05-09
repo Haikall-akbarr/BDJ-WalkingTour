@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,23 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { ChevronLeft, Sparkles, Send, RefreshCcw, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { generateTourReport } from "@/ai/flows/tour-report-generation"
-import { useFirestore, useDoc } from "@/firebase"
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore"
-import { errorEmitter } from "@/firebase/error-emitter"
-import { FirestorePermissionError } from "@/firebase/errors"
 
 export default function TourReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: bookingId } = React.use(params);
-  const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
-
-  const bookingRef = useMemo(() => {
-    if (!db || !bookingId) return null;
-    return doc(db, "bookings", bookingId);
-  }, [db, bookingId]);
-
-  const { data: booking, loading: bookingLoading } = useDoc(bookingRef);
+  const [booking, setBooking] = useState<any>(null);
+  const [bookingLoading, setBookingLoading] = useState(true);
 
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -39,11 +29,43 @@ export default function TourReportPage({ params }: { params: Promise<{ id: strin
   const [generatedReport, setGeneratedReport] = useState("");
 
   useEffect(() => {
+    let mounted = true;
+
+    const loadBooking = async () => {
+      if (!bookingId) return;
+      setBookingLoading(true);
+
+      try {
+        const response = await fetch(`/api/bookings/${bookingId}`, { cache: "no-store" });
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result?.error || "Gagal memuat detail booking.");
+        }
+
+        if (mounted) {
+          setBooking(result?.booking || null);
+        }
+      } catch {
+        if (mounted) setBooking(null);
+      } finally {
+        if (mounted) setBookingLoading(false);
+      }
+    };
+
+    loadBooking();
+
+    return () => {
+      mounted = false;
+    };
+  }, [bookingId]);
+
+  useEffect(() => {
     if (booking) {
       setFormData({
         tourName: booking.tourName || "Tur Tanpa Nama",
         guideName: booking.guideName || "Pemandu",
-        date: booking.createdAt?.toDate ? booking.createdAt.toDate().toLocaleDateString('id-ID') : new Date().toLocaleDateString('id-ID'),
+        date: booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('id-ID') : new Date().toLocaleDateString('id-ID'),
         notableEncounters: ""
       });
       if (booking.report) {
@@ -81,27 +103,38 @@ export default function TourReportPage({ params }: { params: Promise<{ id: strin
     }
   };
 
-  const handleSubmitFinal = () => {
-    if (!db || !bookingId) return;
+  const handleSubmitFinal = async () => {
+    if (!bookingId) return;
 
-    const bRef = doc(db, "bookings", bookingId);
-    updateDoc(bRef, {
-      report: generatedReport,
-      reportSubmittedAt: serverTimestamp()
-    }).catch(async (error) => {
-      const permissionError = new FirestorePermissionError({
-        path: `bookings/${bookingId}`,
-        operation: "update",
-        requestResourceData: { report: generatedReport }
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          report: generatedReport,
+          reportSubmittedAt: new Date().toISOString(),
+        }),
       });
-      errorEmitter.emit("permission-error", permissionError);
-    });
 
-    toast({
-      title: "Berhasil",
-      description: "Laporan resmi telah dikirim!",
-    });
-    router.push("/dashboard/guide");
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal menyimpan laporan.");
+      }
+
+      toast({
+        title: "Berhasil",
+        description: "Laporan resmi telah dikirim!",
+      });
+      router.push("/dashboard/guide");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal menyimpan laporan",
+        description: error?.message || "Coba lagi beberapa saat.",
+      });
+    }
   };
 
   if (bookingLoading) {

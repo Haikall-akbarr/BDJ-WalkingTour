@@ -14,8 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
 import { CheckCircle2, ChevronLeft, ChevronRight, QrCode, Loader2, CreditCard } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useFirestore, useCollection, useUser } from "@/firebase"
-import { collection, query } from "firebase/firestore"
+import { useSessionUser } from "@/hooks/use-session-user"
 
 const MOCK_TOURS = [
   { id: "pacinan", name: "Pacinan Walking Tour", price: 65000 },
@@ -31,18 +30,12 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const [loading, setLoading] = useState(false);
   const [domicile, setDomicile] = useState("banjarmasin");
   const [customDomicile, setCustomDomicile] = useState("");
+  const [toursLoading, setToursLoading] = useState(true);
+  const [dbTours, setDbTours] = useState<any[]>([]);
   
-  const db = useFirestore();
-  const { user, loading: userLoading } = useUser();
+  const { user, loading: userLoading } = useSessionUser();
   const { toast } = useToast();
   const router = useRouter();
-
-  const toursQuery = useMemo(() => {
-    if (!db) return null;
-    return query(collection(db, "tours"));
-  }, [db]);
-
-  const { data: dbTours, loading: toursLoading } = useCollection(toursQuery);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -56,6 +49,41 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     if (!dbTours || dbTours.length === 0) return MOCK_TOURS;
     return dbTours;
   }, [dbTours]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadTours = async () => {
+      setToursLoading(true);
+
+      try {
+        const response = await fetch("/api/tours", { cache: "no-store" });
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result?.error || "Gagal memuat daftar tur.");
+        }
+
+        if (mounted) {
+          setDbTours(Array.isArray(result?.tours) ? result.tours : []);
+        }
+      } catch {
+        if (mounted) {
+          setDbTours([]);
+        }
+      } finally {
+        if (mounted) {
+          setToursLoading(false);
+        }
+      }
+    };
+
+    loadTours();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const nextAfterLogin = useMemo(() => {
     const safeId = tourIdParam && tourIdParam !== "new" ? tourIdParam : "new";
@@ -73,7 +101,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
     setFormData((prev) => ({
       ...prev,
-      name: prev.name || user.displayName || "",
+      name: prev.name || user.name || "",
       email: prev.email || user.email || "",
     }));
   }, [user]);

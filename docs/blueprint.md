@@ -5,7 +5,7 @@
 - Public Tour Listing: Display available tours with key details like image, title, price, and date.
 - Interactive Map: Show general tour routes and meeting points on an interactive map.
 - Booking Flow: Guided multi-step form for tour registration and payment confirmation.
-- Role-Based Authentication: Secure login with Firebase Auth and role-based access control (Admin, Owner, Guide).
+- Role-Based Authentication: Secure MySQL-based login with session cookies and role-based access control (Admin, Owner, Guide, User).
 - Tour Management: Admin interface to create, update, and manage tour packages and schedules.
 - Guide Assignment: Owner interface to view upcoming tours and assign guides from a dropdown list.
 - Tour Report Generation: A tool on the guide dashboard allowing them to provide compelling and engaging narratives describing notable encounters and discoveries of each tour. The system uses this report as input to improve and update future tour packages

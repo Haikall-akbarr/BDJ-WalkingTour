@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createDummyBooking } from '@/lib/dummy-booking-store';
-import { getServerFirestore, isFirebaseAdminUnavailableError, serverTimestamp } from '@/lib/server-firebase';
+import { isMySqlEnabled } from '@/lib/mysql';
+import { createBooking, getTourById, updateBooking } from '@/lib/mysql-store';
 import { BookingPaymentPayload } from '@/lib/payment-helpers';
 
 export const runtime = 'nodejs';
@@ -73,24 +74,16 @@ export async function POST(request: NextRequest) {
     const useManualMode = paymentMode === 'manual';
     const usePakasirMode = paymentMode === 'pakasir';
 
-    let db: ReturnType<typeof getServerFirestore> | null = null;
     let tourName = body.tourName;
     let tourPrice = Number(body.tourPrice);
     let orderId: string | null = null;
 
-    try {
-      db = getServerFirestore();
-      const tourDocRef = db.collection('tours').doc(body.tourId);
-      const tourDoc = await tourDocRef.get();
-      const tourData = tourDoc.data();
-      tourName = tourDoc.exists ? (tourData?.name || body.tourName) : body.tourName;
-      tourPrice = tourDoc.exists ? Number(tourData?.price || body.tourPrice) : Number(body.tourPrice);
-    } catch (dbInitError) {
-      if (!isFirebaseAdminUnavailableError(dbInitError)) {
-        throw dbInitError;
+    if (isMySqlEnabled()) {
+      const mysqlTour = await getTourById(body.tourId);
+      if (mysqlTour) {
+        tourName = mysqlTour.name || body.tourName;
+        tourPrice = Number(mysqlTour.price || body.tourPrice);
       }
-
-      db = null;
     }
 
     const grossAmount = tourPrice * Number(body.pax);
@@ -117,22 +110,12 @@ export async function POST(request: NextRequest) {
       attendanceScannedBy: null,
     } as const;
 
-    if (db) {
-      try {
-        const bookingRef = await db.collection('bookings').add({
-          ...bookingPayload,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+    if (isMySqlEnabled()) {
+      const mysqlBooking = await createBooking({
+        ...bookingPayload,
+      });
 
-        orderId = bookingRef.id;
-      } catch (bookingWriteError) {
-        if (!isFirebaseAdminUnavailableError(bookingWriteError)) {
-          throw bookingWriteError;
-        }
-
-        db = null;
-      }
+      orderId = mysqlBooking?.id || null;
     }
 
     if (!orderId && (useDummyMode || useManualMode || usePakasirMode)) {
@@ -147,7 +130,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!orderId) {
-      throw new Error('Gagal membuat booking pembayaran. Firebase Admin credentials belum tersedia.');
+      throw new Error('Gagal membuat booking pembayaran. Pastikan backend MySQL aktif atau mode dummy tersedia.');
     }
 
     const snapPayload = {
@@ -176,13 +159,12 @@ export async function POST(request: NextRequest) {
     if (useManualMode) {
       const manualCheckoutUrl = buildPublicUrl(request, `/payments/manual/${orderId}`);
 
-      if (db) {
-        await db.collection('bookings').doc(orderId).update({
+      if (isMySqlEnabled()) {
+        await updateBooking(orderId, {
           paymentOrderId: orderId,
           paymentCheckoutUrl: manualCheckoutUrl,
           paymentStatus: 'pending_payment',
           paymentGateway: 'manual',
-          updatedAt: serverTimestamp(),
         });
       } else {
         createDummyBooking({
@@ -239,13 +221,12 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (db) {
-        await db.collection('bookings').doc(orderId).update({
+      if (isMySqlEnabled()) {
+        await updateBooking(orderId, {
           paymentOrderId: orderId,
           paymentCheckoutUrl: pakasirUrl.toString(),
           paymentStatus: 'pending_payment',
           paymentGateway: 'pakasir',
-          updatedAt: serverTimestamp(),
         });
       } else {
         createDummyBooking({
@@ -284,12 +265,12 @@ export async function POST(request: NextRequest) {
     if (useDummyMode) {
       const dummyCheckoutUrl = buildPublicUrl(request, `/payments/dummy/${orderId}`);
 
-      if (db) {
-        await db.collection('bookings').doc(orderId).update({
+      if (isMySqlEnabled()) {
+        await updateBooking(orderId, {
           paymentOrderId: orderId,
           paymentCheckoutUrl: dummyCheckoutUrl,
           paymentStatus: 'pending_payment',
-          updatedAt: serverTimestamp(),
+          paymentGateway: 'dummy',
         });
       } else {
         createDummyBooking({
@@ -346,16 +327,16 @@ export async function POST(request: NextRequest) {
     const midtransData = await response.json();
     const checkoutUrl = midtransData.redirect_url || midtransData.redirectUrl || midtransData.url || null;
 
-    if (!db) {
-      throw new Error('Midtrans mode membutuhkan Firebase Admin credentials yang valid.');
+    if (isMySqlEnabled()) {
+      await updateBooking(orderId, {
+        paymentOrderId: orderId,
+        paymentCheckoutUrl: checkoutUrl,
+        paymentStatus: 'pending_payment',
+        paymentGateway: 'midtrans',
+      });
+    } else {
+      throw new Error('Midtrans mode saat ini membutuhkan backend MySQL aktif.');
     }
-
-    await db.collection('bookings').doc(orderId).update({
-      paymentOrderId: orderId,
-      paymentCheckoutUrl: checkoutUrl,
-      paymentStatus: 'pending_payment',
-      updatedAt: serverTimestamp(),
-    });
 
     return NextResponse.json({
       bookingId: orderId,

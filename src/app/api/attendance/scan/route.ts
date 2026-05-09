@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findDummyBookingByAttendanceCode, updateDummyBooking, initializeDummyBookings } from '@/lib/dummy-booking-store';
-import { getServerFirestore, serverTimestamp } from '@/lib/server-firebase';
+import { isMySqlEnabled } from '@/lib/mysql';
+import { getBookingByAttendanceCode, updateBooking } from '@/lib/mysql-store';
 
 export const runtime = 'nodejs';
 
@@ -23,30 +24,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'attendanceCode wajib diisi.' }, { status: 400 });
     }
 
-    // Try Firestore first, but fallback to dummy bookings on any error
+    // Try MySQL first, then fallback to dummy bookings
     let booking = null;
     let bookingId = null;
-    let usedFirestore = false;
+    let usedMySql = false;
 
-    try {
-      const db = getServerFirestore();
-      const snapshot = await db
-        .collection('bookings')
-        .where('attendanceCode', '==', attendanceCode)
-        .limit(1)
-        .get();
-      
-      if (snapshot.docs[0]) {
-        bookingId = snapshot.docs[0].id;
-        booking = snapshot.docs[0].data();
-        usedFirestore = true;
+    if (isMySqlEnabled()) {
+      const mysqlBooking = await getBookingByAttendanceCode(attendanceCode);
+      if (mysqlBooking) {
+        booking = mysqlBooking;
+        bookingId = mysqlBooking.id;
+        usedMySql = true;
       }
-    } catch (firestoreError) {
-      // Firestore unavailable, will use local fallback
-      console.error('[attendance/scan] Firestore error:', (firestoreError as any)?.message);
     }
 
-    // If not found in Firestore, try local dummy bookings
+    // If not found in MySQL, try local dummy bookings
     if (!booking) {
       const localBooking = findDummyBookingByAttendanceCode(attendanceCode);
       if (localBooking) {
@@ -67,23 +59,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Barcode sudah pernah digunakan untuk absensi.' }, { status: 409 });
     }
 
-    // Update in Firestore if we used it, otherwise update local dummy booking
-    if (usedFirestore) {
-      try {
-        const db = getServerFirestore();
-        await db
-          .collection('bookings')
-          .doc(bookingId)
-          .update({
-            attendanceScannedAt: serverTimestamp(),
-            attendanceScannedBy: scannedBy,
-            attendanceStatus: 'present',
-            updatedAt: serverTimestamp(),
-          });
-      } catch (updateError) {
-        console.error('[attendance/scan] Firestore update error:', (updateError as any)?.message);
-        // Still return success even if update fails (read-only scenario)
-      }
+    // Update in MySQL if available, otherwise update local dummy booking
+    if (usedMySql) {
+      await updateBooking(bookingId!, {
+        attendanceScannedAt: new Date().toISOString(),
+        attendanceScannedBy: scannedBy,
+        attendanceStatus: 'present',
+      });
     } else {
       // Update local dummy booking
       const updated = updateDummyBooking(bookingId!, {
@@ -100,7 +82,7 @@ export async function POST(request: NextRequest) {
       ok: true,
       bookingId,
       booking,
-      source: usedFirestore ? 'firestore' : 'local',
+      source: usedMySql ? 'mysql' : 'local',
     });
   } catch (error: any) {
     console.error('[attendance/scan] Fatal error:', error?.message, error?.stack);

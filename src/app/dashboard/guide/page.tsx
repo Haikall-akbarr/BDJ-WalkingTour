@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
 import { useToast } from "@/hooks/use-toast"
+import { useSessionUser } from "@/hooks/use-session-user"
 
 type ScanHistoryItem = {
   id: string;
@@ -68,6 +69,7 @@ const MOCK_TOURS = [
 export default function GuideDashboard() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useSessionUser();
   const heroImage = useMemo(() => {
     return PlaceHolderImages.find((img) => img.id === "hero-bg")?.imageUrl || PlaceHolderImages[0]?.imageUrl;
   }, []);
@@ -82,13 +84,55 @@ export default function GuideDashboard() {
   const scannerControlsRef = useRef<IScannerControls | null>(null);
   const scanGuardRef = useRef(false);
 
-  // ID Pemandu simulasi (dari login)
-  const currentGuideId = "g1"; 
+  // ID pemandu diambil dari sesi login MySQL
+  const currentGuideId = user?.id || "g1";
   const historyStorageKey = `guide-scan-history-${currentGuideId}`;
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
+  const [apiTours, setApiTours] = useState<any[]>([]);
+  const [apiLoading, setApiLoading] = useState(true);
 
-  // Gunakan data mock sebagai fallback stabil jika Firestore tidak dibutuhkan/terbatas
-  const myTours = useMemo(() => MOCK_TOURS, []);
+  const myTours = useMemo(() => {
+    if (apiTours.length > 0) return apiTours;
+    return MOCK_TOURS;
+  }, [apiTours]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadGuideTours = async () => {
+      if (!currentGuideId) return;
+      setApiLoading(true);
+
+      try {
+        const response = await fetch(`/api/bookings?guideId=${encodeURIComponent(currentGuideId)}`, {
+          cache: "no-store",
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result?.error || "Gagal memuat jadwal guide.");
+        }
+
+        if (mounted) {
+          setApiTours(Array.isArray(result?.bookings) ? result.bookings : []);
+        }
+      } catch {
+        if (mounted) {
+          setApiTours([]);
+        }
+      } finally {
+        if (mounted) {
+          setApiLoading(false);
+        }
+      }
+    };
+
+    loadGuideTours();
+
+    return () => {
+      mounted = false;
+    };
+  }, [currentGuideId]);
 
   const selectedTour = useMemo(() => {
     if (!myTours || myTours.length === 0) return null;
@@ -133,7 +177,9 @@ export default function GuideDashboard() {
   }, []);
 
   const handleLogout = () => {
-    router.push("/");
+    fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+      router.push("/");
+    });
   };
 
   const saveScanHistory = (attendanceCode: string, source: "manual" | "camera", payload: any) => {
@@ -441,7 +487,14 @@ export default function GuideDashboard() {
           </CardContent>
         </Card>
 
-        {myTours && myTours.length > 0 ? (
+        {apiLoading ? (
+          <Card className="rounded-[28px] border-dashed p-20 text-center">
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
+              <p className="text-muted-foreground">Memuat jadwal guide...</p>
+            </div>
+          </Card>
+        ) : myTours && myTours.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Card className="rounded-[28px] border-none bg-white shadow-md lg:col-span-1">
               <CardHeader>
@@ -461,7 +514,7 @@ export default function GuideDashboard() {
                     <p className="truncate text-sm font-bold md:text-base">{tour.tourName}</p>
                     <div className="mt-2 flex items-end justify-between">
                       <p className={`text-[10px] md:text-xs ${selectedTour?.id === tour.id ? "text-zinc-300" : "text-zinc-500"}`}>
-                        {tour.createdAt?.toDate().toLocaleDateString("id-ID")}
+                        {tour.createdAt ? new Date(tour.createdAt).toLocaleDateString("id-ID") : "-"}
                       </p>
                       <Badge
                         variant="outline"
@@ -485,7 +538,7 @@ export default function GuideDashboard() {
                     <div className="min-w-0">
                       <CardTitle className="truncate text-xl font-black uppercase md:text-2xl">{selectedTour?.tourName}</CardTitle>
                       <CardDescription className="mt-1 flex items-center gap-1 text-xs text-zinc-300">
-                        <MapPin className="h-3 w-3" /> Lokasi Tur • {selectedTour?.createdAt?.toDate().toLocaleDateString("id-ID")}
+                        <MapPin className="h-3 w-3" /> Lokasi Tur • {selectedTour?.createdAt ? new Date(selectedTour.createdAt).toLocaleDateString("id-ID") : "-"}
                       </CardDescription>
                     </div>
                     <Button size="sm" variant="outline" className="h-8 gap-1 rounded-full border-white/50 bg-white/10 text-[10px] text-white hover:bg-white/20 hover:text-white md:text-xs">

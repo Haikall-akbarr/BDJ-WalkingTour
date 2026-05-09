@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState } from "react"
 import Image from "next/image"
@@ -10,8 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Calendar, Users, ArrowRight, Clock, Map, ArrowUpRight } from "lucide-react"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
-import { useUser, useAuth } from "@/firebase"
-import { signOut } from "firebase/auth"
+import { useSessionUser } from "@/hooks/use-session-user"
 import { useToast } from "@/hooks/use-toast"
 
 const STATIC_TOURS = [
@@ -45,8 +44,7 @@ const STATIC_TOURS = [
 ]
 
 export default function LandingPage() {
-  const auth = useAuth()
-  const { user, loading: authLoading } = useUser()
+  const { user, loading: authLoading } = useSessionUser()
   const { toast } = useToast()
   const allTours = useMemo(() => STATIC_TOURS, [])
   const [newsletterEmail, setNewsletterEmail] = useState("")
@@ -62,8 +60,8 @@ export default function LandingPage() {
   ]
 
   const handleLogout = async () => {
-    if (!auth) return
-    await signOut(auth)
+    await fetch("/api/auth/logout", { method: "POST" })
+    window.location.href = "/"
   }
 
   const handleNewsletterSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -124,7 +122,7 @@ export default function LandingPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                {((!authLoading || !auth) && !user) && (
+                {!authLoading && !user && (
                   <Link href="/login">
                     <Button
                       size="sm"
@@ -186,7 +184,7 @@ export default function LandingPage() {
                         variant="outline"
                         className="h-11 rounded-full border-white/30 bg-white/5 px-6 text-xs font-bold uppercase text-white hover:bg-white/15 hover:text-white md:px-7"
                       >
-                        Login Staf
+                        Heritage Walks
                       </Button>
                     </Link>
                   )}
@@ -317,7 +315,7 @@ export default function LandingPage() {
                   {!authLoading && !user && (
                     <Link href="/login">
                       <Button className="rounded-full bg-white text-zinc-900 hover:bg-white/90">
-                        Login Staf <ArrowRight className="ml-2 h-4 w-4" />
+                        Heritage Walks <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </Link>
                   )}
@@ -421,7 +419,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <p className="mt-12 text-center text-base text-[#667665] md:text-lg">© 2026 BDJ Walking Tour. Hak cipta dilindungi.</p>
+          <p className="mt-12 text-center text-base text-[#667665] md:text-lg">Â© 2026 BDJ Walking Tour. Hak cipta dilindungi.</p>
         </section>
       </main>
 
@@ -447,3 +445,4 @@ export default function LandingPage() {
     </div>
   )
 }
+

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createDummyBooking, getDummyBooking, updateDummyBooking } from '@/lib/dummy-booking-store';
-import { getServerFirestore, isFirebaseAdminUnavailableError, serverTimestamp } from '@/lib/server-firebase';
+import { getDummyBooking, updateDummyBooking } from '@/lib/dummy-booking-store';
+import { isMySqlEnabled } from '@/lib/mysql';
+import { getBookingById, updateBooking } from '@/lib/mysql-store';
 import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail } from '@/lib/payment-helpers';
 
 export const runtime = 'nodejs';
@@ -33,46 +34,6 @@ function getPakasirProjectSlug() {
   return process.env.PAKASIR_PROJECT_SLUG || process.env.PAKASIR_PROJECT || '';
 }
 
-async function loadBooking(orderId: string) {
-  try {
-    const db = getServerFirestore();
-    const bookingRef = db.collection('bookings').doc(orderId);
-    const bookingDoc = await bookingRef.get();
-
-    if (!bookingDoc.exists) {
-      const localBooking = getDummyBooking(orderId) || null;
-      return {
-        db,
-        bookingRef,
-        bookingDoc,
-        bookingData: localBooking,
-        localBooking,
-      };
-    }
-
-    return {
-      db,
-      bookingRef,
-      bookingDoc,
-      bookingData: bookingDoc.exists ? (bookingDoc.data() as any) : null,
-      localBooking: null,
-    };
-  } catch (dbError) {
-    if (!isFirebaseAdminUnavailableError(dbError)) {
-      throw dbError;
-    }
-
-    const localBooking = getDummyBooking(orderId) || null;
-    return {
-      db: null,
-      bookingRef: null,
-      bookingDoc: null,
-      bookingData: localBooking,
-      localBooking,
-    };
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get('content-type') || '';
@@ -96,8 +57,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Project Pakasir tidak cocok.' }, { status: 401 });
     }
 
-    const context = await loadBooking(orderId);
-    const bookingData = context.bookingData;
+    const mysqlEnabled = isMySqlEnabled();
+    const bookingData = mysqlEnabled ? await getBookingById(orderId) : getDummyBooking(orderId);
 
     if (!bookingData) {
       return NextResponse.json({ error: 'Booking tidak ditemukan.' }, { status: 404 });
@@ -108,11 +69,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (status !== 'completed') {
-      if (context.db) {
-        await context.bookingRef!.update({
+      if (mysqlEnabled) {
+        await updateBooking(orderId, {
           paymentStatus: status,
           status,
-          updatedAt: serverTimestamp(),
         });
       } else {
         updateDummyBooking(orderId, {
@@ -127,16 +87,15 @@ export async function POST(request: NextRequest) {
     const attendanceCode = bookingData.attendanceCode || generateAttendanceCode(orderId);
     const qrImageUrl = bookingData.attendanceQrImageUrl || buildAttendanceQrUrl(attendanceCode);
 
-    if (context.db) {
-      await context.bookingRef!.update({
+    if (mysqlEnabled) {
+      await updateBooking(orderId, {
         paymentStatus: 'paid',
         status: 'paid',
         paymentGateway: 'pakasir',
         paymentTransactionId: `${paymentMethod || 'pakasir'}-${payload?.completed_at || Date.now()}`,
         attendanceCode,
         attendanceQrImageUrl: qrImageUrl,
-        paidAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        paidAt: new Date().toISOString(),
       });
     } else {
       updateDummyBooking(orderId, {
@@ -162,10 +121,9 @@ export async function POST(request: NextRequest) {
           totalAmount: Number(amount),
         });
 
-        if (context.db) {
-          await context.bookingRef!.update({
-            barcodeSentAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
+        if (mysqlEnabled) {
+          await updateBooking(orderId, {
+            barcodeSentAt: new Date().toISOString(),
           });
         } else {
           updateDummyBooking(orderId, {

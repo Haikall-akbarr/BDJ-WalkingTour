@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDummyBooking } from '@/lib/dummy-booking-store';
-import { getServerFirestore, isFirebaseAdminUnavailableError } from '@/lib/server-firebase';
+import { isMySqlEnabled } from '@/lib/mysql';
+import { getBookingById, updateBooking } from '@/lib/mysql-store';
 import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail } from '@/lib/payment-helpers';
 
 export const runtime = 'nodejs';
@@ -20,7 +21,7 @@ function getPakasirApiKey() {
 async function syncFromPakasir(params: {
   bookingId: string;
   booking: any;
-  source: 'firestore' | 'local';
+  source: 'local' | 'mysql';
 }) {
   if (params.booking?.paymentGateway !== 'pakasir') {
     return null;
@@ -66,9 +67,8 @@ async function syncFromPakasir(params: {
   const paymentTransactionId = transaction?.transaction_id || transaction?.payment_id || `pakasir-${params.bookingId}`;
 
   try {
-    if (params.source === 'firestore') {
-      const db = getServerFirestore();
-      await db.collection('bookings').doc(params.bookingId).update({
+    if (params.source === 'mysql') {
+      await updateBooking(params.bookingId, {
         paymentStatus: 'paid',
         status: 'paid',
         paymentGateway: 'pakasir',
@@ -76,7 +76,6 @@ async function syncFromPakasir(params: {
         attendanceCode,
         attendanceQrImageUrl: qrImageUrl,
         paidAt: transaction?.completed_at || transaction?.paid_at || new Date().toISOString(),
-        updatedAt: new Date(),
       });
     } else {
       const { updateDummyBooking } = await import('@/lib/dummy-booking-store');
@@ -127,117 +126,82 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'bookingId wajib diisi.' }, { status: 400 });
     }
 
-    try {
-      const db = getServerFirestore();
-      const bookingDoc = await db.collection('bookings').doc(bookingId).get();
+    if (isMySqlEnabled()) {
+      const booking = await getBookingById(bookingId);
 
-      if (bookingDoc.exists) {
-        const booking = bookingDoc.data() as any;
-        const syncedBooking = await syncFromPakasir({
+      if (!booking) {
+        return NextResponse.json({
+          source: 'mysql',
           bookingId,
           booking: {
             id: bookingId,
-            paymentStatus: booking?.paymentStatus || 'pending_payment',
-            status: booking?.status || 'pending_payment',
-            paymentGateway: booking?.paymentGateway || null,
-            paymentCheckoutUrl: booking?.paymentCheckoutUrl || null,
-            attendanceCode: booking?.attendanceCode || null,
-            attendanceQrImageUrl: booking?.attendanceQrImageUrl || null,
-            attendanceScannedAt: booking?.attendanceScannedAt || null,
-            attendanceScannedBy: booking?.attendanceScannedBy || null,
-            paidAt: booking?.paidAt || null,
-            barcodeSentAt: booking?.barcodeSentAt || null,
-            tourName: booking?.tourName || null,
-            userName: booking?.userName || null,
-            userEmail: booking?.userEmail || null,
-            grossAmount: booking?.grossAmount || null,
+            paymentStatus: 'pending_payment',
+            status: 'pending_payment',
+            paymentGateway: 'pakasir',
+            paymentCheckoutUrl: null,
+            attendanceCode: null,
+            attendanceQrImageUrl: null,
+            attendanceScannedAt: null,
+            attendanceScannedBy: null,
+            paidAt: null,
+            barcodeSentAt: null,
+            tourName: null,
+            userName: null,
+            userEmail: null,
+            grossAmount: null,
           },
-          source: 'firestore',
-        });
-
-        const nextBooking = syncedBooking || {
-          id: bookingId,
-          paymentStatus: booking?.paymentStatus || 'pending_payment',
-          status: booking?.status || 'pending_payment',
-          paymentGateway: booking?.paymentGateway || null,
-          paymentCheckoutUrl: booking?.paymentCheckoutUrl || null,
-          attendanceCode: booking?.attendanceCode || null,
-          attendanceQrImageUrl: booking?.attendanceQrImageUrl || null,
-          attendanceScannedAt: booking?.attendanceScannedAt || null,
-          attendanceScannedBy: booking?.attendanceScannedBy || null,
-          paidAt: booking?.paidAt || null,
-          barcodeSentAt: booking?.barcodeSentAt || null,
-          tourName: booking?.tourName || null,
-          userName: booking?.userName || null,
-          userEmail: booking?.userEmail || null,
-          grossAmount: booking?.grossAmount || null,
-        };
-
-        return NextResponse.json({
-          source: 'firestore',
-          bookingId,
-          booking: nextBooking,
-        });
-      }
-
-      const localBooking = getDummyBooking(bookingId);
-      if (!localBooking) {
-        // Booking tidak ada di dummy store, tapi mungkin ada di Pakasir
-        // Buatlah placeholder booking dan query Pakasir langsung
-        const placeholderBooking = {
-          id: bookingId,
-          paymentStatus: 'pending_payment',
-          status: 'pending_payment',
-          paymentGateway: 'pakasir',
-          paymentCheckoutUrl: null,
-          attendanceCode: null,
-          attendanceQrImageUrl: null,
-          attendanceScannedAt: null,
-          attendanceScannedBy: null,
-          paidAt: null,
-          barcodeSentAt: null,
-          tourName: null,
-          userName: null,
-          userEmail: null,
-          grossAmount: null,
-        };
-
-        const syncedBooking = await syncFromPakasir({
-          bookingId,
-          booking: placeholderBooking,
-          source: 'local',
-        });
-
-        return NextResponse.json({
-          source: 'unknown',
-          bookingId,
-          booking: syncedBooking || placeholderBooking,
         });
       }
 
       const syncedBooking = await syncFromPakasir({
         bookingId,
-        booking: {
-          id: bookingId,
-          paymentStatus: localBooking.paymentStatus || 'pending_payment',
-          status: localBooking.status || 'pending_payment',
-          paymentGateway: localBooking.paymentGateway || null,
-          paymentCheckoutUrl: localBooking.paymentCheckoutUrl || null,
-          attendanceCode: localBooking.attendanceCode || null,
-          attendanceQrImageUrl: localBooking.attendanceQrImageUrl || null,
-          attendanceScannedAt: localBooking.attendanceScannedAt || null,
-          attendanceScannedBy: localBooking.attendanceScannedBy || null,
-          paidAt: localBooking.paidAt || null,
-          barcodeSentAt: localBooking.barcodeSentAt || null,
-          tourName: localBooking.tourName || null,
-          userName: localBooking.userName || null,
-          userEmail: localBooking.userEmail || null,
-          grossAmount: localBooking.grossAmount || null,
-        },
+        booking,
+        source: 'mysql',
+      });
+
+      return NextResponse.json({
+        source: 'mysql',
+        bookingId,
+        booking: syncedBooking || booking,
+      });
+    }
+
+    const localBooking = getDummyBooking(bookingId);
+    if (!localBooking) {
+      const placeholderBooking = {
+        id: bookingId,
+        paymentStatus: 'pending_payment',
+        status: 'pending_payment',
+        paymentGateway: 'pakasir',
+        paymentCheckoutUrl: null,
+        attendanceCode: null,
+        attendanceQrImageUrl: null,
+        attendanceScannedAt: null,
+        attendanceScannedBy: null,
+        paidAt: null,
+        barcodeSentAt: null,
+        tourName: null,
+        userName: null,
+        userEmail: null,
+        grossAmount: null,
+      };
+
+      const syncedBooking = await syncFromPakasir({
+        bookingId,
+        booking: placeholderBooking,
         source: 'local',
       });
 
-      const nextBooking = syncedBooking || {
+      return NextResponse.json({
+        source: 'unknown',
+        bookingId,
+        booking: syncedBooking || placeholderBooking,
+      });
+    }
+
+    const syncedBooking = await syncFromPakasir({
+      bookingId,
+      booking: {
         id: bookingId,
         paymentStatus: localBooking.paymentStatus || 'pending_payment',
         status: localBooking.status || 'pending_payment',
@@ -253,96 +217,31 @@ export async function GET(request: NextRequest) {
         userName: localBooking.userName || null,
         userEmail: localBooking.userEmail || null,
         grossAmount: localBooking.grossAmount || null,
-      };
+      },
+      source: 'local',
+    });
 
-      return NextResponse.json({
-        source: 'local',
-        bookingId,
-        booking: nextBooking,
-      });
-    } catch (dbError) {
-      if (!isFirebaseAdminUnavailableError(dbError)) {
-        throw dbError;
-      }
-
-      const booking = getDummyBooking(bookingId);
-      if (!booking) {
-        // Booking tidak ada di dummy store, buatlah placeholder dan query Pakasir
-        const placeholderBooking = {
-          id: bookingId,
-          paymentStatus: 'pending_payment',
-          status: 'pending_payment',
-          paymentGateway: 'pakasir',
-          paymentCheckoutUrl: null,
-          attendanceCode: null,
-          attendanceQrImageUrl: null,
-          attendanceScannedAt: null,
-          attendanceScannedBy: null,
-          paidAt: null,
-          barcodeSentAt: null,
-          tourName: null,
-          userName: null,
-          userEmail: null,
-          grossAmount: null,
-        };
-
-        const syncedBooking = await syncFromPakasir({
-          bookingId,
-          booking: placeholderBooking,
-          source: 'local',
-        });
-
-        return NextResponse.json({
-          source: 'unknown',
-          bookingId,
-          booking: syncedBooking || placeholderBooking,
-        });
-      }
-
-      const syncedBooking = await syncFromPakasir({
-        bookingId,
-        booking: {
-          id: bookingId,
-          paymentStatus: booking.paymentStatus || 'pending_payment',
-          status: booking.status || 'pending_payment',
-          paymentGateway: booking.paymentGateway || null,
-          paymentCheckoutUrl: booking.paymentCheckoutUrl || null,
-          attendanceCode: booking.attendanceCode || null,
-          attendanceQrImageUrl: booking.attendanceQrImageUrl || null,
-          attendanceScannedAt: booking.attendanceScannedAt || null,
-          attendanceScannedBy: booking.attendanceScannedBy || null,
-          paidAt: booking.paidAt || null,
-          barcodeSentAt: booking.barcodeSentAt || null,
-          tourName: booking.tourName || null,
-          userName: booking.userName || null,
-          userEmail: booking.userEmail || null,
-          grossAmount: booking.grossAmount || null,
-        },
-        source: 'local',
-      });
-
-      return NextResponse.json({
-        source: 'local',
-        bookingId,
-        booking: syncedBooking || {
-          id: bookingId,
-          paymentStatus: booking.paymentStatus || 'pending_payment',
-          status: booking.status || 'pending_payment',
-          paymentGateway: booking.paymentGateway || null,
-          paymentCheckoutUrl: booking.paymentCheckoutUrl || null,
-          attendanceCode: booking.attendanceCode || null,
-          attendanceQrImageUrl: booking.attendanceQrImageUrl || null,
-          attendanceScannedAt: booking.attendanceScannedAt || null,
-          attendanceScannedBy: booking.attendanceScannedBy || null,
-          paidAt: booking.paidAt || null,
-          barcodeSentAt: booking.barcodeSentAt || null,
-          tourName: booking.tourName || null,
-          userName: booking.userName || null,
-          userEmail: booking.userEmail || null,
-          grossAmount: booking.grossAmount || null,
-        },
-      });
-    }
+    return NextResponse.json({
+      source: 'local',
+      bookingId,
+      booking: syncedBooking || {
+        id: bookingId,
+        paymentStatus: localBooking.paymentStatus || 'pending_payment',
+        status: localBooking.status || 'pending_payment',
+        paymentGateway: localBooking.paymentGateway || null,
+        paymentCheckoutUrl: localBooking.paymentCheckoutUrl || null,
+        attendanceCode: localBooking.attendanceCode || null,
+        attendanceQrImageUrl: localBooking.attendanceQrImageUrl || null,
+        attendanceScannedAt: localBooking.attendanceScannedAt || null,
+        attendanceScannedBy: localBooking.attendanceScannedBy || null,
+        paidAt: localBooking.paidAt || null,
+        barcodeSentAt: localBooking.barcodeSentAt || null,
+        tourName: localBooking.tourName || null,
+        userName: localBooking.userName || null,
+        userEmail: localBooking.userEmail || null,
+        grossAmount: localBooking.grossAmount || null,
+      },
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Gagal mengambil status pembayaran.' }, { status: 500 });
   }

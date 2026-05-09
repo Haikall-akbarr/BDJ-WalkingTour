@@ -1,8 +1,48 @@
-# BDJ WalkingTour
+﻿# BDJ WalkingTour
 
-Tour booking app with Firebase auth/data, payment flow, and attendance QR/barcode delivery.
+Tour booking app with MySQL backend, session auth, payment flow, and attendance QR/barcode delivery.
 
-## Payment setup
+## MySQL backend (Laragon)
+
+Jika Anda ingin data benar-benar tersimpan permanen (tour, booking, pembayaran, absensi), aktifkan backend MySQL:
+
+1. Buat database baru di MySQL (contoh: `bdj_walking_tour`).
+2. Import file schema: `docs/mysql-schema.sql`.
+3. Tambahkan env berikut di `.env.local`:
+
+- `DB_PROVIDER=mysql`
+- `MYSQL_HOST=127.0.0.1`
+- `MYSQL_PORT=3306`
+- `MYSQL_USER=root`
+- `MYSQL_PASSWORD=`
+- `MYSQL_DATABASE=bdj_walking_tour`
+- `AUTH_SESSION_SECRET=change-this-session-secret`
+- `AUTH_PASSWORD_SALT=change-this-password-salt`
+
+Lalu seed user demo ke tabel `users`:
+
+1. Jalankan app.
+2. Call endpoint `POST /api/auth/seed` (sekali saja).
+
+Default akun:
+
+- `admin@bdjwalkingtour.com / admin123`
+- `owner@bdjwalkingtour.com / owner123`
+- `guide@bdjwalkingtour.com / guide123`
+- `user@bdjwalkingtour.com / user123`
+
+Setelah itu, dashboard admin/owner/guide dan flow booking/payment akan memakai MySQL lewat API internal (`/api/tours`, `/api/bookings`, `/api/payments/*`, `/api/auth/*`) tanpa ketergantungan Firebase.
+
+
+## Auth peserta
+
+- Login peserta tersedia via Google atau email/password.
+- Jika tidak bisa login dengan Google, peserta bisa membuat akun email baru dari halaman login.
+- Lupa password tersedia melalui email reset link.
+- Akses staff tersembunyi ada di tombol `Heritage Walks` dan menuju `/login?mode=staff`.
+- Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` dan `GOOGLE_CLIENT_ID` untuk mengaktifkan tombol Google.
+- Pastikan provider email (`EMAIL_PROVIDER`, `SMTP_*` atau `RESEND_*`) aktif agar reset password bisa dikirim.
+
 
 - `PAYMENT_MODE=dummy` keeps checkout in the local simulation flow.
 - `PAYMENT_MODE=manual` sends buyers to the internal manual transfer page.
@@ -64,7 +104,7 @@ If you only want QRIS, keep `PAKASIR_QRIS_ONLY=true`.
 2. Fill `PAKASIR_PROJECT_SLUG` and `PAKASIR_API_KEY`.
 3. Set `APP_BASE_URL=https://bdj-walking-tour.vercel.app`.
 4. Add Pakasir webhook URL: `https://bdj-walking-tour.vercel.app/api/payments/pakasir/webhook`.
-5. Ensure Firebase Admin env vars are set so webhook can update bookings and send barcode email.
+5. Ensure env MySQL dan auth session sudah benar agar webhook bisa update booking dan kirim barcode email.
 6. Run one test booking, confirm the checkout link opens Pakasir, then simulate or finish a payment to verify the webhook updates status.
 
 ## Manual payment config
@@ -89,3 +129,4 @@ If Midtrans verification is not finished yet, keep using dummy mode for internal
 ## Fast fallback for deadline
 
 If you need a usable production flow before Midtrans verification is done, use `PAYMENT_MODE=manual` and fill the manual config env vars above.
+

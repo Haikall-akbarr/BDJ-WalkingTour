@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -47,16 +47,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useFirestore, useCollection } from "@/firebase"
-import { collection, query, where, doc, updateDoc, orderBy, addDoc, deleteDoc, serverTimestamp } from "firebase/firestore"
-import { errorEmitter } from "@/firebase/error-emitter"
-import { FirestorePermissionError } from "@/firebase/errors"
 import { useToast } from "@/hooks/use-toast"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const db = useFirestore();
   const { toast } = useToast();
   const heroImage = useMemo(() => {
     return PlaceHolderImages.find((img) => img.id === "hero-bg")?.imageUrl || PlaceHolderImages[0]?.imageUrl;
@@ -73,24 +68,61 @@ export default function AdminDashboard() {
     duration: "2 Jam"
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [pendingBookings, setPendingBookings] = useState<any[]>([]);
+  const [tours, setTours] = useState<any[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [toursLoading, setToursLoading] = useState(true);
 
-  // Queries
-  const bookingsQuery = useMemo(() => {
-    if (!db) return null;
-    return query(
-      collection(db, "bookings"), 
-      where("status", "==", "pending"),
-      orderBy("createdAt", "desc")
-    );
-  }, [db]);
+  const fetchTours = async () => {
+    setToursLoading(true);
+    try {
+      const response = await fetch("/api/tours", { cache: "no-store" });
+      const result = await response.json();
 
-  const toursQuery = useMemo(() => {
-    if (!db) return null;
-    return query(collection(db, "tours"), orderBy("name", "asc"));
-  }, [db]);
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal memuat tur.");
+      }
 
-  const { data: pendingBookings, loading: bookingsLoading } = useCollection(bookingsQuery);
-  const { data: tours, loading: toursLoading } = useCollection(toursQuery);
+      setTours(Array.isArray(result?.tours) ? result.tours : []);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal memuat tur",
+        description: error?.message || "Periksa konfigurasi backend MySQL.",
+      });
+      setTours([]);
+    } finally {
+      setToursLoading(false);
+    }
+  };
+
+  const fetchPendingBookings = async () => {
+    setBookingsLoading(true);
+    try {
+      const response = await fetch("/api/bookings?status=pending", { cache: "no-store" });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal memuat booking.");
+      }
+
+      setPendingBookings(Array.isArray(result?.bookings) ? result.bookings : []);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal memuat booking",
+        description: error?.message || "Periksa konfigurasi backend MySQL.",
+      });
+      setPendingBookings([]);
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTours();
+    fetchPendingBookings();
+  }, []);
 
   const filteredBookings = useMemo(() => {
     if (!pendingBookings) return [];
@@ -101,19 +133,29 @@ export default function AdminDashboard() {
   }, [pendingBookings, searchTerm]);
 
   // Handlers
-  const handleUpdateBookingStatus = (bookingId: string, newStatus: string) => {
-    if (!db) return;
-    const bookingRef = doc(db, "bookings", bookingId);
-    
-    updateDoc(bookingRef, { status: newStatus })
-      .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: `bookings/${bookingId}`,
-          operation: "update",
-          requestResourceData: { status: newStatus }
-        });
-        errorEmitter.emit("permission-error", permissionError);
+  const handleUpdateBookingStatus = async (bookingId: string, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
       });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal memperbarui status booking.");
+      }
+
+      await fetchPendingBookings();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal update booking",
+        description: error?.message || "Coba lagi beberapa saat.",
+      });
+    }
   };
 
   const handleOpenAddTour = () => {
@@ -142,65 +184,71 @@ export default function AdminDashboard() {
     setIsTourDialogOpen(true);
   };
 
-  const handleSaveTour = () => {
-    if (!db) return;
-    
+  const handleSaveTour = async () => {
     const data = {
       ...tourFormData,
       price: Number(tourFormData.price),
-      updatedAt: serverTimestamp()
     };
 
-    if (editingTour) {
-      const tourRef = doc(db, "tours", editingTour.id);
-      updateDoc(tourRef, data).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: `tours/${editingTour.id}`,
-          operation: "update",
-          requestResourceData: data
-        });
-        errorEmitter.emit("permission-error", permissionError);
+    try {
+      const response = await fetch(editingTour ? `/api/tours/${editingTour.id}` : "/api/tours", {
+        method: editingTour ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
       });
-    } else {
-      addDoc(collection(db, "tours"), {
-        ...data,
-        createdAt: serverTimestamp()
-      }).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: "tours",
-          operation: "create",
-          requestResourceData: data
-        });
-        errorEmitter.emit("permission-error", permissionError);
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal menyimpan tur.");
+      }
+
+      setIsTourDialogOpen(false);
+      await fetchTours();
+      toast({
+        title: editingTour ? "Tur Diperbarui" : "Tur Ditambahkan",
+        description: `Paket tur ${tourFormData.name} telah berhasil disimpan.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal menyimpan tur",
+        description: error?.message || "Periksa konfigurasi backend MySQL.",
       });
     }
-
-    setIsTourDialogOpen(false);
-    toast({
-      title: editingTour ? "Tur Diperbarui" : "Tur Ditambahkan",
-      description: `Paket tur ${tourFormData.name} telah berhasil disimpan.`,
-    });
   };
 
-  const handleDeleteTour = (tourId: string) => {
-    if (!db) return;
-    const tourRef = doc(db, "tours", tourId);
-    deleteDoc(tourRef).catch(async (error) => {
-      const permissionError = new FirestorePermissionError({
-        path: `tours/${tourId}`,
-        operation: "delete"
+  const handleDeleteTour = async (tourId: string) => {
+    try {
+      const response = await fetch(`/api/tours/${tourId}`, {
+        method: "DELETE",
       });
-      errorEmitter.emit("permission-error", permissionError);
-    });
-    toast({
-      title: "Tur Dihapus",
-      description: "Paket tur telah dihapus dari sistem.",
-      variant: "destructive"
-    });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal menghapus tur.");
+      }
+
+      await fetchTours();
+      toast({
+        title: "Tur Dihapus",
+        description: "Paket tur telah dihapus dari sistem.",
+        variant: "destructive"
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal menghapus tur",
+        description: error?.message || "Coba lagi beberapa saat.",
+      });
+    }
   };
 
   const handleLogout = () => {
-    router.push("/");
+    fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+      router.push("/");
+    });
   };
 
   return (
@@ -324,7 +372,7 @@ export default function AdminDashboard() {
                           <td className="p-3 md:p-4 whitespace-nowrap">{booking.tourName}</td>
                           <td className="p-3 md:p-4 text-center">{booking.pax}</td>
                           <td className="p-3 md:p-4 whitespace-nowrap">
-                            {booking.createdAt?.toDate().toLocaleDateString('id-ID')}
+                            {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('id-ID') : '-'}
                           </td>
                           <td className="p-3 md:p-4">
                             <Badge variant="outline" className="text-[10px] md:text-xs text-amber-600 border-amber-200 bg-amber-50 whitespace-nowrap">

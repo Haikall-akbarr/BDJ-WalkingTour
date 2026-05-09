@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import Link from "next/link"
 import { MapPin, Menu } from "lucide-react"
@@ -28,7 +28,7 @@ export function Navbar() {
         <nav className="hidden items-center gap-1 text-sm font-medium md:flex">
           <Link href="/" className="rounded-full px-4 py-2 text-white/80 transition-colors hover:bg-white/8 hover:text-white">Beranda</Link>
           <Link href="/#tours" className="rounded-full px-4 py-2 text-white/80 transition-colors hover:bg-white/8 hover:text-white">Semua Tur</Link>
-          <Link href="/login" className="rounded-full px-4 py-2 text-white/80 transition-colors hover:bg-white/8 hover:text-white">Login Staf</Link>
+          <Link href="/login" className="rounded-full px-4 py-2 text-white/80 transition-colors hover:bg-white/8 hover:text-white">Heritage Walks</Link>
           <Link href="/book/1" className="ml-2">
             <Button className="rounded-full bg-[#98DDCA] px-6 text-[#10221f] hover:bg-[#b8eadc]">
               Pesan Sekarang
@@ -59,7 +59,7 @@ export function Navbar() {
               <nav className="mt-12 flex flex-col gap-3">
                 <Link href="/" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-base font-medium transition-colors hover:bg-white/10 hover:text-white">Beranda</Link>
                 <Link href="/#tours" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-base font-medium transition-colors hover:bg-white/10 hover:text-white">Semua Tur</Link>
-                <Link href="/login" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-base font-medium transition-colors hover:bg-white/10 hover:text-white">Login Staf</Link>
+                <Link href="/login" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-base font-medium transition-colors hover:bg-white/10 hover:text-white">Heritage Walks</Link>
                 <Link href="/book/1">
                   <Button className="w-full rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc]">
                     Pesan Sekarang
@@ -73,3 +73,4 @@ export function Navbar() {
     </header>
   )
 }
+
