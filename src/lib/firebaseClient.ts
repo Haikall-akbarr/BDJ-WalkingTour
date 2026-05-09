@@ -24,7 +24,6 @@ export async function signInWithFirebaseGoogle() {
   initFirebaseClient()
   const auth = getAuth()
   const provider = new GoogleAuthProvider()
-  provider.setCustomParameters({ prompt: "select_account" })
 
   console.log('[firebaseClient] Starting redirect sign-in...')
   console.log('[firebaseClient] Current auth state:', { uid: auth.currentUser?.uid, email: auth.currentUser?.email })

@@ -96,6 +96,17 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     }
   }, [tourIdParam]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    // Sinkronkan identitas login aktif ke form booking
+    setFormData((prev) => ({
+      ...prev,
+      name: user.name || "",
+      email: user.email || "",
+    }));
+  }, [user]);
+
   const selectedTour = useMemo(() => {
     if (!allTours || !formData.tourId) return null;
     return allTours.find((t: any) => t.id === formData.tourId);
@@ -114,6 +125,10 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       return;
     }
     
+    // Pastikan nama dan email selalu dari user yang login
+    const nameToSubmit = user?.name || formData.name;
+    const emailToSubmit = user?.email || formData.email;
+    
     setLoading(true);
 
     fetch("/api/payments/create", {
@@ -122,9 +137,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        name: formData.name,
+        name: nameToSubmit,
         whatsapp: formData.whatsapp,
-        email: formData.email,
+        email: emailToSubmit,
         domicile,
         customDomicile,
         tourId: formData.tourId,
@@ -272,8 +287,12 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                         placeholder="John Doe" 
                         required 
                         value={formData.name}
+                        readOnly={!!user}
                         onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className={user ? "bg-white" : ""}
+                        title={user ? "Nama mengikuti akun login aktif" : ""}
                       />
+                      {user && <p className="text-xs text-slate-500">Nama mengikuti akun login aktif</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="whatsapp">Nomor WhatsApp</Label>
@@ -295,9 +314,13 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                       type="email" 
                       placeholder="john@example.com" 
                       value={formData.email}
+                      readOnly={!!user}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
                       required
+                      className={user ? "bg-white" : ""}
+                      title={user ? "Email mengikuti akun login aktif" : ""}
                     />
+                    {user && <p className="text-xs text-slate-500">Email mengikuti akun login aktif</p>}
                   </div>
 
                   <div className="space-y-4">
