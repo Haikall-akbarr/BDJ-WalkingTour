@@ -18,9 +18,27 @@ function assertMySqlConfig() {
   const host = process.env.MYSQL_HOST;
   const user = process.env.MYSQL_USER;
   const database = process.env.MYSQL_DATABASE;
+  const port = process.env.MYSQL_PORT || '3306';
+
+  console.log('[MySQL] Config check:', {
+    host: host ? `${host.substring(0, 20)}...` : 'MISSING',
+    user: user ? `${user.substring(0, 10)}...` : 'MISSING',
+    database: database || 'MISSING',
+    port: port,
+    env: process.env.NODE_ENV,
+    provider: process.env.DB_PROVIDER,
+  });
 
   if (!host || !user || !database) {
-    throw new Error('Konfigurasi MySQL belum lengkap. Isi MYSQL_HOST, MYSQL_USER, MYSQL_DATABASE, dan set DB_PROVIDER=mysql.');
+    const missing = [];
+    if (!host) missing.push('MYSQL_HOST');
+    if (!user) missing.push('MYSQL_USER');
+    if (!database) missing.push('MYSQL_DATABASE');
+    
+    throw new Error(
+      `Konfigurasi MySQL belum lengkap. Missing: ${missing.join(', ')}. ` +
+      `Set DB_PROVIDER=mysql, MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE di Vercel Environment Variables.`
+    );
   }
 
   // Support SSL for cloud databases (Aiven, AWS RDS, etc.)
@@ -32,7 +50,7 @@ function assertMySqlConfig() {
     user,
     database,
     password: process.env.MYSQL_PASSWORD || '',
-    port: parsePort(process.env.MYSQL_PORT),
+    port: parsePort(port),
     ssl,
   };
 }
@@ -42,25 +60,34 @@ export function getMySqlPool() {
     return global.__bdjMysqlPool;
   }
 
-  const config = assertMySqlConfig();
-  const poolConfig: any = {
-    host: config.host,
-    user: config.user,
-    password: config.password,
-    database: config.database,
-    port: config.port,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    timezone: 'Z',
-  };
+  try {
+    const config = assertMySqlConfig();
+    console.log('[MySQL] Creating connection pool with host:', config.host);
+    
+    const poolConfig: any = {
+      host: config.host,
+      user: config.user,
+      password: config.password,
+      database: config.database,
+      port: config.port,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      timezone: 'Z',
+    };
 
-  // Add SSL if configured
-  if (config.ssl) {
-    poolConfig.ssl = config.ssl;
+    // Add SSL if configured
+    if (config.ssl) {
+      poolConfig.ssl = config.ssl;
+      console.log('[MySQL] SSL enabled for connection');
+    }
+
+    global.__bdjMysqlPool = mysql.createPool(poolConfig);
+    console.log('[MySQL] Connection pool created successfully');
+
+    return global.__bdjMysqlPool;
+  } catch (err: any) {
+    console.error('[MySQL] Failed to create pool:', err?.message);
+    throw err;
   }
-
-  global.__bdjMysqlPool = mysql.createPool(poolConfig);
-
-  return global.__bdjMysqlPool;
 }
