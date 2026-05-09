@@ -178,12 +178,16 @@ export default function LoginPage() {
   const handleFirebaseGoogleSignIn = async () => {
     // start redirect-based sign-in (no immediate token returned)
     try {
+      console.log('[LoginClient] handleFirebaseGoogleSignIn clicked')
       const helper = await ensureFirebaseHelper()
       if (!helper) throw new Error("Firebase helper tidak tersedia.")
 
+      console.log('[LoginClient] Calling signInWithFirebaseGoogle...')
       await helper.signInWithFirebaseGoogle()
+      console.log('[LoginClient] signInWithFirebaseGoogle completed (should have redirected)')
       // Redirect will occur; nothing further here.
     } catch (err: any) {
+      console.error('[LoginClient] handleFirebaseGoogleSignIn error:', err?.message)
       toast({
         variant: "destructive",
         title: "Firebase login gagal",
@@ -202,17 +206,25 @@ export default function LoginPage() {
         return
       }
       const helper = await ensureFirebaseHelper()
-      if (!helper || !helper.handleFirebaseRedirectResult) {
+      if (!helper) {
         console.log('[LoginClient] Helper not available')
         return
       }
 
       try {
+        // Try to get redirect result first
         console.log('[LoginClient] Calling handleFirebaseRedirectResult...')
-        const data = await helper.handleFirebaseRedirectResult()
-        console.log('[LoginClient] Redirect result data:', { hasData: !!data, hasToken: !!data?.firebaseIdToken })
+        let data = await helper.handleFirebaseRedirectResult()
+        
+        // If no redirect result, try to get current user (fallback)
+        if (!data && helper.getCurrentUserToken) {
+          console.log('[LoginClient] No redirect result, trying getCurrentUserToken as fallback...')
+          data = await helper.getCurrentUserToken()
+        }
+        
+        console.log('[LoginClient] Auth data:', { hasData: !!data, hasToken: !!data?.firebaseIdToken })
         if (!data || !data.firebaseIdToken) {
-          console.log('[LoginClient] No redirect result or token')
+          console.log('[LoginClient] No auth data or token found')
           return
         }
 
@@ -235,7 +247,7 @@ export default function LoginPage() {
           routeAfterLogin(result?.user?.role || "user")
         }
       } catch (err: any) {
-        console.error('[LoginClient] Error:', err?.message)
+        console.error('[LoginClient] Error in useEffect:', err?.message, err?.code)
         toast({
           variant: "destructive",
           title: "Firebase login gagal",
