@@ -1,7 +1,7 @@
 ﻿"use client"
 
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
@@ -176,23 +176,13 @@ export default function LoginPage() {
   }
 
   const handleFirebaseGoogleSignIn = async () => {
+    // start redirect-based sign-in (no immediate token returned)
     try {
       const helper = await ensureFirebaseHelper()
       if (!helper) throw new Error("Firebase helper tidak tersedia.")
 
-      const { firebaseIdToken } = await helper.signInWithFirebaseGoogle()
-      if (!firebaseIdToken) throw new Error("Tidak mendapatkan token Firebase.")
-
-      const response = await fetch("/api/auth/firebase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken: firebaseIdToken }),
-      })
-
-      const result = await response.json()
-      if (!response.ok) throw new Error(result?.error || "Login Firebase gagal.")
-
-      routeAfterLogin(result?.user?.role || "user")
+      await helper.signInWithFirebaseGoogle()
+      // Redirect will occur; nothing further here.
     } catch (err: any) {
       toast({
         variant: "destructive",
@@ -201,6 +191,44 @@ export default function LoginPage() {
       })
     }
   }
+
+  // Handle redirect result when user is returned from Firebase auth
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      if (!FIREBASE_API_KEY) return
+      const helper = await ensureFirebaseHelper()
+      if (!helper || !helper.handleFirebaseRedirectResult) return
+
+      try {
+        const data = await helper.handleFirebaseRedirectResult()
+        if (!data || !data.firebaseIdToken) return
+
+        const response = await fetch("/api/auth/firebase", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken: data.firebaseIdToken }),
+        })
+
+        const result = await response.json()
+        if (!response.ok) {
+          throw new Error(result?.error || "Login Firebase gagal.")
+        }
+
+        if (mounted) routeAfterLogin(result?.user?.role || "user")
+      } catch (err: any) {
+        toast({
+          variant: "destructive",
+          title: "Firebase login gagal",
+          description: err?.message || String(err),
+        })
+      }
+    })()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const renderParticipantForms = () => {
     if (viewMode === "register") {

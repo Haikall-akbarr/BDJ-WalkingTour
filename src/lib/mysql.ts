@@ -23,12 +23,17 @@ function assertMySqlConfig() {
     throw new Error('Konfigurasi MySQL belum lengkap. Isi MYSQL_HOST, MYSQL_USER, MYSQL_DATABASE, dan set DB_PROVIDER=mysql.');
   }
 
+  // Support SSL for cloud databases (Aiven, AWS RDS, etc.)
+  const sslEnabled = (process.env.MYSQL_SSL || '').toLowerCase() === 'true';
+  const ssl = sslEnabled ? { rejectUnauthorized: false } : undefined;
+
   return {
     host,
     user,
     database,
     password: process.env.MYSQL_PASSWORD || '',
     port: parsePort(process.env.MYSQL_PORT),
+    ssl,
   };
 }
 
@@ -38,7 +43,7 @@ export function getMySqlPool() {
   }
 
   const config = assertMySqlConfig();
-  global.__bdjMysqlPool = mysql.createPool({
+  const poolConfig: any = {
     host: config.host,
     user: config.user,
     password: config.password,
@@ -48,7 +53,14 @@ export function getMySqlPool() {
     connectionLimit: 10,
     queueLimit: 0,
     timezone: 'Z',
-  });
+  };
+
+  // Add SSL if configured
+  if (config.ssl) {
+    poolConfig.ssl = config.ssl;
+  }
+
+  global.__bdjMysqlPool = mysql.createPool(poolConfig);
 
   return global.__bdjMysqlPool;
 }
