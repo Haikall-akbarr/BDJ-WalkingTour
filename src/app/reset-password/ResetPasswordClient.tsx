@@ -4,12 +4,13 @@
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Lock, Mail, ShieldCheck } from "lucide-react"
+import { ArrowLeft, Mail, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
+import { PasswordField } from "@/components/auth/PasswordField"
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -20,6 +21,8 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,15 +81,24 @@ export default function ResetPasswordPage() {
                 <Input id="token" value={token} onChange={(e) => setToken(e.target.value)} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password Baru</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input id="password" type="password" className="pl-10" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                </div>
+                <PasswordField
+                  id="password"
+                  label="Password Baru"
+                  value={password}
+                  onChange={setPassword}
+                  visible={showPassword}
+                  onToggle={() => setShowPassword((current) => !current)}
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Konfirmasi Password</Label>
-                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                <PasswordField
+                  id="confirmPassword"
+                  label="Konfirmasi Password"
+                  value={confirmPassword}
+                  onChange={setConfirmPassword}
+                  visible={showConfirmPassword}
+                  onToggle={() => setShowConfirmPassword((current) => !current)}
+                />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-3">

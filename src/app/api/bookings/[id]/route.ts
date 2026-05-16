@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBookingById, updateBooking } from '@/lib/mysql-store';
 import { isMySqlEnabled } from '@/lib/mysql';
+import { logAuditEvent } from '@/lib/audit-log';
 
 export const runtime = 'nodejs';
 
@@ -55,6 +56,23 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const booking = await updateBooking(id, patch);
     if (!booking) {
       return NextResponse.json({ error: 'Booking tidak ditemukan.' }, { status: 404 });
+    }
+
+    if (body?.guideId || body?.guideName) {
+      await logAuditEvent({
+        action: 'guide_assigned',
+        entityType: 'booking',
+        entityId: id,
+        actorId: body?.assignedById || body?.actorId || null,
+        actorRole: body?.assignedByRole || body?.actorRole || 'owner',
+        actorName: body?.assignedByName || body?.actorName || 'owner',
+        details: {
+          guideId: body?.guideId || null,
+          guideName: body?.guideName || null,
+          status: body?.status || null,
+          paymentStatus: body?.paymentStatus || null,
+        },
+      });
     }
 
     return NextResponse.json({ booking });

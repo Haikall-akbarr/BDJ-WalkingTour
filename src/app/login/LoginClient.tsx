@@ -5,11 +5,12 @@ import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowLeft, Info, Lock, Mail, MapPin, Sparkles } from "lucide-react"
+import { ArrowLeft, Info, Mail, MapPin, Sparkles, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { PasswordField } from "@/components/auth/PasswordField"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
 import { useToast } from "@/hooks/use-toast"
 
@@ -21,6 +22,10 @@ const DASHBOARD_ROUTES: Record<string, string> = {
 }
 
 const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim() || ""
+const FIREBASE_AUTH_DOMAIN = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim() || ""
+const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim() || ""
+const FIREBASE_APP_ID = process.env.NEXT_PUBLIC_FIREBASE_APP_ID?.trim() || ""
+const FIREBASE_CLIENT_READY = Boolean(FIREBASE_API_KEY && FIREBASE_AUTH_DOMAIN && FIREBASE_PROJECT_ID && FIREBASE_APP_ID)
 
 let firebaseHelper: any = null
 async function ensureFirebaseHelper() {
@@ -54,10 +59,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [resetEmail, setResetEmail] = useState("")
+  const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [showStaffPassword, setShowStaffPassword] = useState(false)
 
   const staffMode = searchParams.get("mode") === "staff"
 
   const heroImage = PlaceHolderImages.find((img) => img.id === "hero-bg")?.imageUrl || PlaceHolderImages[0]?.imageUrl
+  const heroSizes = "(max-width: 768px) 100vw, 50vw"
 
   const getSafeNextRoute = (): string | null => {
     const candidate = searchParams.get("next")
@@ -186,90 +196,51 @@ export default function LoginPage() {
   }
 
   const handleFirebaseGoogleSignIn = async () => {
-    // start redirect-based sign-in (no immediate token returned)
+    setLoading(true)
     try {
       console.log('[LoginClient] handleFirebaseGoogleSignIn clicked')
       const helper = await ensureFirebaseHelper()
       if (!helper) throw new Error("Firebase helper tidak tersedia.")
 
-      console.log('[LoginClient] Calling signInWithFirebaseGoogle...')
-      await helper.signInWithFirebaseGoogle()
-      console.log('[LoginClient] signInWithFirebaseGoogle completed (should have redirected)')
-      // Redirect will occur; nothing further here.
+      console.log('[LoginClient] Calling signInWithFirebaseGoogle (popup)...')
+      const data = await helper.signInWithFirebaseGoogle()
+      console.log('[LoginClient] signInWithFirebaseGoogle returned:', { hasToken: !!data?.firebaseIdToken })
+
+      if (!data?.firebaseIdToken) {
+        throw new Error('Tidak menerima token dari Firebase.')
+      }
+
+      console.log('[LoginClient] Posting token to /api/auth/firebase...')
+      const response = await fetch("/api/auth/firebase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken: data.firebaseIdToken }),
+      })
+
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result?.error || 'Login Firebase gagal.')
+      }
+
+      routeAfterLogin(result?.user?.role || 'user')
     } catch (err: any) {
       console.error('[LoginClient] handleFirebaseGoogleSignIn error:', err?.message)
+      const errorMessage = String(err?.message || err || "")
       toast({
         variant: "destructive",
         title: "Firebase login gagal",
-        description: err?.message || String(err),
+        description: errorMessage.includes("Konfigurasi Firebase belum lengkap")
+          ? errorMessage
+          : errorMessage.includes("auth/network-request-failed")
+            ? "Firebase tidak bisa terhubung ke jaringan atau konfigurasi authDomain/projectId belum benar. Periksa environment Firebase Anda."
+            : errorMessage || "Login Google gagal.",
       })
+    } finally {
+      setLoading(false)
     }
   }
 
-  // Handle redirect result when user is returned from Firebase auth
-  useEffect(() => {
-    let mounted = true
-    ;(async () => {
-      console.log('[LoginClient] useEffect mounted, checking Firebase redirect result...')
-      if (!FIREBASE_API_KEY) {
-        console.log('[LoginClient] No FIREBASE_API_KEY, skipping')
-        return
-      }
-      const helper = await ensureFirebaseHelper()
-      if (!helper) {
-        console.log('[LoginClient] Helper not available')
-        return
-      }
-
-      try {
-        // Try to get redirect result first
-        console.log('[LoginClient] Calling handleFirebaseRedirectResult...')
-        let data = await helper.handleFirebaseRedirectResult()
-        
-        // If no redirect result, try to get current user (fallback)
-        if (!data && helper.getCurrentUserToken) {
-          console.log('[LoginClient] No redirect result, trying getCurrentUserToken as fallback...')
-          data = await helper.getCurrentUserToken()
-        }
-        
-        console.log('[LoginClient] Auth data:', { hasData: !!data, hasToken: !!data?.firebaseIdToken })
-        if (!data || !data.firebaseIdToken) {
-          console.log('[LoginClient] No auth data or token found')
-          return
-        }
-
-        console.log('[LoginClient] Posting token to /api/auth/firebase...')
-        const response = await fetch("/api/auth/firebase", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken: data.firebaseIdToken }),
-        })
-
-        const result = await response.json()
-        console.log('[LoginClient] Firebase auth response:', { status: response.status, user: result?.user?.email, error: result?.error })
-        
-        if (!response.ok) {
-          throw new Error(result?.error || "Login Firebase gagal.")
-        }
-
-        if (mounted) {
-          console.log('[LoginClient] Login success, routing to dashboard...')
-          routeAfterLogin(result?.user?.role || "user")
-        }
-      } catch (err: any) {
-        console.error('[LoginClient] Error in useEffect:', err?.message, err?.code)
-        toast({
-          variant: "destructive",
-          title: "Firebase login gagal",
-          description: err?.message || String(err),
-        })
-      }
-    })()
-
-    return () => {
-      mounted = false
-    }
-  }, [])
+  // Popup-based sign-in in use; redirect handling removed.
 
   const renderParticipantForms = () => {
     if (viewMode === "register") {
@@ -286,18 +257,25 @@ export default function LoginPage() {
               <Input id="register-email" type="email" className="pl-10" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@email.com" required />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="register-password">Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input id="register-password" type="password" className="pl-10" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimal 8 karakter" required />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirm-password">Konfirmasi Password</Label>
-            <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
-          </div>
-          <Button type="submit" className="h-11 w-full rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc]" disabled={loading}>
+          <PasswordField
+            id="register-password"
+            label="Password"
+            value={password}
+            onChange={setPassword}
+            placeholder="Minimal 8 karakter"
+            visible={showRegisterPassword}
+            onToggle={() => setShowRegisterPassword((current) => !current)}
+          />
+          <PasswordField
+            id="confirm-password"
+            label="Konfirmasi Password"
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+            visible={showConfirmPassword}
+            onToggle={() => setShowConfirmPassword((current) => !current)}
+          />
+          <Button type="submit" className="h-11 w-full rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc] flex items-center justify-center gap-2" disabled={loading}>
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {loading ? "Membuat akun..." : "Buat Akun"}
           </Button>
         </form>
@@ -317,7 +295,8 @@ export default function LoginPage() {
               <Input id="reset-email" type="email" className="pl-10" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="nama@email.com" required />
             </div>
           </div>
-          <Button type="submit" className="h-11 w-full rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc]" disabled={loading}>
+          <Button type="submit" className="h-11 w-full rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc] flex items-center justify-center gap-2" disabled={loading}>
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {loading ? "Mengirim..." : "Kirim Tautan Reset"}
           </Button>
         </form>
@@ -334,16 +313,20 @@ export default function LoginPage() {
           </div>
         </div>
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <Label htmlFor="login-password">Password</Label>
+          <PasswordField
+            id="login-password"
+            label="Password"
+            value={password}
+            onChange={setPassword}
+            visible={showLoginPassword}
+            onToggle={() => setShowLoginPassword((current) => !current)}
+          />
+          <div className="flex justify-end">
             <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={() => setViewMode("reset")}>Lupa password?</button>
           </div>
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input id="login-password" type="password" className="pl-10" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          </div>
         </div>
-        <Button type="submit" className="h-11 w-full rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc]" disabled={loading}>
+        <Button type="submit" className="h-11 w-full rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc] flex items-center justify-center gap-2" disabled={loading}>
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
           {loading ? "Memproses..." : "Masuk"}
         </Button>
       </form>
@@ -354,7 +337,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(152,221,202,0.18),_transparent_36%),linear-gradient(180deg,_#f7f4ee_0%,_#ecece7_100%)]">
       <div className="grid min-h-screen lg:grid-cols-[1.04fr_0.96fr]">
         <section className="relative hidden overflow-hidden lg:block">
-          <Image src={heroImage} alt="Banjarmasin backdrop" fill className="object-cover" priority />
+          <Image src={heroImage} alt="Banjarmasin backdrop" fill sizes={heroSizes} className="object-cover" priority />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,34,31,0.16)_0%,rgba(16,34,31,0.72)_100%)]" />
           <div className="relative z-10 flex h-full flex-col justify-between p-10 text-white">
             <Link href="/" className="inline-flex w-fit items-center gap-3 rounded-full border border-white/15 bg-white/10 px-4 py-2 backdrop-blur">
@@ -376,7 +359,7 @@ export default function LoginPage() {
                 Masuk, daftar, dan atur ulang akun dengan mudah.
               </h1>
               <p className="max-w-lg text-sm leading-7 text-white/80 xl:text-base">
-                Gunakan login Google via Firebase, atau buat akun email baru agar proses pemesanan tur tetap lancar tanpa hambatan.
+                Gunakan login Google via Firebase, buat akun email baru, atau reset password agar akses ke BDJ WalkingTour tetap lancar.
               </p>
             </div>
 
@@ -410,7 +393,7 @@ export default function LoginPage() {
               <p className="text-muted-foreground">
                 {staffMode
                   ? "Masuk dengan email yang sudah didaftarkan untuk membuka menu khusus Heritage Walks."
-                  : "Masuk, daftar, atau reset password untuk akun peserta Anda."}
+                  : "Masuk atau daftar untuk melanjutkan ke BDJ WalkingTour."}
               </p>
             </div>
 
@@ -420,7 +403,7 @@ export default function LoginPage() {
                 <CardDescription>
                   {staffMode
                     ? "Gunakan menu ini hanya untuk akun pengelola yang sudah terdaftar."
-                    : "Pilih Firebase Google atau email untuk melanjutkan ke dashboard peserta."}
+                    : "Pilih Google atau email untuk melanjutkan ke BDJ WalkingTour."}
                 </CardDescription>
               </CardHeader>
 
@@ -435,13 +418,17 @@ export default function LoginPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="staff-password">Password</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input id="staff-password" type="password" className="pl-10" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                      </div>
+                      <PasswordField
+                        id="staff-password"
+                        label="Password"
+                        value={password}
+                        onChange={setPassword}
+                        visible={showStaffPassword}
+                        onToggle={() => setShowStaffPassword((current) => !current)}
+                      />
                     </div>
-                    <Button type="submit" className="h-11 w-full rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc]" disabled={loading}>
+                    <Button type="submit" className="h-11 w-full rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc] flex items-center justify-center gap-2" disabled={loading}>
+                      {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                       {loading ? "Memproses..." : "Masuk ke Menu Khusus"}
                     </Button>
                   </form>
@@ -451,7 +438,6 @@ export default function LoginPage() {
                       <div className="flex flex-wrap gap-2">
                         <Button type="button" variant={viewMode === "login" ? "default" : "outline"} className={viewMode === "login" ? "rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc]" : "rounded-full"} onClick={() => setViewMode("login")}>Masuk</Button>
                         <Button type="button" variant={viewMode === "register" ? "default" : "outline"} className={viewMode === "register" ? "rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc]" : "rounded-full"} onClick={() => setViewMode("register")}>Buat Akun</Button>
-                        <Button type="button" variant={viewMode === "reset" ? "default" : "outline"} className={viewMode === "reset" ? "rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc]" : "rounded-full"} onClick={() => setViewMode("reset")}>Lupa Password</Button>
                       </div>
                       {viewMode === "login" && (
                         <div className="space-y-3">
@@ -495,11 +481,7 @@ export default function LoginPage() {
                   <Link href="/" className="inline-flex items-center gap-2 transition-colors hover:text-primary">
                     <ArrowLeft className="h-4 w-4" /> Kembali ke beranda
                   </Link>
-                  {!staffMode && (
-                    <Link href="/login?mode=staff" className="inline-flex items-center gap-2 transition-colors hover:text-primary">
-                      Heritage Walks
-                    </Link>
-                  )}
+                  
                 </div>
               </CardFooter>
             </Card>

@@ -1,22 +1,16 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Compass, LogOut, MapPin, Ticket, Mail, UserRound } from "lucide-react"
+import { Compass, MapPin, Ticket, Mail, UserRound } from "lucide-react"
 import { useSessionUser } from "@/hooks/use-session-user"
+import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog"
+import { NotificationBell } from "@/components/NotificationBell"
 
 export default function UserDashboardPage() {
-  const router = useRouter()
   const { user, loading } = useSessionUser()
-
-  const handleLogout = () => {
-    fetch("/api/auth/logout", { method: "POST" }).finally(() => {
-      router.push("/")
-    })
-  }
 
   const userInitial = (user?.name || user?.email || "U").trim().charAt(0).toUpperCase()
 
@@ -45,9 +39,12 @@ export default function UserDashboardPage() {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Button variant="secondary" className="rounded-full bg-white text-[#16302c] hover:bg-white/90" onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" /> Keluar
-                </Button>
+                <NotificationBell />
+                <LogoutConfirmDialog>
+                  <Button variant="secondary" className="rounded-full bg-white text-[#16302c] hover:bg-white/90">
+                    <span className="mr-2">Keluar</span>
+                  </Button>
+                </LogoutConfirmDialog>
               </div>
             </div>
           </div>
@@ -90,7 +87,7 @@ export default function UserDashboardPage() {
               <CardDescription className="text-white/70">Pilih tur, isi nomor WhatsApp, lalu lanjut ke pembayaran.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Link href="/#tours" className="block">
+              <Link href="/tours" className="block">
                 <Button className="w-full rounded-full bg-[#98DDCA] text-[#16302c] hover:bg-[#b8eadc]">
                   <Compass className="mr-2 h-4 w-4" /> Lihat Semua Tur
                 </Button>
@@ -112,7 +109,7 @@ export default function UserDashboardPage() {
               <CardDescription>Lihat paket tur terbaru dan pilih rute favorit Anda.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/#tours">
+              <Link href="/tours">
                 <Button className="rounded-full bg-zinc-900 text-white hover:bg-zinc-800">
                   <Compass className="mr-2 h-4 w-4" /> Lihat Semua Tur
                 </Button>

@@ -234,7 +234,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
           <div className="flex flex-wrap items-center gap-1 text-sm font-medium text-white/85">
             <Link href="/" className="rounded-full px-4 py-2 transition-colors hover:bg-white/10 hover:text-white">Beranda</Link>
-            <Link href="/#tours" className="rounded-full px-4 py-2 transition-colors hover:bg-white/10 hover:text-white">Semua Tur</Link>
+            <Link href="/tours" className="rounded-full px-4 py-2 transition-colors hover:bg-white/10 hover:text-white">Semua Tur</Link>
             <Link href="/book/new" className="rounded-full bg-[#98DDCA] px-4 py-2 text-[#16302c] transition-colors hover:bg-[#b8eadc]">Pesan Tur</Link>
           </div>
         </div>

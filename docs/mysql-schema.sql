@@ -84,4 +84,79 @@ CREATE TABLE IF NOT EXISTS sessions (
   CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Tabel untuk menyimpan data guide (pemandu wisata)
+CREATE TABLE IF NOT EXISTS guides (
+  id VARCHAR(64) PRIMARY KEY,
+  user_id VARCHAR(64) NOT NULL UNIQUE,
+  name VARCHAR(191) NOT NULL,
+  phone VARCHAR(20) NOT NULL,
+  email VARCHAR(191) NOT NULL,
+  specialization VARCHAR(191) NULL COMMENT 'e.g., Pacinan, Heritage, Modern',
+  availability_status VARCHAR(32) NOT NULL DEFAULT 'available',
+  total_tours_led INT NOT NULL DEFAULT 0,
+  average_rating DECIMAL(3, 2) NULL,
+  bio TEXT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_guides_user_id (user_id),
+  INDEX idx_guides_availability (availability_status),
+  CONSTRAINT fk_guides_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Tabel untuk assignment guide ke tour
+CREATE TABLE IF NOT EXISTS guide_tour_assignments (
+  id VARCHAR(64) PRIMARY KEY,
+  booking_id VARCHAR(36) NOT NULL,
+  guide_id VARCHAR(64) NOT NULL,
+  tour_date DATETIME NOT NULL,
+  pax_count INT NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'pending' COMMENT 'pending, accepted, completed, cancelled',
+  notes TEXT NULL,
+  assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  accepted_at DATETIME NULL,
+  completed_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_assignment_booking (booking_id),
+  INDEX idx_assignments_guide_id (guide_id),
+  INDEX idx_assignments_status (status),
+  CONSTRAINT fk_assignment_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+  CONSTRAINT fk_assignment_guide FOREIGN KEY (guide_id) REFERENCES guides(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Tabel untuk notifikasi real-time
+CREATE TABLE IF NOT EXISTS notifications (
+  id VARCHAR(64) PRIMARY KEY,
+  recipient_id VARCHAR(64) NOT NULL,
+  type VARCHAR(32) NOT NULL COMMENT 'booking_confirmed, payment_received, barcode_scanned, tour_completed, guide_assigned, message',
+  title VARCHAR(191) NOT NULL,
+  message TEXT NOT NULL,
+  related_id VARCHAR(64) NULL COMMENT 'booking_id, guide_id, tour_id, etc',
+  is_read TINYINT(1) NOT NULL DEFAULT 0,
+  action_url VARCHAR(255) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  read_at DATETIME NULL,
+  INDEX idx_notifications_recipient (recipient_id),
+  INDEX idx_notifications_type (type),
+  INDEX idx_notifications_is_read (is_read),
+  INDEX idx_notifications_created (created_at),
+  CONSTRAINT fk_notifications_recipient FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Tabel untuk pencatatan scan barcode oleh guide
+CREATE TABLE IF NOT EXISTS barcode_scans (
+  id VARCHAR(64) PRIMARY KEY,
+  booking_id VARCHAR(36) NOT NULL,
+  guide_id VARCHAR(64) NOT NULL,
+  attendance_code VARCHAR(64) NOT NULL,
+  scanned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  location VARCHAR(191) NULL,
+  notes TEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_scans_booking (booking_id),
+  INDEX idx_scans_guide (guide_id),
+  INDEX idx_scans_scanned_at (scanned_at),
+  CONSTRAINT fk_scans_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+  CONSTRAINT fk_scans_guide FOREIGN KEY (guide_id) REFERENCES guides(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

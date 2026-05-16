@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { findDummyBookingByAttendanceCode, updateDummyBooking, initializeDummyBookings } from '@/lib/dummy-booking-store';
 import { isMySqlEnabled } from '@/lib/mysql';
 import { getBookingByAttendanceCode, updateBooking } from '@/lib/mysql-store';
+import { logAuditEvent } from '@/lib/audit-log';
 
 export const runtime = 'nodejs';
 
@@ -77,6 +78,21 @@ export async function POST(request: NextRequest) {
         booking = updated;
       }
     }
+
+    await logAuditEvent({
+      action: 'ticket_scanned',
+      entityType: 'booking',
+      entityId: bookingId!,
+      actorId: scannedBy || null,
+      actorRole: 'guide',
+      actorName: scannedBy || 'guide',
+      details: {
+        attendanceCode,
+        source: usedMySql ? 'mysql' : 'local',
+        bookingUserName: booking?.userName || null,
+        tourName: booking?.tourName || null,
+      },
+    });
 
     return NextResponse.json({
       ok: true,

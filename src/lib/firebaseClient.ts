@@ -1,7 +1,7 @@
 "use client"
 
 import { initializeApp, getApps } from "firebase/app"
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth"
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from "firebase/auth"
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
@@ -10,7 +10,19 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
 }
 
+function assertFirebaseConfig() {
+  const missing = Object.entries(firebaseConfig)
+    .filter(([, value]) => !String(value || "").trim())
+    .map(([key]) => key)
+
+  if (missing.length > 0) {
+    throw new Error(`Konfigurasi Firebase belum lengkap: ${missing.join(", ")}. Periksa NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, NEXT_PUBLIC_FIREBASE_PROJECT_ID, dan NEXT_PUBLIC_FIREBASE_APP_ID.`)
+  }
+}
+
 export function initFirebaseClient() {
+  assertFirebaseConfig()
+
   if (!getApps().length) {
     try {
       initializeApp(firebaseConfig)
@@ -25,46 +37,31 @@ export async function signInWithFirebaseGoogle() {
   const auth = getAuth()
   const provider = new GoogleAuthProvider()
 
-  console.log('[firebaseClient] Starting redirect sign-in...')
+  console.log('[firebaseClient] Starting popup sign-in...')
   console.log('[firebaseClient] Current auth state:', { uid: auth.currentUser?.uid, email: auth.currentUser?.email })
-  
+
+  // Force account selection so cached sessions don't auto-login the wrong account
   try {
-    // Use redirect flow which is more reliable in production (avoids popup blockers)
-    console.log('[firebaseClient] Calling signInWithRedirect...')
-    await signInWithRedirect(auth, provider)
-    console.log('[firebaseClient] signInWithRedirect called successfully (page will redirect)')
-  } catch (err: any) {
-    console.error('[firebaseClient] signInWithRedirect error:', err?.code, err?.message)
-    throw err
+    provider.setCustomParameters({ prompt: 'select_account' })
+  } catch (e) {
+    // ignore if provider doesn't support custom parameters
   }
 
-  // This function does not return a token immediately because the page will redirect.
-  return null
-}
-
-export async function handleFirebaseRedirectResult() {
-  initFirebaseClient()
-  const auth = getAuth()
-
   try {
-    console.log('[firebaseClient] Getting redirect result...')
-    const result = await getRedirectResult(auth)
-    console.log('[firebaseClient] Redirect result:', { hasResult: !!result, hasUser: !!result?.user, email: result?.user?.email })
-    
-    if (!result || !result.user) {
-      console.log('[firebaseClient] No redirect result or user')
-      return null
-    }
-    
+    const result = await signInWithPopup(auth, provider)
     const firebaseIdToken = await result.user.getIdToken(true)
-    console.log('[firebaseClient] Got ID token, length:', firebaseIdToken.length)
-    
+    console.log('[firebaseClient] Popup sign-in success, got ID token length:', firebaseIdToken.length)
     return { result, firebaseIdToken }
   } catch (err: any) {
-    console.error('[firebaseClient] Error getting redirect result:', err?.code, err?.message)
-    // Forward error to caller for handling
+    console.error('[firebaseClient] signInWithPopup error:', err?.code, err?.message)
     throw err
   }
+}
+
+// Redirect flow disabled: using popup sign-in instead. Keep a compatibility no-op.
+export async function handleFirebaseRedirectResult() {
+  console.log('[firebaseClient] handleFirebaseRedirectResult called but redirect flow is disabled (using popup).')
+  return null
 }
 
 export async function getCurrentUserToken() {
@@ -87,4 +84,13 @@ export async function getCurrentUserToken() {
   }
 }
 
-export default null
+export async function signOutFirebase() {
+  initFirebaseClient()
+  const auth = getAuth()
+  try {
+    await firebaseSignOut(auth)
+    console.log('[firebaseClient] Signed out Firebase client')
+  } catch (err: any) {
+    console.error('[firebaseClient] Error signing out Firebase client:', err?.message)
+  }
+}

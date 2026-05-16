@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { signOutFirebase } from "@/lib/firebaseClient"
 import Link from "next/link"
 import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -111,6 +112,8 @@ export default function OwnerDashboard() {
   const [removedMockIds, setRemovedMockIds] = useState<string[]>([]);
   const [dbBookings, setDbBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bookingChartData, setBookingChartData] = useState<any[]>([]);
+  const [userChartData, setUserChartData] = useState<any[]>([]);
 
   const heroImage = useMemo(() => {
     return PlaceHolderImages.find((img) => img.id === "hero-bg")?.imageUrl || PlaceHolderImages[0]?.imageUrl;
@@ -123,7 +126,7 @@ export default function OwnerDashboard() {
   const loadUnassignedBookings = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/bookings?status=approved&unassigned=true", { cache: "no-store" });
+      const response = await fetch("/api/bookings?paymentStatus=paid&unassigned=true", { cache: "no-store" });
       const result = await response.json();
 
       if (!response.ok) {
@@ -145,6 +148,20 @@ export default function OwnerDashboard() {
 
   useEffect(() => {
     loadUnassignedBookings();
+    // load analytics
+    (async () => {
+      try {
+        const resp1 = await fetch('/api/analytics/bookings');
+        const d1 = await resp1.json();
+        if (resp1.ok) setBookingChartData(d1.data || []);
+      } catch {}
+
+      try {
+        const resp2 = await fetch('/api/analytics/users');
+        const d2 = await resp2.json();
+        if (resp2.ok) setUserChartData(d2.data || []);
+      } catch {}
+    })();
   }, []);
 
   const bookingsToDisplay = useMemo(() => {
@@ -201,7 +218,13 @@ export default function OwnerDashboard() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await signOutFirebase()
+    } catch (err) {
+      console.error('Client signOut failed:', err)
+    }
+
     fetch("/api/auth/logout", { method: "POST" }).finally(() => {
       router.push("/");
     });
@@ -383,19 +406,33 @@ export default function OwnerDashboard() {
                 <CardDescription>Jelajahi rute paling cocok untuk level petualangan Anda.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-3">
-                  {PlaceHolderImages.map((img) => (
-                    <div key={img.id} className="relative h-40 overflow-hidden rounded-xl md:h-56">
-                      <Image
-                        src={img.imageUrl}
-                        alt={img.description}
-                        fill
-                        className="object-cover"
-                        data-ai-hint={img.imageHint}
-                      />
-                    </div>
-                  ))}
-                </div>
+                  <div style={{ width: '100%', height: 220 }}>
+                    {bookingChartData && bookingChartData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={220}>
+                        <BarChart data={bookingChartData.map((r:any) => ({ name: r.day, value: Number(r.bookings) }))}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" />
+                          <YAxis />
+                          <Tooltip />
+                          <Bar dataKey="value" fill="#10221f" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        {PlaceHolderImages.map((img) => (
+                          <div key={img.id} className="relative h-40 overflow-hidden rounded-xl md:h-56">
+                            <Image
+                              src={img.imageUrl}
+                              alt={img.description}
+                              fill
+                              className="object-cover"
+                              data-ai-hint={img.imageHint}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
               </CardContent>
             </Card>
 
@@ -420,10 +457,10 @@ export default function OwnerDashboard() {
 
           <Card className="rounded-[28px] border-none bg-white shadow-md lg:col-span-2">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl md:text-2xl font-black uppercase">
+                <CardTitle className="flex items-center gap-2 text-xl md:text-2xl font-black uppercase">
                 <Mountain className="h-5 w-5" /> Alokasi Pemandu
               </CardTitle>
-              <CardDescription>Tugaskan pemandu untuk pesanan yang sudah disetujui.</CardDescription>
+              <CardDescription>Tugaskan pemandu untuk pesanan yang sudah dibayar dan belum memiliki pemandu.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 px-4 pb-6">
               {loading ? (
@@ -442,6 +479,9 @@ export default function OwnerDashboard() {
                         <span>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString("id-ID") : "-"}</span>
                         <Badge variant="outline" className="h-5 rounded-full px-2 text-[10px]">
                           {booking.pax} Pax {booking.id.startsWith("mock-") && "(Simulasi)"}
+                        </Badge>
+                        <Badge variant="secondary" className="h-5 rounded-full px-2 text-[10px]">
+                          {(booking.paymentStatus || booking.status || "pending_payment").toString()}
                         </Badge>
                       </div>
                     </div>
@@ -517,11 +557,8 @@ export default function OwnerDashboard() {
                   <Link href="/" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10 hover:text-white">
                     Beranda
                   </Link>
-                  <Link href="#tours" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10 hover:text-white">
+                  <Link href="/tours" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10 hover:text-white">
                     Semua Tur
-                  </Link>
-                  <Link href="/login" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10 hover:text-white">
-                    Heritage Walks
                   </Link>
                   <Link href="/book/1" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10 hover:text-white">
                     Pesan Sekarang

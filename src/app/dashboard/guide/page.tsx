@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
+import { signOutFirebase } from "@/lib/firebaseClient"
 import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -176,7 +177,13 @@ export default function GuideDashboard() {
     };
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await signOutFirebase()
+    } catch (err) {
+      console.error('Client signOut failed:', err)
+    }
+
     fetch("/api/auth/logout", { method: "POST" }).finally(() => {
       router.push("/");
     });

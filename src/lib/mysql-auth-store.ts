@@ -64,6 +64,18 @@ export async function getUserById(id: string) {
   return mapUser(rows[0]);
 }
 
+export async function listUsers() {
+  const pool = getMySqlPool();
+  const [rows] = await pool.query<DbUserRow[]>('SELECT * FROM users ORDER BY created_at DESC');
+  return rows.map(mapUser);
+}
+
+export async function deleteUserById(id: string) {
+  const pool = getMySqlPool();
+  const [result] = await pool.execute<ResultSetHeader>('DELETE FROM users WHERE id = ?', [id]);
+  return (result as ResultSetHeader).affectedRows > 0;
+}
+
 export async function upsertUser(input: {
   id?: string;
   email: string;

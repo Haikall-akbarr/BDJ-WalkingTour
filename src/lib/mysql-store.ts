@@ -10,6 +10,8 @@ type DbTourRow = RowDataPacket & {
   description: string | null;
   distance: string | null;
   duration: string | null;
+  image_url?: string | null;
+  image_filename?: string | null;
   created_at: Date | string;
   updated_at: Date | string;
 };
@@ -62,6 +64,8 @@ function mapTour(row: DbTourRow) {
     description: row.description || '',
     distance: row.distance || '3 KM',
     duration: row.duration || '2 Jam',
+    imageUrl: row.image_url || '',
+    imageHint: row.image_filename || '',
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
   };
@@ -104,13 +108,25 @@ function mapBooking(row: DbBookingRow) {
 
 export async function listTours() {
   const pool = getMySqlPool();
-  const [rows] = await pool.query<DbTourRow[]>('SELECT * FROM tours ORDER BY name ASC');
+  const [rows] = await pool.query<DbTourRow[]>(
+    `SELECT t.*, ti.url AS image_url, ti.filename AS image_filename
+       FROM tours t
+       LEFT JOIN tour_images ti ON ti.tour_id = t.id AND ti.is_cover = 1
+      ORDER BY t.name ASC`
+  );
   return rows.map(mapTour);
 }
 
 export async function getTourById(id: string) {
   const pool = getMySqlPool();
-  const [rows] = await pool.query<DbTourRow[]>('SELECT * FROM tours WHERE id = ? LIMIT 1', [id]);
+  const [rows] = await pool.query<DbTourRow[]>(
+    `SELECT t.*, ti.url AS image_url, ti.filename AS image_filename
+       FROM tours t
+       LEFT JOIN tour_images ti ON ti.tour_id = t.id AND ti.is_cover = 1
+      WHERE t.id = ?
+      LIMIT 1`,
+    [id]
+  );
   if (!rows[0]) return null;
   return mapTour(rows[0]);
 }
@@ -198,7 +214,7 @@ export async function deleteTour(id: string) {
   return result.affectedRows > 0;
 }
 
-export async function listBookings(params?: { status?: string; guideId?: string; unassigned?: boolean }) {
+export async function listBookings(params?: { status?: string; paymentStatus?: string; guideId?: string; unassigned?: boolean }) {
   const pool = getMySqlPool();
   const values: unknown[] = [];
   let sql = 'SELECT * FROM bookings';
@@ -212,6 +228,11 @@ export async function listBookings(params?: { status?: string; guideId?: string;
       conditions.push('status = ?');
       values.push(params.status);
     }
+  }
+
+  if (params?.paymentStatus) {
+    conditions.push('(payment_status = ? OR status = ?)');
+    values.push(params.paymentStatus, params.paymentStatus);
   }
 
   if (params?.unassigned) {

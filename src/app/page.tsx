@@ -1,6 +1,7 @@
 ﻿"use client"
 
 import { useMemo, useState } from "react"
+import { signOutFirebase } from "@/lib/firebaseClient"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -12,12 +13,14 @@ import { Calendar, Users, ArrowRight, Clock, Map, ArrowUpRight } from "lucide-re
 import { PlaceHolderImages } from "@/lib/placeholder-images"
 import { useSessionUser } from "@/hooks/use-session-user"
 import { useToast } from "@/hooks/use-toast"
+import { NotificationBell } from "@/components/NotificationBell"
 
 const STATIC_TOURS = [
   {
     id: "st-1",
     name: "Pacinan Walking Tour",
     price: 65000,
+    description: "Menelusuri jejak kawasan heritage Pacinan dengan cerita perdagangan, arsitektur lama, dan spot foto klasik.",
     distance: "3 KM",
     duration: "2 Jam",
     date: "Minggu, 12 Okt",
@@ -27,6 +30,7 @@ const STATIC_TOURS = [
     id: "st-2",
     name: "Susur Sungai Martapura",
     price: 85000,
+    description: "Rute santai menyusuri tepian sungai, dermaga, dan kehidupan warga yang tumbuh bersama air.",
     distance: "5 KM",
     duration: "3 Jam",
     date: "Sabtu, 18 Okt",
@@ -36,6 +40,7 @@ const STATIC_TOURS = [
     id: "st-3",
     name: "Wisata Religi Kubah Basirih",
     price: 50000,
+    description: "Perjalanan singkat ke situs religi yang tenang, cocok untuk tur tematik dan eksplorasi budaya.",
     distance: "2 KM",
     duration: "1.5 Jam",
     date: "Jumat, 24 Okt",
@@ -60,6 +65,11 @@ export default function LandingPage() {
   ]
 
   const handleLogout = async () => {
+    try {
+      await signOutFirebase()
+    } catch (err) {
+      console.error('Client signOut failed:', err)
+    }
     await fetch("/api/auth/logout", { method: "POST" })
     window.location.href = "/"
   }
@@ -117,7 +127,7 @@ export default function LandingPage() {
 
               <div className="flex flex-wrap items-center gap-1 text-sm font-medium text-white/85">
                 <Link href="/" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Beranda</Link>
-                <Link href="#tours" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Semua Tur</Link>
+                <Link href="/tours" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Semua Tur</Link>
                 <Link href="/book/1" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Pesan Sekarang</Link>
               </div>
 
@@ -134,6 +144,7 @@ export default function LandingPage() {
                 )}
                 {!authLoading && user && (
                   <>
+                    <NotificationBell />
                     <Link href="/dashboard/user">
                       <Button
                         variant="outline"
@@ -152,7 +163,7 @@ export default function LandingPage() {
                     </Button>
                   </>
                 )}
-                <Link href="#tours">
+                <Link href="/tours">
                   <Button size="sm" className="h-8 rounded-full bg-[#98DDCA] px-3 text-xs font-semibold text-[#16302c] hover:bg-[#b8eadc]">
                     Explore
                   </Button>
@@ -162,9 +173,7 @@ export default function LandingPage() {
 
             <div className="flex flex-1 items-center py-14 md:py-20 lg:py-24">
               <div className="space-y-5">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/85 backdrop-blur-sm md:text-xs">
-                  Heritage Walks
-                </div>
+                {/* Heritage Walks badge hidden - only shown in login form */}
                 <h1 className="max-w-4xl text-5xl font-black uppercase leading-[0.9] tracking-[0.08em] text-white sm:text-6xl md:text-7xl lg:text-[7.25rem]">
                   Banjarmasin
                   <span className="block text-[#98DDCA]">Walking Tour</span>
@@ -173,21 +182,12 @@ export default function LandingPage() {
                   Rasakan keindahan sejarah, sungai, dan budaya kota seribu sungai melalui pengalaman berjalan kaki yang dipandu lokal berpengalaman.
                 </p>
                 <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-                  <Link href="#tours">
+                  <Link href="/tours">
                     <Button className="h-11 rounded-full bg-[#98DDCA] px-6 text-xs font-bold uppercase text-[#16302c] hover:bg-[#b8eadc] md:px-7">
-                      Jelajahi Tur <ArrowUpRight className="ml-2 h-4 w-4" />
+                  {/* Heritage Walks button hidden - only shown in login form */}
                     </Button>
                   </Link>
-                  {!authLoading && !user && (
-                    <Link href="/login">
-                      <Button
-                        variant="outline"
-                        className="h-11 rounded-full border-white/30 bg-white/5 px-6 text-xs font-bold uppercase text-white hover:bg-white/15 hover:text-white md:px-7"
-                      >
-                        Heritage Walks
-                      </Button>
-                    </Link>
-                  )}
+                  {/* Heritage Walks button hidden - only shown in login form */}
                   {!authLoading && user && null}
                 </div>
               </div>
@@ -214,7 +214,7 @@ export default function LandingPage() {
               <p className="mx-auto mt-3 max-w-2xl text-sm text-zinc-600 md:text-base">
                 Pilih rute jalan kaki populer, lihat harga, dan pesan slot terbaik untuk jadwal kamu.
               </p>
-              <Link href="/tours">
+                  <Link href="/tours">
                 <Button variant="outline" className="mt-5 rounded-full border-zinc-900 px-6 text-xs font-bold uppercase">
                   Lihat Semua Tur
                 </Button>
@@ -273,6 +273,9 @@ export default function LandingPage() {
                           <div className="absolute bottom-3 left-3 right-3 text-white">
                             <p className="truncate text-sm font-bold md:text-base">{tour.name}</p>
                             <p className="text-xs text-white/80 md:text-sm">Rp {tour.price?.toLocaleString("id-ID")}</p>
+                            <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-white/75 md:text-xs">
+                              {tour.description || "Tur pilihan dengan pengalaman lokal yang terkurasi."}
+                            </p>
                           </div>
                         </div>
                       </Link>
@@ -307,18 +310,15 @@ export default function LandingPage() {
                         <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {tour.duration}</span>
                         <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> Grup Kecil</span>
                       </div>
+                      <p className="mt-3 text-sm leading-6 text-zinc-300">
+                        {tour.description || "Deskripsi singkat tur ini akan membantu peserta memilih rute yang paling sesuai."}
+                      </p>
                     </div>
                   ))}
                 </div>
 
                 <div className="mt-5">
-                  {!authLoading && !user && (
-                    <Link href="/login">
-                      <Button className="rounded-full bg-white text-zinc-900 hover:bg-white/90">
-                        Heritage Walks <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </Link>
-                  )}
+                  {!authLoading && !user && null}
                   {!authLoading && user && (
                     <div className="flex flex-wrap gap-2">
                       <Link href="/dashboard/user">
