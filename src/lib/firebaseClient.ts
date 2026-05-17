@@ -1,7 +1,7 @@
 "use client"
 
 import { initializeApp, getApps } from "firebase/app"
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from "firebase/auth"
+import { getAuth, GoogleAuthProvider, getRedirectResult, signInWithPopup, signInWithRedirect, signOut as firebaseSignOut } from "firebase/auth"
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
@@ -54,14 +54,30 @@ export async function signInWithFirebaseGoogle() {
     return { result, firebaseIdToken }
   } catch (err: any) {
     console.error('[firebaseClient] signInWithPopup error:', err?.code, err?.message)
+    if (err?.code === 'auth/popup-blocked' || err?.code === 'auth/popup-closed-by-user') {
+      console.log('[firebaseClient] Falling back to redirect sign-in...')
+      await signInWithRedirect(auth, provider)
+      return null
+    }
     throw err
   }
 }
 
-// Redirect flow disabled: using popup sign-in instead. Keep a compatibility no-op.
 export async function handleFirebaseRedirectResult() {
-  console.log('[firebaseClient] handleFirebaseRedirectResult called but redirect flow is disabled (using popup).')
-  return null
+  initFirebaseClient()
+  const auth = getAuth()
+
+  try {
+    const result = await getRedirectResult(auth)
+    if (!result?.user) return null
+
+    const firebaseIdToken = await result.user.getIdToken(true)
+    console.log('[firebaseClient] Redirect sign-in success, got ID token length:', firebaseIdToken.length)
+    return { result, firebaseIdToken }
+  } catch (err: any) {
+    console.error('[firebaseClient] getRedirectResult error:', err?.code, err?.message)
+    throw err
+  }
 }
 
 export async function getCurrentUserToken() {

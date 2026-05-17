@@ -204,6 +204,10 @@ export default function LoginPage() {
 
       console.log('[LoginClient] Calling signInWithFirebaseGoogle (popup)...')
       const data = await helper.signInWithFirebaseGoogle()
+      if (!data?.firebaseIdToken) {
+        console.log('[LoginClient] Firebase sign-in handed off to redirect flow.')
+        return
+      }
       console.log('[LoginClient] signInWithFirebaseGoogle returned:', { hasToken: !!data?.firebaseIdToken })
 
       if (!data?.firebaseIdToken) {
@@ -240,7 +244,48 @@ export default function LoginPage() {
     }
   }
 
-  // Popup-based sign-in in use; redirect handling removed.
+  useEffect(() => {
+    let mounted = true
+
+    const finishRedirectLogin = async () => {
+      try {
+        const helper = await ensureFirebaseHelper()
+        if (!helper || !mounted) return
+
+        const data = await helper.handleFirebaseRedirectResult()
+        if (!mounted || !data?.firebaseIdToken) return
+
+        setLoading(true)
+        const response = await fetch("/api/auth/firebase", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken: data.firebaseIdToken }),
+        })
+
+        const result = await response.json()
+        if (!response.ok) {
+          throw new Error(result?.error || 'Login Firebase gagal.')
+        }
+
+        routeAfterLogin(result?.user?.role || 'user')
+      } catch (error: any) {
+        console.error('[LoginClient] handleFirebaseRedirectResult error:', error?.message)
+        toast({
+          variant: 'destructive',
+          title: 'Firebase login gagal',
+          description: error?.message || 'Login Google gagal.',
+        })
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+
+    finishRedirectLogin()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const renderParticipantForms = () => {
     if (viewMode === "register") {
