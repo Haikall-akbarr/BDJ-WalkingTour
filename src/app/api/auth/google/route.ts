@@ -1,8 +1,8 @@
 import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { createSession, getUserByEmail, upsertUser } from '@/lib/mysql-auth-store';
+import { createSession, getUserByEmail, upsertUser } from '@/lib/auth-store';
 import { generateSessionToken, getSessionCookieName, getSessionExpiryDate, hashPassword, hashSessionToken } from '@/lib/auth-session';
-import { isMySqlEnabled } from '@/lib/mysql';
+import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 
 export const runtime = 'nodejs';
 
@@ -42,8 +42,8 @@ async function verifyGoogleCredential(credential: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isMySqlEnabled()) {
-      return NextResponse.json({ error: 'MySQL backend belum aktif.' }, { status: 400 });
+    if (!isDatabaseProviderEnabled()) {
+      return NextResponse.json({ error: 'Backend database belum aktif.' }, { status: 400 });
     }
 
     const body = await request.json();

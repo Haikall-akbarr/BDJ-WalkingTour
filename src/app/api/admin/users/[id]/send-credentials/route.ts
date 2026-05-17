@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUserById, updateUserPasswordHash } from '@/lib/mysql-auth-store'
+import { getUserById, updateUserPasswordHash } from '@/lib/auth-store'
 import { hashPassword } from '@/lib/auth-session'
 import { sendEmail } from '@/lib/email'
 

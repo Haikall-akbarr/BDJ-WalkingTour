@@ -1,14 +1,14 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { getSessionCookieName, generateSessionToken, getSessionExpiryDate, hashPassword, hashSessionToken } from '@/lib/auth-session';
-import { createSession, getUserByEmail } from '@/lib/mysql-auth-store';
-import { isMySqlEnabled } from '@/lib/mysql';
+import { createSession, getUserByEmail } from '@/lib/auth-store';
+import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isMySqlEnabled()) {
-      return NextResponse.json({ error: 'MySQL backend belum aktif.' }, { status: 400 });
+    if (!isDatabaseProviderEnabled()) {
+      return NextResponse.json({ error: 'Backend database belum aktif.' }, { status: 400 });
     }
 
     const body = await request.json();

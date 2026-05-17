@@ -402,7 +402,7 @@ export default function LoginPage() {
                 <CardTitle className="text-2xl">{staffMode ? "Akses Khusus" : "Akun Peserta"}</CardTitle>
                 <CardDescription>
                   {staffMode
-                    ? "Gunakan menu ini hanya untuk akun pengelola yang sudah terdaftar."
+                    ? "Gunakan email/password untuk akun admin, owner, atau guide yang sudah di-seed di Supabase."
                     : "Pilih Google atau email untuk melanjutkan ke BDJ WalkingTour."}
                 </CardDescription>
               </CardHeader>

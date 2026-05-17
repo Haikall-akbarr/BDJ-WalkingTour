@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isMySqlEnabled } from '@/lib/mysql';
-import { getBookingById, updateBooking } from '@/lib/mysql-store';
+import { isDatabaseProviderEnabled } from '@/lib/database-provider';
+import { getBookingById, updateBooking } from '@/lib/data-store';
 import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail, verifyMidtransSignature } from '@/lib/payment-helpers';
 
 export const runtime = 'nodejs';
@@ -31,8 +31,8 @@ export async function DELETE() {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isMySqlEnabled()) {
-      return NextResponse.json({ error: 'Mode MySQL wajib aktif untuk webhook ini.' }, { status: 400 });
+    if (!isDatabaseProviderEnabled()) {
+      return NextResponse.json({ error: 'Backend database wajib aktif untuk webhook ini.' }, { status: 400 });
     }
 
     const payload = await request.json();

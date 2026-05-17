@@ -59,58 +59,12 @@ const REVENUE_DATA = [
   { name: 'Jun', value: 2390 },
 ];
 
-const GUIDES = [
-  { id: "g1", name: "Andi Saputra" },
-  { id: "g2", name: "Budi Santoso" },
-  { id: "g3", name: "Siti Aminah" },
-  { id: "g4", name: "Diana Putri" },
-];
-
-const MOCK_BOOKINGS = [
-  { 
-    id: "mock-b1", 
-    tourName: "Pacinan Walking Tour", 
-    userName: "Rizky Ramadhan", 
-    pax: 2, 
-    createdAt: { toDate: () => new Date() }, 
-    status: "approved", 
-    guideId: null 
-  },
-  { 
-    id: "mock-b2", 
-    tourName: "Susur Sungai Martapura", 
-    userName: "Lutfi Hakim", 
-    pax: 1, 
-    createdAt: { toDate: () => new Date() }, 
-    status: "approved", 
-    guideId: null 
-  },
-  { 
-    id: "mock-b3", 
-    tourName: "Pacinan Walking Tour", 
-    userName: "Hendra Wijaya", 
-    pax: 3, 
-    createdAt: { toDate: () => new Date(Date.now() - 86400000) }, 
-    status: "approved", 
-    guideId: null 
-  },
-  { 
-    id: "mock-b4", 
-    tourName: "Susur Sungai Martapura", 
-    userName: "Anita Sari", 
-    pax: 2, 
-    createdAt: { toDate: () => new Date(Date.now() - 172800000) }, 
-    status: "approved", 
-    guideId: null 
-  }
-];
-
 export default function OwnerDashboard() {
   const router = useRouter();
   const { toast } = useToast();
   const [selectedGuides, setSelectedGuides] = useState<Record<string, string>>({});
-  const [removedMockIds, setRemovedMockIds] = useState<string[]>([]);
   const [dbBookings, setDbBookings] = useState<any[]>([]);
+  const [guides, setGuides] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [bookingChartData, setBookingChartData] = useState<any[]>([]);
   const [userChartData, setUserChartData] = useState<any[]>([]);
@@ -138,7 +92,7 @@ export default function OwnerDashboard() {
       toast({
         variant: "destructive",
         title: "Gagal memuat data",
-        description: error?.message || "Periksa backend MySQL.",
+        description: error?.message || "Periksa backend database.",
       });
       setDbBookings([]);
     } finally {
@@ -146,8 +100,24 @@ export default function OwnerDashboard() {
     }
   };
 
+  const loadGuides = async () => {
+    try {
+      const response = await fetch('/api/admin/users?role=guide', { cache: 'no-store' });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error || 'Gagal memuat daftar pemandu.');
+      }
+
+      setGuides(Array.isArray(result?.users) ? result.users : []);
+    } catch {
+      setGuides([]);
+    }
+  };
+
   useEffect(() => {
     loadUnassignedBookings();
+    loadGuides();
     // load analytics
     (async () => {
       try {
@@ -165,26 +135,14 @@ export default function OwnerDashboard() {
   }, []);
 
   const bookingsToDisplay = useMemo(() => {
-    const activeMocks = MOCK_BOOKINGS.filter(b => !removedMockIds.includes(b.id));
-    if (!dbBookings || dbBookings.length === 0) return activeMocks;
-    return [...dbBookings, ...activeMocks];
-  }, [dbBookings, removedMockIds]);
+    return dbBookings || [];
+  }, [dbBookings]);
 
   const handleAssignGuide = async (bookingId: string) => {
     const guideId = selectedGuides[bookingId];
     if (!guideId) return;
 
-    const guideName = GUIDES.find(g => g.id === guideId)?.name;
-
-    // Handle Mock Data (Simulasi)
-    if (bookingId.startsWith('mock-')) {
-      setRemovedMockIds(prev => [...prev, bookingId]);
-      toast({
-        title: "Berhasil (Simulasi)",
-        description: `Pemandu ${guideName} telah ditugaskan (Hanya tampilan).`,
-      });
-      return;
-    }
+    const guideName = guides.find(g => g.id === guideId)?.name;
 
     try {
       const response = await fetch(`/api/bookings/${bookingId}`, {
@@ -478,7 +436,7 @@ export default function OwnerDashboard() {
                         <span>â€¢</span>
                         <span>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString("id-ID") : "-"}</span>
                         <Badge variant="outline" className="h-5 rounded-full px-2 text-[10px]">
-                          {booking.pax} Pax {booking.id.startsWith("mock-") && "(Simulasi)"}
+                          {booking.pax} Pax
                         </Badge>
                         <Badge variant="secondary" className="h-5 rounded-full px-2 text-[10px]">
                           {(booking.paymentStatus || booking.status || "pending_payment").toString()}
@@ -495,7 +453,7 @@ export default function OwnerDashboard() {
                           <SelectValue placeholder="Pilih Pemandu" />
                         </SelectTrigger>
                         <SelectContent>
-                          {GUIDES.map((guide) => (
+                          {guides.map((guide) => (
                             <SelectItem key={guide.id} value={guide.id}>{guide.name}</SelectItem>
                           ))}
                         </SelectContent>

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { deleteSessionByTokenHash } from '@/lib/mysql-auth-store';
+import { deleteSessionByTokenHash } from '@/lib/auth-store';
 import { getSessionCookieName, hashSessionToken } from '@/lib/auth-session';
 
 export const runtime = 'nodejs';

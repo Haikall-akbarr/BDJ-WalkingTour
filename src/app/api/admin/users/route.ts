@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { listUsers, upsertUser } from '@/lib/mysql-auth-store'
+import { listUsers, upsertUser } from '@/lib/auth-store'
 import { hashPassword } from '@/lib/auth-session'
 import { sendEmail } from '@/lib/email'
 import { randomUUID } from 'crypto'
 
 export const runtime = 'nodejs'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const role = String(request.nextUrl.searchParams.get('role') || '').trim().toLowerCase()
     const users = await listUsers()
-    return NextResponse.json({ users })
+    const filtered = role ? users.filter((user) => String(user.role || '').toLowerCase() === role) : users
+    return NextResponse.json({ users: filtered })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || String(err) }, { status: 500 })
   }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findDummyBookingByAttendanceCode, updateDummyBooking, initializeDummyBookings } from '@/lib/dummy-booking-store';
-import { isMySqlEnabled } from '@/lib/mysql';
-import { getBookingByAttendanceCode, updateBooking } from '@/lib/mysql-store';
+import { isDatabaseProviderEnabled } from '@/lib/database-provider';
+import { getBookingByAttendanceCode, updateBooking } from '@/lib/data-store';
 import { logAuditEvent } from '@/lib/audit-log';
 
 export const runtime = 'nodejs';
@@ -25,12 +25,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'attendanceCode wajib diisi.' }, { status: 400 });
     }
 
-    // Try MySQL first, then fallback to dummy bookings
+    // Try the active database provider first, then fallback to dummy bookings
     let booking = null;
     let bookingId = null;
     let usedMySql = false;
 
-    if (isMySqlEnabled()) {
+    if (isDatabaseProviderEnabled()) {
       const mysqlBooking = await getBookingByAttendanceCode(attendanceCode);
       if (mysqlBooking) {
         booking = mysqlBooking;
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // If not found in MySQL, try local dummy bookings
+    // If not found in the database, try local dummy bookings
     if (!booking) {
       const localBooking = findDummyBookingByAttendanceCode(attendanceCode);
       if (localBooking) {
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Barcode sudah pernah digunakan untuk absensi.' }, { status: 409 });
     }
 
-    // Update in MySQL if available, otherwise update local dummy booking
+    // Update in the active database provider if available, otherwise update local dummy booking
     if (usedMySql) {
       await updateBooking(bookingId!, {
         attendanceScannedAt: new Date().toISOString(),
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       actorName: scannedBy || 'guide',
       details: {
         attendanceCode,
-        source: usedMySql ? 'mysql' : 'local',
+        source: usedMySql ? 'database' : 'local',
         bookingUserName: booking?.userName || null,
         tourName: booking?.tourName || null,
       },
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       ok: true,
       bookingId,
       booking,
-      source: usedMySql ? 'mysql' : 'local',
+      source: usedMySql ? 'database' : 'local',
     });
   } catch (error: any) {
     console.error('[attendance/scan] Fatal error:', error?.message, error?.stack);

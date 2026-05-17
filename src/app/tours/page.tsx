@@ -108,6 +108,9 @@ export default function ToursPage() {
   const [apiTours, setApiTours] = useState<TourItem[]>([])
   const [loading, setLoading] = useState(true)
 
+  const isSupabaseStorageUrl = (value?: string) =>
+    typeof value === "string" && value.includes(".supabase.co/storage/v1/object/public/")
+
   useEffect(() => {
     let mounted = true
 
@@ -217,13 +220,21 @@ export default function ToursPage() {
             return (
               <Card key={tour.id} className="group overflow-hidden rounded-[28px] border-none bg-white shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(16,34,31,0.14)]">
                 <div className="relative h-56 overflow-hidden">
-                  <Image
-                    src={tour.imageUrl || fallbackImage.imageUrl}
-                    alt={tour.name}
-                    fill
-                    className="object-cover transition duration-500 group-hover:scale-105"
-                    data-ai-hint={tour.imageHint || fallbackImage.imageHint}
-                  />
+                  {isSupabaseStorageUrl(tour.imageUrl) ? (
+                    <img
+                      src={tour.imageUrl}
+                      alt={tour.name}
+                      className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <Image
+                      src={tour.imageUrl || fallbackImage.imageUrl}
+                      alt={tour.name}
+                      fill
+                      className="object-cover transition duration-500 group-hover:scale-105"
+                      data-ai-hint={tour.imageHint || fallbackImage.imageHint}
+                    />
+                  )}
                   <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,34,31,0.05)_0%,rgba(16,34,31,0.78)_100%)]" />
                   <div className="absolute left-4 right-4 top-4 flex items-start justify-between gap-2">
                     <Badge className="rounded-full bg-white/12 text-white hover:bg-white/12">{tour.distance || "3 KM"}</Badge>

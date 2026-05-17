@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUserById, upsertUser, deleteUserById } from '@/lib/mysql-auth-store'
+import { getUserById, upsertUser, deleteUserById } from '@/lib/auth-store'
 import { hashPassword } from '@/lib/auth-session'
 
 export const runtime = 'nodejs'

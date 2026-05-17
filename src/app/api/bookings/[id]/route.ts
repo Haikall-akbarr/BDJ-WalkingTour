@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getBookingById, updateBooking } from '@/lib/mysql-store';
-import { isMySqlEnabled } from '@/lib/mysql';
+import { getBookingById, updateBooking } from '@/lib/data-store';
+import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { logAuditEvent } from '@/lib/audit-log';
 
 export const runtime = 'nodejs';
 
 function assertMySql() {
-  if (!isMySqlEnabled()) {
-    throw new Error('MySQL backend belum aktif. Set DB_PROVIDER=mysql di environment.');
+  if (!isDatabaseProviderEnabled()) {
+    throw new Error('Backend database belum aktif. Set DB_PROVIDER=mysql atau supabase di environment.');
   }
 }
 

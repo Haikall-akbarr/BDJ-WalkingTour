@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { isMySqlEnabled } from '@/lib/mysql';
+import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { getCurrentSessionUser } from '@/lib/server-auth';
-import { listBookings } from '@/lib/mysql-store';
+import { listBookings } from '@/lib/data-store';
 
 export const runtime = 'nodejs';
 
@@ -90,7 +90,7 @@ function buildNotificationsFromBookings(bookings: Awaited<ReturnType<typeof list
 
 export async function GET() {
   try {
-    if (!isMySqlEnabled()) {
+    if (!isDatabaseProviderEnabled()) {
       return NextResponse.json({ notifications: [] });
     }
 

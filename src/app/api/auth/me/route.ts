@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { isMySqlEnabled } from '@/lib/mysql';
+import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { getCurrentSessionUser } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    if (!isMySqlEnabled()) {
+    if (!isDatabaseProviderEnabled()) {
       return NextResponse.json({ user: null });
     }
 

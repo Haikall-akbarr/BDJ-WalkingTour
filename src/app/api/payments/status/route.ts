@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDummyBooking } from '@/lib/dummy-booking-store';
-import { isMySqlEnabled } from '@/lib/mysql';
-import { getBookingById, updateBooking } from '@/lib/mysql-store';
+import { isDatabaseProviderEnabled } from '@/lib/database-provider';
+import { getBookingById, updateBooking } from '@/lib/data-store';
 import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail } from '@/lib/payment-helpers';
 
 export const runtime = 'nodejs';
@@ -21,7 +21,7 @@ function getPakasirApiKey() {
 async function syncFromPakasir(params: {
   bookingId: string;
   booking: any;
-  source: 'local' | 'mysql';
+  source: 'local' | 'database';
 }) {
   if (params.booking?.paymentGateway !== 'pakasir') {
     return null;
@@ -67,7 +67,7 @@ async function syncFromPakasir(params: {
   const paymentTransactionId = transaction?.transaction_id || transaction?.payment_id || `pakasir-${params.bookingId}`;
 
   try {
-    if (params.source === 'mysql') {
+    if (params.source === 'database') {
       await updateBooking(params.bookingId, {
         paymentStatus: 'paid',
         status: 'paid',
@@ -126,12 +126,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'bookingId wajib diisi.' }, { status: 400 });
     }
 
-    if (isMySqlEnabled()) {
+    if (isDatabaseProviderEnabled()) {
       const booking = await getBookingById(bookingId);
 
       if (!booking) {
         return NextResponse.json({
-          source: 'mysql',
+          source: 'database',
           bookingId,
           booking: {
             id: bookingId,
@@ -156,11 +156,11 @@ export async function GET(request: NextRequest) {
       const syncedBooking = await syncFromPakasir({
         bookingId,
         booking,
-        source: 'mysql',
+        source: 'database',
       });
 
       return NextResponse.json({
-        source: 'mysql',
+        source: 'database',
         bookingId,
         booking: syncedBooking || booking,
       });

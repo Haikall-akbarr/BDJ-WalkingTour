@@ -33,6 +33,30 @@ Default akun:
 
 Setelah itu, dashboard admin/owner/guide dan flow booking/payment akan memakai MySQL lewat API internal (`/api/tours`, `/api/bookings`, `/api/payments/*`, `/api/auth/*`) tanpa ketergantungan Firebase.
 
+## Supabase backend
+
+Project ini sekarang sudah punya koneksi Supabase dasar.
+
+Env yang dipakai:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (opsional fallback ke anon key)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SECRET_KEY` (opsional fallback)
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Catatan provider:
+
+- `DB_PROVIDER=mysql` -> flow backend lama tetap berjalan.
+- `DB_PROVIDER=supabase` -> status provider akan tampil sebagai Supabase (endpoint health siap dipakai).
+
+Endpoint cek koneksi:
+
+- `GET /api/health/supabase`
+
+Respons sukses akan mengembalikan `ok: true`.
+Jika gagal dan ada pesan tabel `tours` tidak ditemukan, buat tabel `tours` dulu di Supabase SQL Editor.
+
 
 ## Auth peserta
 

@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { getSessionCookieName, hashSessionToken } from '@/lib/auth-session';
-import { getSessionByTokenHash, getUserById, touchSession } from '@/lib/mysql-auth-store';
+import { getSessionByTokenHash, getUserById, touchSession } from '@/lib/auth-store';
 
 export async function getCurrentSessionUser() {
   const cookieStore = await cookies();

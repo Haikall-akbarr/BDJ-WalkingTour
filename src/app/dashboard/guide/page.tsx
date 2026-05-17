@@ -41,36 +41,12 @@ type ScanHistoryItem = {
   source: "manual" | "camera";
 };
 
-// Data statis untuk keperluan demonstrasi jika database kosong
-const MOCK_TOURS = [
-  {
-    id: "mock-1",
-    tourName: "Susur Sungai Martapura",
-    userName: "Budi Santoso",
-    userWhatsApp: "08123456789",
-    userEmail: "budi@example.com",
-    domicile: "Banjarmasin",
-    pax: 2,
-    createdAt: { toDate: () => new Date() },
-    status: "approved"
-  },
-  {
-    id: "mock-2",
-    tourName: "Pacinan Walking Tour",
-    userName: "Siti Rahma",
-    userWhatsApp: "08987654321",
-    userEmail: "siti@example.com",
-    domicile: "Banjarbaru",
-    pax: 4,
-    createdAt: { toDate: () => new Date(Date.now() + 86400000) },
-    status: "approved"
-  }
-];
-
 export default function GuideDashboard() {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useSessionUser();
+  const currentGuideId = user?.id || "";
+  const currentGuideName = user?.name || "Pemandu";
   const heroImage = useMemo(() => {
     return PlaceHolderImages.find((img) => img.id === "hero-bg")?.imageUrl || PlaceHolderImages[0]?.imageUrl;
   }, []);
@@ -85,17 +61,10 @@ export default function GuideDashboard() {
   const scannerControlsRef = useRef<IScannerControls | null>(null);
   const scanGuardRef = useRef(false);
 
-  // ID pemandu diambil dari sesi login MySQL
-  const currentGuideId = user?.id || "g1";
   const historyStorageKey = `guide-scan-history-${currentGuideId}`;
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
   const [apiTours, setApiTours] = useState<any[]>([]);
   const [apiLoading, setApiLoading] = useState(true);
-
-  const myTours = useMemo(() => {
-    if (apiTours.length > 0) return apiTours;
-    return MOCK_TOURS;
-  }, [apiTours]);
 
   useEffect(() => {
     let mounted = true;
@@ -136,10 +105,10 @@ export default function GuideDashboard() {
   }, [currentGuideId]);
 
   const selectedTour = useMemo(() => {
-    if (!myTours || myTours.length === 0) return null;
-    if (selectedTourId) return myTours.find((t: any) => t.id === selectedTourId) || myTours[0];
-    return myTours[0];
-  }, [myTours, selectedTourId]);
+    if (!apiTours || apiTours.length === 0) return null;
+    if (selectedTourId) return apiTours.find((t: any) => t.id === selectedTourId) || apiTours[0];
+    return apiTours[0];
+  }, [apiTours, selectedTourId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -385,6 +354,7 @@ export default function GuideDashboard() {
               <h1 className="max-w-2xl text-4xl font-extrabold uppercase leading-tight tracking-wide text-white sm:text-5xl md:text-6xl">
                 Route Briefing
               </h1>
+              <p className="text-sm font-semibold text-white/90">Selamat datang, {currentGuideName}</p>
               <p className="max-w-2xl text-xs text-white/90 md:text-sm">
                 Kelola jadwal, data peserta, dan laporan tur harian dalam satu panel bergaya eksplorasi.
               </p>
@@ -449,14 +419,6 @@ export default function GuideDashboard() {
               </div>
             )}
 
-            <div className="rounded-2xl bg-blue-50 border border-blue-200 p-3">
-              <p className="text-xs font-semibold text-blue-900 mb-2">💡 Kode Test Tersedia:</p>
-              <div className="space-y-1 text-xs text-blue-800">
-                <p>• <code className="bg-white px-2 py-1 rounded">BDJ-LOCAL-08-A1B2C3</code> - Budi Santoso (Susur Sungai)</p>
-                <p>• <code className="bg-white px-2 py-1 rounded">BDJ-LOCAL-09-D4E5F6</code> - Siti Rahma (Pacinan Walking)</p>
-                <p>• <code className="bg-white px-2 py-1 rounded">BDJ-LOCAL-10-G7H8I9</code> - Ahmad Wijaya (Susur Sungai)</p>
-              </div>
-            </div>
           </CardContent>
           {scanResult && (
             <CardFooter className="pt-0">
@@ -501,7 +463,7 @@ export default function GuideDashboard() {
               <p className="text-muted-foreground">Memuat jadwal guide...</p>
             </div>
           </Card>
-        ) : myTours && myTours.length > 0 ? (
+        ) : apiTours && apiTours.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Card className="rounded-[28px] border-none bg-white shadow-md lg:col-span-1">
               <CardHeader>
@@ -511,7 +473,7 @@ export default function GuideDashboard() {
                 <CardDescription>Pilih jadwal untuk melihat detail peserta.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {myTours.map((tour: any) => (
+                {apiTours.map((tour: any) => (
                   <button
                     key={tour.id}
                     className={`w-full rounded-2xl border p-4 text-left transition-all ${selectedTour?.id === tour.id ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"}`}
@@ -596,7 +558,7 @@ export default function GuideDashboard() {
           </div>
         ) : (
           <Card className="rounded-[28px] border-dashed p-20 text-center">
-            <p className="text-muted-foreground">Anda belum memiliki jadwal tur yang ditugaskan.</p>
+              <p className="text-muted-foreground">Anda belum memiliki jadwal tur yang ditugaskan.</p>
           </Card>
         )}
       </div>

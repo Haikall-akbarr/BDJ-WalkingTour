@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserByEmail, createPasswordResetToken } from '@/lib/mysql-auth-store';
-import { isMySqlEnabled } from '@/lib/mysql';
+import { getUserByEmail, createPasswordResetToken } from '@/lib/auth-store';
+import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { buildPasswordResetEmailHtml, sendAuthEmail } from '@/lib/auth-email';
 import { generateResetToken, hashResetToken } from '@/lib/auth-session';
 
@@ -21,8 +21,8 @@ function getAppBaseUrl() {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isMySqlEnabled()) {
-      return NextResponse.json({ error: 'MySQL backend belum aktif.' }, { status: 400 });
+    if (!isDatabaseProviderEnabled()) {
+      return NextResponse.json({ error: 'Backend database belum aktif.' }, { status: 400 });
     }
 
     const body = await request.json();

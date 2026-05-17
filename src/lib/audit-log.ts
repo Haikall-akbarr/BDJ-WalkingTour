@@ -1,6 +1,8 @@
 import { randomUUID } from 'crypto'
 import type { RowDataPacket } from 'mysql2'
 import { getMySqlPool } from '@/lib/mysql'
+import { isSupabaseProvider } from '@/lib/database-provider'
+import { getSupabaseAdmin } from '@/lib/supabase'
 
 type AuditColumnRow = RowDataPacket & { COLUMN_NAME: string }
 
@@ -55,6 +57,23 @@ function buildDetails(entry: AuditEntry) {
 
 export async function logAuditEvent(entry: AuditEntry) {
   try {
+    if (isSupabaseProvider()) {
+      const admin = getSupabaseAdmin()
+      const { error } = await admin.from('audit_logs').insert({
+        id: randomUUID(),
+        action: entry.action,
+        entity_type: entry.entityType,
+        entity_id: entry.entityId,
+        actor_id: entry.actorId || null,
+        actor_role: entry.actorRole || null,
+        actor_name: entry.actorName || null,
+        details: buildDetails(entry),
+        created_at: new Date().toISOString(),
+      })
+
+      return !error
+    }
+
     const pool = getMySqlPool()
     const [tableRows] = await pool.query<RowDataPacket[]>(
       `SELECT COUNT(*) AS total
@@ -102,5 +121,43 @@ export async function logAuditEvent(entry: AuditEntry) {
     return true
   } catch {
     return false
+  }
+}
+
+export async function listAuditLogs() {
+  try {
+    if (isSupabaseProvider()) {
+      const admin = getSupabaseAdmin()
+      const { data, error } = await admin.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200)
+
+      if (error) {
+        return []
+      }
+
+      return data || []
+    }
+
+    const pool = getMySqlPool()
+    const [tableRows] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS total
+         FROM information_schema.tables
+        WHERE table_schema = DATABASE()
+          AND table_name = 'audit_logs'`
+    )
+
+    if (!tableRows?.[0] || Number((tableRows[0] as any).total || 0) === 0) {
+      return []
+    }
+
+    const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM audit_logs LIMIT 500')
+    return [...rows]
+      .sort((a, b) => {
+        const aTime = new Date(String(a.created_at || a.createdAt || a.timestamp || a.time || 0)).getTime()
+        const bTime = new Date(String(b.created_at || b.createdAt || b.timestamp || b.time || 0)).getTime()
+        return bTime - aTime
+      })
+      .slice(0, 200)
+  } catch {
+    return []
   }
 }

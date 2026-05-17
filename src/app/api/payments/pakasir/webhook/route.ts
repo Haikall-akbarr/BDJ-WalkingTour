@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDummyBooking, updateDummyBooking } from '@/lib/dummy-booking-store';
-import { isMySqlEnabled } from '@/lib/mysql';
-import { getBookingById, updateBooking } from '@/lib/mysql-store';
+import { isDatabaseProviderEnabled } from '@/lib/database-provider';
+import { getBookingById, updateBooking } from '@/lib/data-store';
 import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail } from '@/lib/payment-helpers';
 
 export const runtime = 'nodejs';
@@ -57,8 +57,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Project Pakasir tidak cocok.' }, { status: 401 });
     }
 
-    const mysqlEnabled = isMySqlEnabled();
-    const bookingData = mysqlEnabled ? await getBookingById(orderId) : getDummyBooking(orderId);
+    const databaseEnabled = isDatabaseProviderEnabled();
+    const bookingData = databaseEnabled ? await getBookingById(orderId) : getDummyBooking(orderId);
 
     if (!bookingData) {
       return NextResponse.json({ error: 'Booking tidak ditemukan.' }, { status: 404 });
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (status !== 'completed') {
-      if (mysqlEnabled) {
+      if (databaseEnabled) {
         await updateBooking(orderId, {
           paymentStatus: status,
           status,
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     const attendanceCode = bookingData.attendanceCode || generateAttendanceCode(orderId);
     const qrImageUrl = bookingData.attendanceQrImageUrl || buildAttendanceQrUrl(attendanceCode);
 
-    if (mysqlEnabled) {
+    if (databaseEnabled) {
       await updateBooking(orderId, {
         paymentStatus: 'paid',
         status: 'paid',
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
           totalAmount: Number(amount),
         });
 
-        if (mysqlEnabled) {
+        if (databaseEnabled) {
           await updateBooking(orderId, {
             barcodeSentAt: new Date().toISOString(),
           });

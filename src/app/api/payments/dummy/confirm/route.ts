@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDummyBooking, updateDummyBooking } from '@/lib/dummy-booking-store';
-import { isMySqlEnabled } from '@/lib/mysql';
-import { getBookingById, updateBooking } from '@/lib/mysql-store';
+import { isDatabaseProviderEnabled } from '@/lib/database-provider';
+import { getBookingById, updateBooking } from '@/lib/data-store';
 import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail } from '@/lib/payment-helpers';
 
 export const runtime = 'nodejs';
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'bookingId wajib diisi.' }, { status: 400 });
     }
 
-    if (isMySqlEnabled()) {
+    if (isDatabaseProviderEnabled()) {
       const bookingData = await getBookingById(bookingId);
       if (!bookingData) {
         return NextResponse.json({ error: 'Booking tidak ditemukan.' }, { status: 404 });
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         bookingId,
         attendanceCode,
         qrImageUrl,
-        source: 'mysql',
+        source: 'database',
         emailDelivery: {
           status: emailDeliveryStatus,
           detail: emailDeliveryDetail,

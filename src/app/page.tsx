@@ -55,6 +55,9 @@ export default function LandingPage() {
   const [newsletterEmail, setNewsletterEmail] = useState("")
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
 
+  const isSupabaseStorageUrl = (value?: string) =>
+    typeof value === "string" && value.includes(".supabase.co/storage/v1/object/public/")
+
   const heroImg = PlaceHolderImages.find((img) => img.id === "hero-bg")
   const showcaseImages = PlaceHolderImages.slice(0, 3)
 
@@ -262,13 +265,21 @@ export default function LandingPage() {
                     return (
                       <Link key={tour.id} href={`/book/${tour.id}`} className="group">
                         <div className="relative h-56 overflow-hidden rounded-2xl">
-                          <Image
-                            src={tour.imageUrl || tourImg.imageUrl}
-                            alt={tour.name}
-                            fill
-                            className="object-cover transition duration-500 group-hover:scale-105"
-                            data-ai-hint={tour.imageHint || tourImg.imageHint}
-                          />
+                          {isSupabaseStorageUrl(tour.imageUrl) ? (
+                            <img
+                              src={tour.imageUrl}
+                              alt={tour.name}
+                              className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                            />
+                          ) : (
+                            <Image
+                              src={tour.imageUrl || tourImg.imageUrl}
+                              alt={tour.name}
+                              fill
+                              className="object-cover transition duration-500 group-hover:scale-105"
+                              data-ai-hint={tour.imageHint || tourImg.imageHint}
+                            />
+                          )}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
                           <div className="absolute bottom-3 left-3 right-3 text-white">
                             <p className="truncate text-sm font-bold md:text-base">{tour.name}</p>

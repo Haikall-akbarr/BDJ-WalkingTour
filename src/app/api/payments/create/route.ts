@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createDummyBooking } from '@/lib/dummy-booking-store';
-import { isMySqlEnabled } from '@/lib/mysql';
-import { createBooking, getTourById, updateBooking } from '@/lib/mysql-store';
+import { isDatabaseProviderEnabled } from '@/lib/database-provider';
+import { createBooking, getTourById, updateBooking } from '@/lib/data-store';
 import { BookingPaymentPayload } from '@/lib/payment-helpers';
 
 export const runtime = 'nodejs';
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     let tourPrice = Number(body.tourPrice);
     let orderId: string | null = null;
 
-    if (isMySqlEnabled()) {
+    if (isDatabaseProviderEnabled()) {
       const mysqlTour = await getTourById(body.tourId);
       if (mysqlTour) {
         tourName = mysqlTour.name || body.tourName;
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       attendanceScannedBy: null,
     } as const;
 
-    if (isMySqlEnabled()) {
+    if (isDatabaseProviderEnabled()) {
       const mysqlBooking = await createBooking({
         ...bookingPayload,
       });
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
     if (useManualMode) {
       const manualCheckoutUrl = buildPublicUrl(request, `/payments/manual/${orderId}`);
 
-      if (isMySqlEnabled()) {
+      if (isDatabaseProviderEnabled()) {
         await updateBooking(orderId, {
           paymentOrderId: orderId,
           paymentCheckoutUrl: manualCheckoutUrl,
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (isMySqlEnabled()) {
+      if (isDatabaseProviderEnabled()) {
         await updateBooking(orderId, {
           paymentOrderId: orderId,
           paymentCheckoutUrl: pakasirUrl.toString(),
@@ -265,7 +265,7 @@ export async function POST(request: NextRequest) {
     if (useDummyMode) {
       const dummyCheckoutUrl = buildPublicUrl(request, `/payments/dummy/${orderId}`);
 
-      if (isMySqlEnabled()) {
+      if (isDatabaseProviderEnabled()) {
         await updateBooking(orderId, {
           paymentOrderId: orderId,
           paymentCheckoutUrl: dummyCheckoutUrl,
@@ -327,7 +327,7 @@ export async function POST(request: NextRequest) {
     const midtransData = await response.json();
     const checkoutUrl = midtransData.redirect_url || midtransData.redirectUrl || midtransData.url || null;
 
-    if (isMySqlEnabled()) {
+    if (isDatabaseProviderEnabled()) {
       await updateBooking(orderId, {
         paymentOrderId: orderId,
         paymentCheckoutUrl: checkoutUrl,
@@ -335,7 +335,7 @@ export async function POST(request: NextRequest) {
         paymentGateway: 'midtrans',
       });
     } else {
-      throw new Error('Midtrans mode saat ini membutuhkan backend MySQL aktif.');
+      throw new Error('Midtrans mode saat ini membutuhkan backend database aktif.');
     }
 
     return NextResponse.json({

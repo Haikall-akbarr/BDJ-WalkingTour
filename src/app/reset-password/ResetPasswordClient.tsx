@@ -1,7 +1,7 @@
 ﻿"use client"
 
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Mail, ShieldCheck } from "lucide-react"
@@ -23,6 +23,27 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  useEffect(() => {
+    const queryEmail = searchParams.get("email") || ""
+    const queryToken = searchParams.get("token") || ""
+
+    if (!email && queryEmail) {
+      setEmail(queryEmail)
+    }
+
+    if (!token && queryToken) {
+      setToken(queryToken)
+    }
+
+    if (queryToken) {
+      const nextParams = new URLSearchParams()
+      if (queryEmail) {
+        nextParams.set("email", queryEmail)
+      }
+      router.replace(`/reset-password${nextParams.toString() ? `?${nextParams.toString()}` : ""}`)
+    }
+  }, [email, router, searchParams, token])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,7 +86,7 @@ export default function ResetPasswordPage() {
               <ShieldCheck className="h-7 w-7" />
             </div>
             <CardTitle className="text-3xl font-black uppercase">Atur Ulang Password</CardTitle>
-            <CardDescription>Masukkan token dari email dan buat password baru untuk akun peserta Anda.</CardDescription>
+            <CardDescription>Gunakan tautan dari email untuk mengatur ulang password. Token diproses otomatis dan tidak ditampilkan di halaman.</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
@@ -76,10 +97,7 @@ export default function ResetPasswordPage() {
                   <Input id="email" type="email" className="pl-10" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="token">Token Reset</Label>
-                <Input id="token" value={token} onChange={(e) => setToken(e.target.value)} required />
-              </div>
+              <input type="hidden" name="token" value={token} readOnly />
               <div className="space-y-2">
                 <PasswordField
                   id="password"

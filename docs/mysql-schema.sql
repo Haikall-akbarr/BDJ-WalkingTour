@@ -11,6 +11,18 @@
   INDEX idx_tours_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS tour_images (
+  id VARCHAR(64) PRIMARY KEY,
+  tour_id VARCHAR(36) NOT NULL,
+  url TEXT NOT NULL,
+  filename VARCHAR(255) NOT NULL,
+  is_cover TINYINT(1) NOT NULL DEFAULT 0,
+  uploaded_by VARCHAR(64) NULL,
+  uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_tour_images_tour_id (tour_id),
+  CONSTRAINT fk_tour_images_tour FOREIGN KEY (tour_id) REFERENCES tours(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS bookings (
   id VARCHAR(36) PRIMARY KEY,
   user_name VARCHAR(191) NOT NULL,
@@ -47,6 +59,20 @@ CREATE TABLE IF NOT EXISTS bookings (
   INDEX idx_bookings_tour (tour_id),
   INDEX idx_bookings_guide_id (guide_id),
   UNIQUE KEY uq_bookings_attendance_code (attendance_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id VARCHAR(64) PRIMARY KEY,
+  action VARCHAR(191) NOT NULL,
+  entity_type VARCHAR(64) NOT NULL,
+  entity_id VARCHAR(64) NOT NULL,
+  actor_id VARCHAR(64) NULL,
+  actor_role VARCHAR(32) NULL,
+  actor_name VARCHAR(191) NULL,
+  details TEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_audit_logs_created_at (created_at),
+  INDEX idx_audit_logs_entity (entity_type, entity_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS users (

@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.54.0",
     "@firebase/app": "^0.14.12",
     "@firebase/auth": "^1.13.1",
     "@genkit-ai/google-genai": "^1.20.0",

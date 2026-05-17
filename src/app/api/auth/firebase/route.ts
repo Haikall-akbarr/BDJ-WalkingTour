@@ -1,8 +1,8 @@
 import { createPublicKey, createVerify } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { createSession, getUserByEmail, upsertUser } from '@/lib/mysql-auth-store';
+import { createSession, getUserByEmail, upsertUser } from '@/lib/auth-store';
 import { generateSessionToken, getSessionCookieName, getSessionExpiryDate, hashPassword, hashSessionToken } from '@/lib/auth-session';
-import { isMySqlEnabled } from '@/lib/mysql';
+import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 
 export const runtime = 'nodejs';
 
@@ -113,11 +113,11 @@ export async function POST(request: NextRequest) {
     console.log('[Firebase Auth] POST request received');
     console.log('[Firebase Auth] DB_PROVIDER:', process.env.DB_PROVIDER);
     console.log('[Firebase Auth] MYSQL_HOST:', process.env.MYSQL_HOST ? `${process.env.MYSQL_HOST.substring(0, 20)}...` : 'NOT SET');
-    console.log('[Firebase Auth] isMySqlEnabled:', isMySqlEnabled());
+    console.log('[Firebase Auth] isDatabaseProviderEnabled:', isDatabaseProviderEnabled());
 
-    if (!isMySqlEnabled()) {
-      console.error('[Firebase Auth] MySQL not enabled - DB_PROVIDER is not set to "mysql"');
-      return NextResponse.json({ error: 'DB_PROVIDER belum di-set ke "mysql" di environment variables. MySQL backend belum aktif.' }, { status: 400 });
+    if (!isDatabaseProviderEnabled()) {
+      console.error('[Firebase Auth] Database provider not enabled');
+      return NextResponse.json({ error: 'DB_PROVIDER belum di-set ke backend database yang valid.' }, { status: 400 });
     }
 
     const body = await request.json();

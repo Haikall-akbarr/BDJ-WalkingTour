@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth-session';
-import { upsertUser } from '@/lib/mysql-auth-store';
-import { isMySqlEnabled } from '@/lib/mysql';
+import { upsertUser } from '@/lib/auth-store';
+import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 
 export const runtime = 'nodejs';
 
 export async function POST() {
   try {
-    if (!isMySqlEnabled()) {
-      return NextResponse.json({ error: 'MySQL backend belum aktif.' }, { status: 400 });
+    if (!isDatabaseProviderEnabled()) {
+      return NextResponse.json({ error: 'Backend database belum aktif.' }, { status: 400 });
     }
 
     const users = [

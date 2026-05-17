@@ -18,7 +18,7 @@ import {
   Search, 
   Settings, 
   Trash2, 
-  Mail,
+  RefreshCcw,
   Edit, 
   History,
   ShieldCheck,
@@ -56,6 +56,8 @@ import { PlaceHolderImages } from "@/lib/placeholder-images"
 export default function AdminDashboard() {
   const router = useRouter();
   const { toast } = useToast();
+  const isSupabaseStorageUrl = (value?: string) =>
+    typeof value === "string" && value.includes(".supabase.co/storage/v1/object/public/")
   const heroImage = useMemo(() => {
     return PlaceHolderImages.find((img) => img.id === "hero-bg")?.imageUrl || PlaceHolderImages[0]?.imageUrl;
   }, []);
@@ -78,12 +80,15 @@ export default function AdminDashboard() {
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [userForm, setUserForm] = useState({ name: '', email: '', role: 'user' });
   const [createdCreds, setCreatedCreds] = useState<{id:string,email:string,password:string}|null>(null);
+  const [resetPasswordTarget, setResetPasswordTarget] = useState<any | null>(null);
+  const [resetPasswordForm, setResetPasswordForm] = useState({ password: '', confirmPassword: '' });
   const [pendingBookings, setPendingBookings] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [tours, setTours] = useState<any[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
   const [toursLoading, setToursLoading] = useState(true);
   const [auditLoading, setAuditLoading] = useState(true);
+  const [bookingStatusFilter, setBookingStatusFilter] = useState<'all' | 'pending' | 'paid' | 'cancelled'>('all');
 
   const fetchTours = async () => {
     setToursLoading(true);
@@ -111,7 +116,7 @@ export default function AdminDashboard() {
   const fetchPendingBookings = async () => {
     setBookingsLoading(true);
     try {
-      const response = await fetch("/api/bookings?status=pending", { cache: "no-store" });
+      const response = await fetch("/api/bookings", { cache: "no-store" });
       const result = await response.json();
 
       if (!response.ok) {
@@ -123,7 +128,7 @@ export default function AdminDashboard() {
       toast({
         variant: "destructive",
         title: "Gagal memuat booking",
-        description: error?.message || "Periksa konfigurasi backend MySQL.",
+        description: error?.message || "Periksa konfigurasi backend database.",
       });
       setPendingBookings([]);
     } finally {
@@ -238,11 +243,44 @@ export default function AdminDashboard() {
 
   const filteredBookings = useMemo(() => {
     if (!pendingBookings) return [];
-    return pendingBookings.filter((b: any) => 
-      b.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.tourName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [pendingBookings, searchTerm]);
+    const search = searchTerm.toLowerCase();
+
+    const matchesStatus = (booking: any) => {
+      const status = String(booking.paymentStatus || booking.status || '').toLowerCase();
+
+      if (bookingStatusFilter === 'all') return true;
+      if (bookingStatusFilter === 'pending') return ['pending', 'pending_payment', 'awaiting_payment'].includes(status);
+      if (bookingStatusFilter === 'paid') return ['paid', 'settlement', 'completed'].includes(status);
+      return ['cancelled', 'cancel', 'rejected', 'expire', 'expired', 'failed'].includes(status);
+    };
+
+    return pendingBookings.filter((b: any) => {
+      const haystack = `${b.userName || ''} ${b.tourName || ''} ${b.paymentStatus || ''} ${b.status || ''}`.toLowerCase();
+      return matchesStatus(b) && haystack.includes(search);
+    });
+  }, [pendingBookings, searchTerm, bookingStatusFilter]);
+
+  const bookingSummary = useMemo(() => {
+    const summary = { pending: 0, paid: 0, cancelled: 0 };
+    for (const booking of pendingBookings || []) {
+      const status = String(booking.paymentStatus || booking.status || '').toLowerCase();
+      if (['paid', 'settlement', 'completed'].includes(status)) summary.paid += 1;
+      else if (['cancelled', 'cancel', 'rejected', 'expire', 'expired', 'failed'].includes(status)) summary.cancelled += 1;
+      else summary.pending += 1;
+    }
+    return summary;
+  }, [pendingBookings]);
+
+  const getBookingStatusBadge = (booking: any) => {
+    const status = String(booking.paymentStatus || booking.status || '').toLowerCase();
+    if (['paid', 'settlement', 'completed'].includes(status)) {
+      return { label: 'Sudah Bayar', className: 'text-emerald-700 border-emerald-200 bg-emerald-50' };
+    }
+    if (['cancelled', 'cancel', 'rejected', 'expire', 'expired', 'failed'].includes(status)) {
+      return { label: 'Dibatalkan', className: 'text-rose-700 border-rose-200 bg-rose-50' };
+    }
+    return { label: 'Belum Bayar', className: 'text-amber-700 border-amber-200 bg-amber-50' };
+  };
 
   // Handlers
   const handleUpdateBookingStatus = async (bookingId: string, newStatus: string) => {
@@ -478,7 +516,7 @@ export default function AdminDashboard() {
               <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
                 <div>
                   <CardTitle className="text-lg md:text-xl">Permintaan Pemesanan Baru</CardTitle>
-                  <CardDescription className="text-xs md:text-sm">Setujui atau tolak permintaan pendaftaran baru.</CardDescription>
+                  <CardDescription className="text-xs md:text-sm">Lihat semua pemesanan, baik belum bayar, sudah bayar, maupun dibatalkan.</CardDescription>
                 </div>
                 <div className="relative w-full lg:w-64">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -489,6 +527,12 @@ export default function AdminDashboard() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant={bookingStatusFilter === 'all' ? 'default' : 'outline'} onClick={() => setBookingStatusFilter('all')}>Semua ({pendingBookings.length})</Button>
+                <Button type="button" size="sm" variant={bookingStatusFilter === 'pending' ? 'default' : 'outline'} onClick={() => setBookingStatusFilter('pending')}>Belum Bayar ({bookingSummary.pending})</Button>
+                <Button type="button" size="sm" variant={bookingStatusFilter === 'paid' ? 'default' : 'outline'} onClick={() => setBookingStatusFilter('paid')}>Sudah Bayar ({bookingSummary.paid})</Button>
+                <Button type="button" size="sm" variant={bookingStatusFilter === 'cancelled' ? 'default' : 'outline'} onClick={() => setBookingStatusFilter('cancelled')}>Dibatalkan ({bookingSummary.cancelled})</Button>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -525,8 +569,8 @@ export default function AdminDashboard() {
                             {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('id-ID') : '-'}
                           </td>
                           <td className="p-3 md:p-4">
-                            <Badge variant="outline" className="text-[10px] md:text-xs text-amber-600 border-amber-200 bg-amber-50 whitespace-nowrap">
-                              Menunggu Verifikasi
+                            <Badge variant="outline" className={`text-[10px] md:text-xs whitespace-nowrap ${getBookingStatusBadge(booking).className}`}>
+                              {getBookingStatusBadge(booking).label}
                             </Badge>
                           </td>
                           <td className="p-3 md:p-4 text-right space-x-1 whitespace-nowrap">
@@ -584,13 +628,21 @@ export default function AdminDashboard() {
                 return (
                   <Card key={`${tour.id}-${idx}`} className="overflow-hidden border border-zinc-200 shadow-none group rounded-2xl">
                     <div className="h-32 md:h-40 relative bg-slate-100">
-                      <Image
-                        src={tour.imageUrl || tourImg.imageUrl}
-                        alt={tour.name}
-                        fill
-                        className="object-cover transition-transform group-hover:scale-105"
-                        data-ai-hint={tour.imageHint || tourImg.imageHint}
-                      />
+                      {isSupabaseStorageUrl(tour.imageUrl) ? (
+                        <img
+                          src={tour.imageUrl}
+                          alt={tour.name}
+                          className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
+                        />
+                      ) : (
+                        <Image
+                          src={tour.imageUrl || tourImg.imageUrl}
+                          alt={tour.name}
+                          fill
+                          className="object-cover transition-transform group-hover:scale-105"
+                          data-ai-hint={tour.imageHint || tourImg.imageHint}
+                        />
+                      )}
                       <div className="absolute top-2 right-2 flex gap-1 z-10">
                         <Button 
                           size="icon" 
@@ -654,15 +706,11 @@ export default function AdminDashboard() {
               {users && users.length > 0 ? users.map((u) => (
                 <div key={u.id} className="flex items-center justify-between p-3 md:p-4 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-colors gap-2">
                       <div className="flex items-center gap-2">
-                        <Button size="icon" variant="ghost" onClick={async () => {
-                          try {
-                            const result = await sendCredentials({ id: u.id, email: u.email }, true)
-                            setCreatedCreds({ id: u.id, email: result.user.email, password: result.password })
-                          } catch (error: any) {
-                            toast({ variant: 'destructive', title: 'Gagal kirim email', description: error?.message || 'Coba lagi.' })
-                          }
+                        <Button size="sm" variant="outline" className="gap-2 rounded-full" onClick={() => {
+                          setResetPasswordTarget(u)
+                          setResetPasswordForm({ password: '', confirmPassword: '' })
                         }}>
-                          <Mail className="h-4 w-4" />
+                          <RefreshCcw className="h-4 w-4" /> Reset Password
                         </Button>
                     <div className="h-8 w-8 md:h-10 md:w-10 bg-zinc-100 rounded-full flex items-center justify-center shrink-0">
                       <span className="text-sm font-bold">{(u.name || u.email || '').slice(0,1).toUpperCase()}</span>
@@ -829,6 +877,78 @@ export default function AdminDashboard() {
                   fetchUsers();
                 } catch (e:any) { alert(e?.message || String(e)) }
               }}>Buat & Kirim</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reset Password Dialog */}
+        <Dialog
+          open={!!resetPasswordTarget}
+          onOpenChange={(open) => {
+            if (!open) {
+              setResetPasswordTarget(null)
+              setResetPasswordForm({ password: '', confirmPassword: '' })
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-[460px]">
+            <DialogHeader>
+              <DialogTitle>Reset Password Custom</DialogTitle>
+              <DialogDescription>
+                Isi password baru untuk {resetPasswordTarget?.name || resetPasswordTarget?.email || 'pengguna ini'} lalu konfirmasi sekali lagi.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-3 py-2">
+              <div className="grid gap-2">
+                <Label>Password Baru</Label>
+                <Input
+                  type="password"
+                  value={resetPasswordForm.password}
+                  onChange={(e) => setResetPasswordForm((prev) => ({ ...prev, password: e.target.value }))}
+                  placeholder="Masukkan password baru"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Konfirmasi Password</Label>
+                <Input
+                  type="password"
+                  value={resetPasswordForm.confirmPassword}
+                  onChange={(e) => setResetPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                  placeholder="Ketik ulang password baru"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setResetPasswordTarget(null)
+                setResetPasswordForm({ password: '', confirmPassword: '' })
+              }}>Batal</Button>
+              <Button onClick={async () => {
+                if (!resetPasswordTarget) return;
+                const password = resetPasswordForm.password.trim();
+                const confirmPassword = resetPasswordForm.confirmPassword.trim();
+
+                if (!password || !confirmPassword) {
+                  toast({ variant: 'destructive', title: 'Password belum lengkap', description: 'Isi password baru dan konfirmasi terlebih dahulu.' })
+                  return;
+                }
+
+                if (password !== confirmPassword) {
+                  toast({ variant: 'destructive', title: 'Password tidak cocok', description: 'Pastikan password dan konfirmasi sama.' })
+                  return;
+                }
+
+                try {
+                  const result = await sendCredentials({ id: resetPasswordTarget.id, email: resetPasswordTarget.email, password }, true)
+                  setCreatedCreds({ id: result.user.id, email: result.user.email, password: result.password })
+                  setResetPasswordTarget(null)
+                  setResetPasswordForm({ password: '', confirmPassword: '' })
+                  fetchUsers()
+                  toast({ title: 'Password diperbarui', description: 'Kredensial baru siap dikirim atau disalin.' })
+                } catch (error: any) {
+                  toast({ variant: 'destructive', title: 'Gagal reset password', description: error?.message || 'Coba lagi.' })
+                }
+              }}>Reset & Lanjut</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
