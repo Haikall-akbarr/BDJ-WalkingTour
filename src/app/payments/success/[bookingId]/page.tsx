@@ -40,6 +40,7 @@ export default function PaymentSuccessPage() {
   const booking = payload?.booking;
   const isPaid = booking?.paymentStatus === 'paid' || booking?.status === 'paid';
   const hasBarcode = Boolean(booking?.attendanceCode && booking?.attendanceQrImageUrl);
+  const paymentTargetUrl = booking?.paymentCheckoutUrl || (booking?.paymentGateway === 'manual' ? `/payments/manual/${bookingId}` : booking?.paymentGateway === 'dummy' ? `/payments/dummy/${bookingId}` : null);
 
   const formattedAmount = useMemo(() => {
     if (!booking?.grossAmount) return null;
@@ -160,6 +161,21 @@ export default function PaymentSuccessPage() {
             )}
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
+            {!isPaid && paymentTargetUrl && (
+              <Button
+                onClick={() => {
+                  if (paymentTargetUrl.startsWith('/')) {
+                    router.push(paymentTargetUrl);
+                    return;
+                  }
+
+                  window.location.href = paymentTargetUrl;
+                }}
+                className="w-full rounded-full bg-[#10221f] text-white hover:bg-[#1a3531]"
+              >
+                Bayar Sekarang
+              </Button>
+            )}
             <Button onClick={() => loadStatus(true)} disabled={refreshing} className="w-full rounded-full bg-[#98DDCA] text-[#16302c] hover:bg-[#b8eadc]">
               {refreshing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memperbarui...</> : <><RefreshCw className="mr-2 h-4 w-4" /> Refresh Status</>}
             </Button>

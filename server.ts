@@ -150,11 +150,13 @@ function buildNotificationsFromBookings(bookings: Awaited<ReturnType<typeof list
     type: string;
     createdAt: string | null;
     actionUrl: string | null;
+    ctaLabel: string | null;
     isRead: boolean;
   }> = [];
 
   for (const booking of bookings) {
-    const baseUrl = `/payments/success/${booking.id}`;
+    const detailUrl = `/payments/success/${booking.id}`;
+    const paymentUrl = booking.paymentCheckoutUrl || detailUrl;
     const createdAt = booking.updatedAt || booking.createdAt || null;
 
     if (booking.paymentStatus === 'paid' || booking.status === 'paid') {
@@ -164,7 +166,8 @@ function buildNotificationsFromBookings(bookings: Awaited<ReturnType<typeof list
         message: `${booking.tourName} atas nama ${booking.userName} sudah dibayar. Barcode sedang diproses / sudah dikirim ke email.`,
         type: 'payment_received',
         createdAt: booking.paidAt || createdAt,
-        actionUrl: baseUrl,
+        actionUrl: detailUrl,
+        ctaLabel: 'Lihat Detail',
         isRead: false,
       });
     } else if (booking.paymentStatus === 'pending_payment' || booking.status === 'pending_payment') {
@@ -174,7 +177,8 @@ function buildNotificationsFromBookings(bookings: Awaited<ReturnType<typeof list
         message: `${booking.tourName} atas nama ${booking.userName} masih menunggu pembayaran.`,
         type: 'payment_pending',
         createdAt,
-        actionUrl: baseUrl,
+        actionUrl: paymentUrl,
+        ctaLabel: 'Bayar Sekarang',
         isRead: false,
       });
     }
@@ -186,7 +190,8 @@ function buildNotificationsFromBookings(bookings: Awaited<ReturnType<typeof list
         message: `Barcode untuk ${booking.tourName} siap dipakai saat check-in.`,
         type: 'barcode_ready',
         createdAt: booking.barcodeSentAt || booking.paidAt || createdAt,
-        actionUrl: baseUrl,
+        actionUrl: detailUrl,
+        ctaLabel: 'Lihat Detail',
         isRead: false,
       });
     }
@@ -198,7 +203,8 @@ function buildNotificationsFromBookings(bookings: Awaited<ReturnType<typeof list
         message: `Peserta ${booking.userName} sudah discan oleh guide pada ${booking.attendanceScannedAt}.`,
         type: 'attendance_scanned',
         createdAt: booking.attendanceScannedAt,
-        actionUrl: baseUrl,
+        actionUrl: detailUrl,
+        ctaLabel: 'Lihat Detail',
         isRead: false,
       });
     }
@@ -210,7 +216,8 @@ function buildNotificationsFromBookings(bookings: Awaited<ReturnType<typeof list
         message: `${booking.guideName} ditugaskan untuk ${booking.tourName}.`,
         type: 'guide_assigned',
         createdAt,
-        actionUrl: baseUrl,
+        actionUrl: detailUrl,
+        ctaLabel: 'Lihat Detail',
         isRead: false,
       });
     }

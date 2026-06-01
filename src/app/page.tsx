@@ -391,15 +391,6 @@ export default function LandingPage() {
             </div>
 
             <div className="space-y-4 text-[#3b443b]">
-              <p className="text-3xl font-bold md:text-4xl">Perusahaan</p>
-              <div className="space-y-2 text-base md:text-lg">
-                <Link href="/" className="block transition-colors hover:text-[#1f2a1f]">Tentang Kami</Link>
-                <Link href="/dashboard/guide" className="block italic transition-colors hover:text-[#1f2a1f]">Dashboard Pemandu</Link>
-                <Link href="/dashboard/owner" className="block italic transition-colors hover:text-[#1f2a1f]">Dashboard Pemilik</Link>
-              </div>
-            </div>
-
-            <div className="space-y-4 text-[#3b443b]">
               <p className="text-3xl font-bold md:text-4xl">Bantuan</p>
               <div className="space-y-2 text-base md:text-lg">
                 <Link href="#faq" className="block transition-colors hover:text-[#1f2a1f]">FAQ</Link>

@@ -14,6 +14,7 @@ type NotificationItem = {
   type: string
   createdAt: string | null
   actionUrl: string | null
+  ctaLabel?: string | null
   isRead: boolean
 }
 
@@ -93,14 +94,21 @@ export function NotificationBell() {
                     </div>
                     <span className="mt-1 h-2 w-2 rounded-full bg-[#98DDCA]" />
                   </div>
+                  {item.actionUrl && item.ctaLabel && (
+                    <div className="mt-3">
+                      <Link
+                        href={item.actionUrl}
+                        className="inline-flex items-center rounded-full bg-[#98DDCA] px-3 py-1.5 text-xs font-semibold text-[#10221f] transition-colors hover:bg-[#b8eadc]"
+                        onClick={() => setOpen(false)}
+                      >
+                        {item.ctaLabel}
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )
 
-              return item.actionUrl ? (
-                <Link key={item.id} href={item.actionUrl} className="block p-1">
-                  {content}
-                </Link>
-              ) : (
+              return (
                 <div key={item.id} className="p-1">
                   {content}
                 </div>
