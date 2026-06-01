@@ -10,8 +10,12 @@ function parsePort(rawPort?: string) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 3306;
 }
 
+export function hasMySqlConfig() {
+  return Boolean(process.env.MYSQL_HOST && process.env.MYSQL_USER && process.env.MYSQL_DATABASE);
+}
+
 export function isMySqlEnabled() {
-  return (process.env.DB_PROVIDER || '').toLowerCase() === 'mysql';
+  return (process.env.DB_PROVIDER || '').toLowerCase() === 'mysql' && hasMySqlConfig();
 }
 
 function assertMySqlConfig() {

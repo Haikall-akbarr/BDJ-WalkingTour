@@ -4,15 +4,16 @@
   "private": true,
   "scripts": {
     "predev": "kill-port 9002",
-    "dev": "next dev -p 9002",
+    "dev": "tsx server.ts",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build",
-    "start": "next start",
+    "start": "set NODE_ENV=production&&tsx server.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "express": "^5.1.0",
     "@supabase/supabase-js": "^2.54.0",
     "@firebase/app": "^0.14.12",
     "@firebase/auth": "^1.13.1",
@@ -66,6 +67,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/express": "^5.0.3",
     "@types/node": "^20",
     "@types/react": "^19.2.1",
     "@types/react-dom": "^19.2.1",
@@ -73,6 +75,7 @@
     "kill-port": "^2.0.1",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.20.3",
     "typescript": "^5"
   }
 }

@@ -17,8 +17,12 @@ function getSupabaseServiceRoleKey() {
   return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '';
 }
 
+export function hasSupabaseConfig() {
+  return Boolean(getSupabaseUrl() && getSupabaseAnonKey() && getSupabaseServiceRoleKey());
+}
+
 export function isSupabaseEnabled() {
-  return (process.env.DB_PROVIDER || '').toLowerCase() === 'supabase';
+  return (process.env.DB_PROVIDER || '').toLowerCase() === 'supabase' && hasSupabaseConfig();
 }
 
 function assertSupabaseClientConfig() {

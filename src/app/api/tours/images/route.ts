@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getMySqlPool } from '@/lib/mysql'
 import { saveBase64TourImage, generateId } from '@/lib/file-storage'
-import { isSupabaseProvider } from '@/lib/database-provider'
+import { isDatabaseProviderEnabled, isSupabaseProvider } from '@/lib/database-provider'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isDatabaseProviderEnabled()) {
+      return NextResponse.json({ error: 'Backend database belum aktif.' }, { status: 400 })
+    }
+
     const body = await request.json()
     const tourId = String(body?.tourId || '')
     const images = Array.isArray(body?.images) ? body.images : []

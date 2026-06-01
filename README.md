@@ -2,6 +2,16 @@
 
 Tour booking app with MySQL backend, session auth, payment flow, and attendance QR/barcode delivery.
 
+## Express backend mode
+
+Project ini sekarang bisa dijalankan melalui custom Express server dengan `npm run dev`.
+
+- Express menangani route inti seperti auth, tours, bookings, admin, analytics, notifications, attendance, dan payment config/dummy confirm.
+- Route Next.js API yang belum dipindah masih tetap bisa dipakai sebagai fallback di server yang sama.
+- Backend tetap berjalan di port `9002`, jadi frontend tidak perlu perubahan URL.
+
+Kalau ingin menambah route baru ke Express, tambahkan handler di `server.ts` lalu biarkan route Next lama tetap menjadi cadangan sementara.
+
 ## MySQL backend (Laragon)
 
 Jika Anda ingin data benar-benar tersimpan permanen (tour, booking, pembayaran, absensi), aktifkan backend MySQL:
