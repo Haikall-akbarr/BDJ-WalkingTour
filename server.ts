@@ -289,6 +289,147 @@ function ensureDatabase(res: Response) {
   return true;
 }
 
+function isPublicApiPath(pathname: string, method: string) {
+  if (pathname === '/api/health/express') return true;
+  if (pathname.startsWith('/api/auth/')) return true;
+  if (pathname === '/api/tours' && method === 'GET') return true;
+  if (pathname.startsWith('/api/tours/') && method === 'GET') return true;
+  if (pathname === '/api/payments/config' && method === 'GET') return true;
+  return false;
+}
+
+function isProtectedPagePath(pathname: string) {
+  return pathname.startsWith('/dashboard/') || pathname.startsWith('/book/') || pathname.startsWith('/payments/');
+}
+
+function needsAuthForApi(pathname: string, method: string) {
+  if (pathname.startsWith('/api/admin/')) return true;
+  if (pathname.startsWith('/api/analytics/')) return true;
+  if (pathname.startsWith('/api/attendance/')) return true;
+  if (pathname.startsWith('/api/bookings/')) return true;
+  if (pathname === '/api/notifications') return true;
+  if (pathname === '/api/tours/images') return true;
+  if (pathname === '/api/payments/status') return true;
+  if (pathname === '/api/payments/create') return true;
+  if (pathname.startsWith('/api/payments/') && pathname !== '/api/payments/config') return true;
+  if (pathname === '/api/tours' && method !== 'GET') return true;
+  if (pathname.startsWith('/api/tours/') && method !== 'GET') return true;
+  return false;
+}
+
+function getLoginUrl(req: Request, mode: 'staff' | 'user') {
+  const loginUrl = new URL('/login', `${req.protocol}://${req.get('host')}`);
+  loginUrl.searchParams.set('mode', mode);
+  loginUrl.searchParams.set('next', req.originalUrl || req.url || '/');
+  return loginUrl.toString();
+}
+
+app.use(
+  asyncHandler(async (req, res, next) => {
+    const pathname = req.path;
+    const method = req.method.toUpperCase();
+
+    const pageProtected = isProtectedPagePath(pathname);
+    const apiProtected = pathname.startsWith('/api/') && needsAuthForApi(pathname, method);
+
+    if (!pageProtected && !apiProtected) {
+      return next();
+    }
+
+    if (isPublicApiPath(pathname, method)) {
+      return next();
+    }
+
+    const user = await getCurrentSessionUser(req);
+    if (!user) {
+      if (pathname.startsWith('/api/')) {
+        res.status(401).json({ error: 'Login diperlukan.' });
+        return;
+      }
+
+      res.redirect(getLoginUrl(req, pathname.startsWith('/dashboard/') ? 'staff' : 'user'));
+      return;
+    }
+
+    if (pathname.startsWith('/dashboard/admin') && user.role !== 'admin') {
+      if (pathname.startsWith('/api/')) {
+        res.status(403).json({ error: 'Akses admin ditolak.' });
+        return;
+      }
+
+      res.redirect(getLoginUrl(req, 'staff'));
+      return;
+    }
+
+    if (pathname.startsWith('/dashboard/owner') && user.role !== 'owner') {
+      if (pathname.startsWith('/api/')) {
+        res.status(403).json({ error: 'Akses owner ditolak.' });
+        return;
+      }
+
+      res.redirect(getLoginUrl(req, 'staff'));
+      return;
+    }
+
+    if (pathname.startsWith('/dashboard/guide') && user.role !== 'guide') {
+      if (pathname.startsWith('/api/')) {
+        res.status(403).json({ error: 'Akses pemandu ditolak.' });
+        return;
+      }
+
+      res.redirect(getLoginUrl(req, 'staff'));
+      return;
+    }
+
+    if (pathname.startsWith('/dashboard/user') && user.role !== 'user') {
+      if (pathname.startsWith('/api/')) {
+        res.status(403).json({ error: 'Akses peserta ditolak.' });
+        return;
+      }
+
+      res.redirect(getLoginUrl(req, 'user'));
+      return;
+    }
+
+    if (pathname.startsWith('/api/admin/') && user.role !== 'admin') {
+      res.status(403).json({ error: 'Akses admin ditolak.' });
+      return;
+    }
+
+    if (pathname.startsWith('/api/analytics/') && !['admin', 'owner'].includes(user.role)) {
+      res.status(403).json({ error: 'Akses analytics ditolak.' });
+      return;
+    }
+
+    if (pathname.startsWith('/api/attendance/') && !['guide', 'admin'].includes(user.role)) {
+      res.status(403).json({ error: 'Akses absensi ditolak.' });
+      return;
+    }
+
+    if ((pathname.startsWith('/api/bookings/') || pathname === '/api/bookings') && !['admin', 'owner'].includes(user.role)) {
+      res.status(403).json({ error: 'Akses booking ditolak.' });
+      return;
+    }
+
+    if (pathname === '/api/tours/images' && !['admin', 'owner'].includes(user.role)) {
+      res.status(403).json({ error: 'Akses unggah gambar ditolak.' });
+      return;
+    }
+
+    if ((pathname === '/api/payments/status' || pathname === '/api/payments/create' || pathname.startsWith('/api/payments/')) && pathname !== '/api/payments/config' && !['user', 'admin', 'owner', 'guide'].includes(user.role)) {
+      res.status(403).json({ error: 'Akses pembayaran ditolak.' });
+      return;
+    }
+
+    if (pathname === '/api/notifications' && !['user', 'admin', 'owner', 'guide'].includes(user.role)) {
+      res.status(403).json({ error: 'Akses notifikasi ditolak.' });
+      return;
+    }
+
+    return next();
+  })
+);
+
 app.disable('x-powered-by');
 
 app.get('/api/health/express', (_, res) => {
