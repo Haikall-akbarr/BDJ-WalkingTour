@@ -12,6 +12,12 @@ type DbTourRow = RowDataPacket & {
   duration: string | null;
   image_url?: string | null;
   image_filename?: string | null;
+  description_full: string | null;
+  history_culture: string | null;
+  history_highlights: string | null;
+  route_detail: string | null;
+  route_map_url: string | null;
+  poi_list: string | null;
   created_at: Date | string;
   updated_at: Date | string;
 };
@@ -66,6 +72,12 @@ function mapTour(row: DbTourRow) {
     duration: row.duration || '2 Jam',
     imageUrl: row.image_url || '',
     imageHint: row.image_filename || '',
+    descriptionFull: row.description_full || '',
+    historyCulture: row.history_culture || '',
+    historyHighlights: row.history_highlights || '[]',
+    routeDetail: row.route_detail || '',
+    routeMapUrl: row.route_map_url || '',
+    poiList: row.poi_list || '[]',
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
   };
@@ -128,7 +140,22 @@ export async function getTourById(id: string) {
     [id]
   );
   if (!rows[0]) return null;
-  return mapTour(rows[0]);
+
+  // Load all images for this tour
+  const [images] = await pool.query<RowDataPacket[]>(
+    `SELECT * FROM tour_images WHERE tour_id = ?`,
+    [id]
+  );
+
+  return {
+    ...mapTour(rows[0]),
+    images: images.map(img => ({
+      id: img.id,
+      url: img.url,
+      filename: img.filename,
+      isCover: img.is_cover === 1 || img.is_cover === true
+    }))
+  };
 }
 
 export async function createTour(input: {
@@ -138,13 +165,19 @@ export async function createTour(input: {
   description?: string;
   distance?: string;
   duration?: string;
+  descriptionFull?: string;
+  historyCulture?: string;
+  historyHighlights?: string;
+  routeDetail?: string;
+  routeMapUrl?: string;
+  poiList?: string;
 }) {
   const pool = getMySqlPool();
   const id = randomUUID();
 
   await pool.execute(
-    `INSERT INTO tours (id, name, price, date, description, distance, duration, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+    `INSERT INTO tours (id, name, price, date, description, distance, duration, description_full, history_culture, history_highlights, route_detail, route_map_url, poi_list, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
     [
       id,
       input.name,
@@ -153,6 +186,12 @@ export async function createTour(input: {
       input.description || null,
       input.distance || '3 KM',
       input.duration || '2 Jam',
+      input.descriptionFull || null,
+      input.historyCulture || null,
+      input.historyHighlights || null,
+      input.routeDetail || null,
+      input.routeMapUrl || null,
+      input.poiList || null,
     ]
   );
 
@@ -168,36 +207,30 @@ export async function updateTour(
     description: string;
     distance: string;
     duration: string;
+    descriptionFull: string;
+    historyCulture: string;
+    historyHighlights: string;
+    routeDetail: string;
+    routeMapUrl: string;
+    poiList: string;
   }>
 ) {
   const pool = getMySqlPool();
   const fields: string[] = [];
   const values: any[] = [];
 
-  if (typeof input.name !== 'undefined') {
-    fields.push('name = ?');
-    values.push(input.name);
-  }
-  if (typeof input.price !== 'undefined') {
-    fields.push('price = ?');
-    values.push(Number(input.price || 0));
-  }
-  if (typeof input.date !== 'undefined') {
-    fields.push('date = ?');
-    values.push(input.date || null);
-  }
-  if (typeof input.description !== 'undefined') {
-    fields.push('description = ?');
-    values.push(input.description || null);
-  }
-  if (typeof input.distance !== 'undefined') {
-    fields.push('distance = ?');
-    values.push(input.distance || null);
-  }
-  if (typeof input.duration !== 'undefined') {
-    fields.push('duration = ?');
-    values.push(input.duration || null);
-  }
+  if (typeof input.name !== 'undefined') { fields.push('name = ?'); values.push(input.name); }
+  if (typeof input.price !== 'undefined') { fields.push('price = ?'); values.push(Number(input.price || 0)); }
+  if (typeof input.date !== 'undefined') { fields.push('date = ?'); values.push(input.date || null); }
+  if (typeof input.description !== 'undefined') { fields.push('description = ?'); values.push(input.description || null); }
+  if (typeof input.distance !== 'undefined') { fields.push('distance = ?'); values.push(input.distance || null); }
+  if (typeof input.duration !== 'undefined') { fields.push('duration = ?'); values.push(input.duration || null); }
+  if (typeof input.descriptionFull !== 'undefined') { fields.push('description_full = ?'); values.push(input.descriptionFull || null); }
+  if (typeof input.historyCulture !== 'undefined') { fields.push('history_culture = ?'); values.push(input.historyCulture || null); }
+  if (typeof input.historyHighlights !== 'undefined') { fields.push('history_highlights = ?'); values.push(input.historyHighlights || null); }
+  if (typeof input.routeDetail !== 'undefined') { fields.push('route_detail = ?'); values.push(input.routeDetail || null); }
+  if (typeof input.routeMapUrl !== 'undefined') { fields.push('route_map_url = ?'); values.push(input.routeMapUrl || null); }
+  if (typeof input.poiList !== 'undefined') { fields.push('poi_list = ?'); values.push(input.poiList || null); }
 
   if (fields.length === 0) {
     return getTourById(id);

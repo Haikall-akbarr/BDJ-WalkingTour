@@ -20,6 +20,12 @@ function mapTour(row: AnyRow) {
     duration: row.duration || '2 Jam',
     imageUrl: row.image_url || '',
     imageHint: row.image_filename || '',
+    descriptionFull: row.description_full || '',
+    historyCulture: row.history_culture || '',
+    historyHighlights: row.history_highlights || '[]',
+    routeDetail: row.route_detail || '',
+    routeMapUrl: row.route_map_url || '',
+    poiList: row.poi_list || '[]',
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
   };
@@ -52,6 +58,12 @@ function withTourImage(row: AnyRow, images: AnyRow[] | undefined) {
     ...mapTour(row),
     imageUrl: coverImage?.url || '',
     imageHint: coverImage?.filename || '',
+    images: images ? images.map(img => ({
+      id: img.id,
+      url: img.url,
+      filename: img.filename,
+      isCover: Boolean(img.is_cover)
+    })) : []
   };
 }
 
@@ -189,6 +201,12 @@ export async function createTour(input: {
   description?: string;
   distance?: string;
   duration?: string;
+  descriptionFull?: string;
+  historyCulture?: string;
+  historyHighlights?: string;
+  routeDetail?: string;
+  routeMapUrl?: string;
+  poiList?: string;
 }) {
   const admin = getSupabaseAdmin();
   const row = {
@@ -199,6 +217,12 @@ export async function createTour(input: {
     description: input.description || null,
     distance: input.distance || '3 KM',
     duration: input.duration || '2 Jam',
+    description_full: input.descriptionFull || null,
+    history_culture: input.historyCulture || null,
+    history_highlights: input.historyHighlights || null,
+    route_detail: input.routeDetail || null,
+    route_map_url: input.routeMapUrl || null,
+    poi_list: input.poiList || null,
   };
 
   const { data, error } = await admin.from('tours').insert(row).select('*').single();
@@ -215,6 +239,12 @@ export async function updateTour(
     description: string;
     distance: string;
     duration: string;
+    descriptionFull: string;
+    historyCulture: string;
+    historyHighlights: string;
+    routeDetail: string;
+    routeMapUrl: string;
+    poiList: string;
   }>
 ) {
   const admin = getSupabaseAdmin();
@@ -226,6 +256,12 @@ export async function updateTour(
   if (typeof input.description !== 'undefined') patch.description = input.description || null;
   if (typeof input.distance !== 'undefined') patch.distance = input.distance || null;
   if (typeof input.duration !== 'undefined') patch.duration = input.duration || null;
+  if (typeof input.descriptionFull !== 'undefined') patch.description_full = input.descriptionFull || null;
+  if (typeof input.historyCulture !== 'undefined') patch.history_culture = input.historyCulture || null;
+  if (typeof input.historyHighlights !== 'undefined') patch.history_highlights = input.historyHighlights || null;
+  if (typeof input.routeDetail !== 'undefined') patch.route_detail = input.routeDetail || null;
+  if (typeof input.routeMapUrl !== 'undefined') patch.route_map_url = input.routeMapUrl || null;
+  if (typeof input.poiList !== 'undefined') patch.poi_list = input.poiList || null;
 
   if (Object.keys(patch).length === 0) {
     return getTourById(id);

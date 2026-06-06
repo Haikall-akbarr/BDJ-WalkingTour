@@ -71,8 +71,24 @@ export default function AdminDashboard() {
     date: "",
     description: "",
     distance: "3 KM",
-    duration: "2 Jam"
+    duration: "2 Jam",
+    descriptionFull: "",
+    historyCulture: "",
+    highlight1Title: "",
+    highlight1Desc: "",
+    highlight2Title: "",
+    highlight2Desc: "",
+    highlight3Title: "",
+    highlight3Desc: "",
+    routeDetail: "",
+    routeMapUrl: "",
+    poi1: "",
+    poi2: "",
+    poi3: "",
+    poi4: "",
+    poi5: ""
   });
+  const [routeMapFile, setRouteMapFile] = useState<File | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [auditSearchTerm, setAuditSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("bookings");
@@ -316,30 +332,105 @@ export default function AdminDashboard() {
       date: "",
       description: "",
       distance: "3 KM",
-      duration: "2 Jam"
+      duration: "2 Jam",
+      descriptionFull: "",
+      historyCulture: "",
+      highlight1Title: "",
+      highlight1Desc: "",
+      highlight2Title: "",
+      highlight2Desc: "",
+      highlight3Title: "",
+      highlight3Desc: "",
+      routeDetail: "",
+      routeMapUrl: "",
+      poi1: "",
+      poi2: "",
+      poi3: "",
+      poi4: "",
+      poi5: ""
     });
     setTourFiles([]);
+    setRouteMapFile(null);
     setIsTourDialogOpen(true);
   };
 
   const handleOpenEditTour = (tour: any) => {
     setEditingTour(tour);
+    let highlights = [];
+    try {
+      highlights = JSON.parse(tour.historyHighlights || "[]");
+    } catch {
+      highlights = [];
+    }
+
+    let pois = [];
+    try {
+      pois = JSON.parse(tour.poiList || "[]");
+    } catch {
+      pois = [];
+    }
+
     setTourFormData({
       name: tour.name || "",
       price: tour.price?.toString() || "",
       date: tour.date || "",
       description: tour.description || "",
       distance: tour.distance || "3 KM",
-      duration: tour.duration || "2 Jam"
+      duration: tour.duration || "2 Jam",
+      descriptionFull: tour.descriptionFull || "",
+      historyCulture: tour.historyCulture || "",
+      highlight1Title: highlights[0]?.title || "",
+      highlight1Desc: highlights[0]?.desc || "",
+      highlight2Title: highlights[1]?.title || "",
+      highlight2Desc: highlights[1]?.desc || "",
+      highlight3Title: highlights[2]?.title || "",
+      highlight3Desc: highlights[2]?.desc || "",
+      routeDetail: tour.routeDetail || "",
+      routeMapUrl: tour.routeMapUrl || "",
+      poi1: pois[0] || "",
+      poi2: pois[1] || "",
+      poi3: pois[2] || "",
+      poi4: pois[3] || "",
+      poi5: pois[4] || ""
     });
     setTourFiles([]);
+    setRouteMapFile(null);
     setIsTourDialogOpen(true);
   };
 
   const handleSaveTour = async () => {
-    const data = {
-      ...tourFormData,
+    const highlightsList = [];
+    if (tourFormData.highlight1Title && tourFormData.highlight1Desc) {
+      highlightsList.push({ title: tourFormData.highlight1Title, desc: tourFormData.highlight1Desc });
+    }
+    if (tourFormData.highlight2Title && tourFormData.highlight2Desc) {
+      highlightsList.push({ title: tourFormData.highlight2Title, desc: tourFormData.highlight2Desc });
+    }
+    if (tourFormData.highlight3Title && tourFormData.highlight3Desc) {
+      highlightsList.push({ title: tourFormData.highlight3Title, desc: tourFormData.highlight3Desc });
+    }
+
+    const poisList = [
+      tourFormData.poi1,
+      tourFormData.poi2,
+      tourFormData.poi3,
+      tourFormData.poi4,
+      tourFormData.poi5
+    ].map(p => p.trim()).filter(Boolean);
+
+    const payload = {
+      name: tourFormData.name,
       price: Number(tourFormData.price),
+      date: tourFormData.date,
+      description: tourFormData.description,
+      distance: tourFormData.distance,
+      duration: tourFormData.duration,
+      descriptionFull: tourFormData.descriptionFull,
+      historyCulture: tourFormData.historyCulture,
+      historyHighlights: JSON.stringify(highlightsList),
+      routeDetail: tourFormData.routeDetail,
+      routeMapUrl: tourFormData.routeMapUrl,
+      poiList: JSON.stringify(poisList),
     };
 
     try {
@@ -348,7 +439,7 @@ export default function AdminDashboard() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
@@ -356,23 +447,50 @@ export default function AdminDashboard() {
         throw new Error(result?.error || "Gagal menyimpan tur.");
       }
 
-      // If there are images selected, upload them after creating/updating tour
       const tourId = result?.tour?.id;
-      if (tourId && tourFiles && tourFiles.length > 0) {
-        // helper to read file as base64 without prefix
-        const readFileAsBase64 = (file: File) => new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const res = String(reader.result || '')
-            const parts = res.split(',')
-            resolve(parts.length > 1 ? parts[1] : parts[0])
+      
+      const readFileAsBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const res = String(reader.result || '')
+          const parts = res.split(',')
+          resolve(parts.length > 1 ? parts[1] : parts[0])
+        }
+        reader.onerror = (e) => reject(e)
+        reader.readAsDataURL(file)
+      })
+
+      // Upload Route Map if selected
+      let finalRouteMapUrl = tourFormData.routeMapUrl;
+      if (tourId && routeMapFile) {
+        try {
+          const mapData = await readFileAsBase64(routeMapFile);
+          const uploadMapResp = await fetch('/api/tours/images', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tourId,
+              images: [{ filename: routeMapFile.name, data: mapData, isRouteMap: true }]
+            }),
+          });
+          const uploadMapResult = await uploadMapResp.json();
+          if (uploadMapResp.ok && uploadMapResult?.images?.[0]?.url) {
+            finalRouteMapUrl = uploadMapResult.images[0].url;
+            // Immediately update the tour's routeMapUrl
+            await fetch(`/api/tours/${tourId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ routeMapUrl: finalRouteMapUrl }),
+            });
           }
-          reader.onerror = (e) => reject(e)
-          reader.readAsDataURL(file)
-        })
+        } catch (mapErr) {
+          toast({ variant: 'destructive', title: 'Gagal upload peta rute', description: 'Gambar peta rute gagal disimpan.' })
+        }
+      }
 
+      // Upload gallery images if selected
+      if (tourId && tourFiles && tourFiles.length > 0) {
         const images = await Promise.all(tourFiles.map(async (f) => ({ filename: f.name, data: await readFileAsBase64(f) })));
-
         try {
           await fetch('/api/tours/images', {
             method: 'POST',
@@ -380,8 +498,7 @@ export default function AdminDashboard() {
             body: JSON.stringify({ tourId, images }),
           });
         } catch (err) {
-          // ignore upload failures but notify
-          toast({ variant: 'destructive', title: 'Gagal upload gambar', description: 'Gambar mungkin belum tersimpan.' })
+          toast({ variant: 'destructive', title: 'Gagal upload gambar', description: 'Gambar galeri mungkin belum tersimpan.' })
         }
       }
 
@@ -983,80 +1100,194 @@ export default function AdminDashboard() {
 
       {/* Add/Edit Tour Dialog */}
       <Dialog open={isTourDialogOpen} onOpenChange={setIsTourDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[650px]">
           <DialogHeader>
             <DialogTitle>{editingTour ? "Edit Paket Tur" : "Tambah Paket Tur Baru"}</DialogTitle>
             <DialogDescription>
               Lengkapi detail paket tur untuk ditampilkan kepada pengunjung.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="tour-name">Nama Tur</Label>
-              <Input 
-                id="tour-name" 
-                placeholder="misal: Pacinan Walking Tour"
-                value={tourFormData.name}
-                onChange={(e) => setTourFormData({...tourFormData, name: e.target.value})}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+
+          <Tabs defaultValue="basic" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 rounded-full border bg-zinc-50/50 p-1 mb-4">
+              <TabsTrigger value="basic" className="rounded-full py-1.5 text-xs data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Info Dasar</TabsTrigger>
+              <TabsTrigger value="detail" className="rounded-full py-1.5 text-xs data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Detail & Sejarah</TabsTrigger>
+              <TabsTrigger value="route" className="rounded-full py-1.5 text-xs data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Rute & Peta</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="basic" className="space-y-4 py-2">
               <div className="grid gap-2">
-                <Label htmlFor="tour-price">Harga (Rp)</Label>
+                <Label htmlFor="tour-name">Nama Tur</Label>
                 <Input 
-                  id="tour-price" 
-                  type="number"
-                  placeholder="65000"
-                  value={tourFormData.price}
-                  onChange={(e) => setTourFormData({...tourFormData, price: e.target.value})}
+                  id="tour-name" 
+                  placeholder="misal: Pacinan Walking Tour"
+                  value={tourFormData.name}
+                  onChange={(e) => setTourFormData({...tourFormData, name: e.target.value})}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="tour-price">Harga (Rp)</Label>
+                  <Input 
+                    id="tour-price" 
+                    type="number"
+                    placeholder="65000"
+                    value={tourFormData.price}
+                    onChange={(e) => setTourFormData({...tourFormData, price: e.target.value})}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="tour-date">Tanggal Opsional</Label>
+                  <Input 
+                    id="tour-date" 
+                    placeholder="15 Jan 2024"
+                    value={tourFormData.date}
+                    onChange={(e) => setTourFormData({...tourFormData, date: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="tour-distance">Jarak (KM)</Label>
+                  <Input 
+                    id="tour-distance" 
+                    placeholder="3 KM"
+                    value={tourFormData.distance}
+                    onChange={(e) => setTourFormData({...tourFormData, distance: e.target.value})}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="tour-duration">Durasi</Label>
+                  <Input 
+                    id="tour-duration" 
+                    placeholder="2 Jam"
+                    value={tourFormData.duration}
+                    onChange={(e) => setTourFormData({...tourFormData, duration: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="tour-desc">Deskripsi Singkat</Label>
+                <Textarea 
+                  id="tour-desc" 
+                  placeholder="Ceritakan sejarah singkat atau rute tur ini..."
+                  className="min-h-[70px]"
+                  value={tourFormData.description}
+                  onChange={(e) => setTourFormData({...tourFormData, description: e.target.value})}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="tour-date">Tanggal Opsional</Label>
-                <Input 
-                  id="tour-date" 
-                  placeholder="15 Jan 2024"
-                  value={tourFormData.date}
-                  onChange={(e) => setTourFormData({...tourFormData, date: e.target.value})}
-                />
+                <Label>Foto Galeri Paket (opsional, ganda)</Label>
+                <input type="file" accept="image/*" multiple onChange={(e) => setTourFiles(Array.from(e.target.files || []))} className="text-sm cursor-pointer" />
+                {tourFiles && tourFiles.length > 0 && <p className="text-xs text-muted-foreground">{tourFiles.length} file dipilih</p>}
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+            </TabsContent>
+
+            <TabsContent value="detail" className="space-y-4 py-2 max-h-[400px] overflow-y-auto pr-2">
               <div className="grid gap-2">
-                <Label htmlFor="tour-distance">Jarak (KM)</Label>
-                <Input 
-                  id="tour-distance" 
-                  placeholder="3 KM"
-                  value={tourFormData.distance}
-                  onChange={(e) => setTourFormData({...tourFormData, distance: e.target.value})}
+                <Label htmlFor="tour-desc-full">Deskripsi Lengkap Tur</Label>
+                <Textarea 
+                  id="tour-desc-full" 
+                  placeholder="Tuliskan deskripsi lengkap tour secara detail..."
+                  className="min-h-[100px]"
+                  value={tourFormData.descriptionFull}
+                  onChange={(e) => setTourFormData({...tourFormData, descriptionFull: e.target.value})}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="tour-duration">Durasi</Label>
-                <Input 
-                  id="tour-duration" 
-                  placeholder="2 Jam"
-                  value={tourFormData.duration}
-                  onChange={(e) => setTourFormData({...tourFormData, duration: e.target.value})}
+                <Label htmlFor="tour-history-culture">Sejarah & Budaya</Label>
+                <Textarea 
+                  id="tour-history-culture" 
+                  placeholder="Ceritakan sejarah dan latar belakang budaya kawasan..."
+                  className="min-h-[100px]"
+                  value={tourFormData.historyCulture}
+                  onChange={(e) => setTourFormData({...tourFormData, historyCulture: e.target.value})}
                 />
               </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="tour-desc">Deskripsi</Label>
-              <Textarea 
-                id="tour-desc" 
-                placeholder="Ceritakan sejarah singkat atau rute tur ini..."
-                className="min-h-[100px]"
-                value={tourFormData.description}
-                onChange={(e) => setTourFormData({...tourFormData, description: e.target.value})}
-              />
-            </div>
-              <div className="grid gap-2">
-                <Label>Foto Paket (opsional)</Label>
-                <input type="file" accept="image/*" multiple onChange={(e) => setTourFiles(Array.from(e.target.files || []))} />
-                {tourFiles && tourFiles.length > 0 && <p className="text-sm text-muted-foreground">{tourFiles.length} file dipilih</p>}
+              
+              <div className="space-y-3 pt-2 border-t border-zinc-100">
+                <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Highlights Sejarah & Budaya (Opsional)</p>
+                <div className="grid grid-cols-2 gap-3 p-3 bg-zinc-50/50 rounded-xl border">
+                  <div className="col-span-2 space-y-1">
+                    <Label className="text-xs font-semibold">Highlight 1</Label>
+                    <Input placeholder="Judul (misal: Arsitektur Hibrida)" className="h-8 text-xs" value={tourFormData.highlight1Title} onChange={(e) => setTourFormData({...tourFormData, highlight1Title: e.target.value})} />
+                    <Textarea placeholder="Deskripsi highlight..." className="min-h-[50px] text-xs" value={tourFormData.highlight1Desc} onChange={(e) => setTourFormData({...tourFormData, highlight1Desc: e.target.value})} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 p-3 bg-zinc-50/50 rounded-xl border">
+                  <div className="col-span-2 space-y-1">
+                    <Label className="text-xs font-semibold">Highlight 2</Label>
+                    <Input placeholder="Judul (misal: Warisan Kuliner)" className="h-8 text-xs" value={tourFormData.highlight2Title} onChange={(e) => setTourFormData({...tourFormData, highlight2Title: e.target.value})} />
+                    <Textarea placeholder="Deskripsi highlight..." className="min-h-[50px] text-xs" value={tourFormData.highlight2Desc} onChange={(e) => setTourFormData({...tourFormData, highlight2Desc: e.target.value})} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 p-3 bg-zinc-50/50 rounded-xl border">
+                  <div className="col-span-2 space-y-1">
+                    <Label className="text-xs font-semibold">Highlight 3</Label>
+                    <Input placeholder="Judul" className="h-8 text-xs" value={tourFormData.highlight3Title} onChange={(e) => setTourFormData({...tourFormData, highlight3Title: e.target.value})} />
+                    <Textarea placeholder="Deskripsi highlight..." className="min-h-[50px] text-xs" value={tourFormData.highlight3Desc} onChange={(e) => setTourFormData({...tourFormData, highlight3Desc: e.target.value})} />
+                  </div>
+                </div>
               </div>
-          </div>
+            </TabsContent>
+
+            <TabsContent value="route" className="space-y-4 py-2 max-h-[400px] overflow-y-auto pr-2">
+              <div className="grid gap-2">
+                <Label htmlFor="tour-route-detail">Detail Rute Maps</Label>
+                <Textarea 
+                  id="tour-route-detail" 
+                  placeholder="Detail rute jalan kaki..."
+                  className="min-h-[80px]"
+                  value={tourFormData.routeDetail}
+                  onChange={(e) => setTourFormData({...tourFormData, routeDetail: e.target.value})}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="tour-route-map-url">Link Google Maps Rute</Label>
+                  <Input 
+                    id="tour-route-map-url" 
+                    placeholder="Contoh: https://maps.app.goo.gl/..."
+                    value={tourFormData.routeMapUrl}
+                    onChange={(e) => setTourFormData({...tourFormData, routeMapUrl: e.target.value})}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Atau Upload File Gambar Peta</Label>
+                  <input type="file" accept="image/*" onChange={(e) => setRouteMapFile(e.target.files?.[0] || null)} className="text-sm cursor-pointer mt-1" />
+                  {routeMapFile && <p className="text-xs text-emerald-600 font-semibold">{routeMapFile.name} dipilih</p>}
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-2 border-t border-zinc-100">
+                <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Titik Kunjungan / Points of Interest (POIs)</p>
+                <div className="grid gap-3 p-3 bg-zinc-50/50 rounded-xl border space-y-2">
+                  <div className="grid grid-cols-[30px_1fr] items-center gap-2">
+                    <span className="font-bold text-sm text-center">1</span>
+                    <Input placeholder="Lokasi 1 (misal: Vihara Soetji Nurani)" className="h-8 text-xs" value={tourFormData.poi1} onChange={(e) => setTourFormData({...tourFormData, poi1: e.target.value})} />
+                  </div>
+                  <div className="grid grid-cols-[30px_1fr] items-center gap-2">
+                    <span className="font-bold text-sm text-center">2</span>
+                    <Input placeholder="Lokasi 2 (misal: Toko Jamu Tua)" className="h-8 text-xs" value={tourFormData.poi2} onChange={(e) => setTourFormData({...tourFormData, poi2: e.target.value})} />
+                  </div>
+                  <div className="grid grid-cols-[30px_1fr] items-center gap-2">
+                    <span className="font-bold text-sm text-center">3</span>
+                    <Input placeholder="Lokasi 3 (misal: Pasar Sudimampir)" className="h-8 text-xs" value={tourFormData.poi3} onChange={(e) => setTourFormData({...tourFormData, poi3: e.target.value})} />
+                  </div>
+                  <div className="grid grid-cols-[30px_1fr] items-center gap-2">
+                    <span className="font-bold text-sm text-center">4</span>
+                    <Input placeholder="Lokasi 4" className="h-8 text-xs" value={tourFormData.poi4} onChange={(e) => setTourFormData({...tourFormData, poi4: e.target.value})} />
+                  </div>
+                  <div className="grid grid-cols-[30px_1fr] items-center gap-2">
+                    <span className="font-bold text-sm text-center">5</span>
+                    <Input placeholder="Lokasi 5" className="h-8 text-xs" value={tourFormData.poi5} onChange={(e) => setTourFormData({...tourFormData, poi5: e.target.value})} />
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsTourDialogOpen(false)}>Batal</Button>
             <Button onClick={handleSaveTour} className="bg-zinc-900 text-white hover:bg-zinc-800">Simpan Perubahan</Button>

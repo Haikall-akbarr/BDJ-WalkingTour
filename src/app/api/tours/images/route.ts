@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
         const img = images[i]
         const filename = String(img.filename || `image-${i}.jpg`)
         const base64 = String(img.data || '')
+        const isRouteMap = Boolean(img.isRouteMap)
         if (!base64) continue
 
         const safeName = `${tourId}/${Date.now()}-${filename.replace(/[^a-z0-9._-]/gi, '-')}`
@@ -52,6 +53,11 @@ export async function POST(request: NextRequest) {
 
         const { data: publicUrlData } = admin.storage.from(bucketName).getPublicUrl(safeName)
         const url = publicUrlData.publicUrl
+
+        if (isRouteMap) {
+          inserted.push({ id: 'route-map', tourId, url, filename, isRouteMap: true })
+          continue
+        }
 
         const id = generateId()
         const isCover = i === 0
@@ -82,9 +88,15 @@ export async function POST(request: NextRequest) {
       const img = images[i]
       const filename = String(img.filename || `image-${i}.jpg`)
       const base64 = String(img.data || '')
+      const isRouteMap = Boolean(img.isRouteMap)
       if (!base64) continue
 
       const url = await saveBase64TourImage(tourId, filename, base64)
+
+      if (isRouteMap) {
+        inserted.push({ id: 'route-map', tourId, url, filename, isRouteMap: true })
+        continue
+      }
 
       const id = generateId()
       const isCover = i === 0 ? 1 : 0

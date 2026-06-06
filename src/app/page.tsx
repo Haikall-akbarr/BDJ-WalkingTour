@@ -1,6 +1,6 @@
-﻿"use client"
+"use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { signOutFirebase } from "@/lib/firebaseClient"
 import Image from "next/image"
 import Link from "next/link"
@@ -51,12 +51,39 @@ const STATIC_TOURS = [
 export default function LandingPage() {
   const { user, loading: authLoading } = useSessionUser()
   const { toast } = useToast()
-  const allTours = useMemo(() => STATIC_TOURS, [])
-  const [newsletterEmail, setNewsletterEmail] = useState("")
+  const [dbTours, setDbTours] = useState<any[]>([])
+  const [toursLoading, setToursLoading] = useState(true)
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
 
   const isSupabaseStorageUrl = (value?: string) =>
     typeof value === "string" && value.includes(".supabase.co/storage/v1/object/public/")
+
+  useEffect(() => {
+    let mounted = true
+    const loadTours = async () => {
+      try {
+        const response = await fetch("/api/tours", { cache: "no-store" })
+        const result = await response.json()
+        if (mounted && response.ok && Array.isArray(result?.tours)) {
+          setDbTours(result.tours)
+        }
+      } catch (err) {
+        console.error("Gagal memuat tur:", err)
+      } finally {
+        if (mounted) {
+          setToursLoading(false)
+        }
+      }
+    }
+    loadTours()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const allTours = useMemo(() => {
+    return dbTours.length > 0 ? dbTours : STATIC_TOURS
+  }, [dbTours])
 
   const heroImg = PlaceHolderImages.find((img) => img.id === "hero-bg")
   const showcaseImages = PlaceHolderImages.slice(0, 3)
@@ -77,26 +104,7 @@ export default function LandingPage() {
     window.location.href = "/"
   }
 
-  const handleNewsletterSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const email = newsletterEmail.trim()
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-    if (!emailRegex.test(email)) {
-      toast({
-        variant: "destructive",
-        title: "Email belum valid",
-        description: "Masukkan email yang valid untuk berlangganan newsletter.",
-      })
-      return
-    }
-
-    toast({
-      title: "Newsletter aktif",
-      description: `Terima kasih. Update terbaru akan dikirim ke ${email}.`,
-    })
-    setNewsletterEmail("")
-  }
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top,_rgba(152,221,202,0.18),_transparent_36%),linear-gradient(180deg,_#f7f4ee_0%,_#ecece7_100%)] text-zinc-900">
@@ -131,7 +139,8 @@ export default function LandingPage() {
               <div className="flex flex-wrap items-center gap-1 text-sm font-medium text-white/85">
                 <Link href="/" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Beranda</Link>
                 <Link href="/tours" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Semua Tur</Link>
-                <Link href="/book/1" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Pesan Sekarang</Link>
+                <Link href="/book/new" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Pesan Sekarang</Link>
+                <Link href="#faq" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">FAQ</Link>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -166,11 +175,6 @@ export default function LandingPage() {
                     </Button>
                   </>
                 )}
-                <Link href="/tours">
-                  <Button size="sm" className="h-8 rounded-full bg-[#98DDCA] px-3 text-xs font-semibold text-[#16302c] hover:bg-[#b8eadc]">
-                    Explore
-                  </Button>
-                </Link>
               </div>
             </div>
 
@@ -184,15 +188,7 @@ export default function LandingPage() {
                 <p className="max-w-2xl text-sm leading-7 text-white/88 md:text-lg text-white/80">
                   Rasakan keindahan sejarah, sungai, dan budaya kota seribu sungai melalui pengalaman berjalan kaki yang dipandu lokal berpengalaman.
                 </p>
-                <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-                  <Link href="/tours">
-                    <Button className="h-11 rounded-full bg-[#98DDCA] px-6 text-xs font-bold uppercase text-[#16302c] hover:bg-[#b8eadc] md:px-7">
-                  {/* Heritage Walks button hidden - only shown in login form */}
-                    </Button>
-                  </Link>
-                  {/* Heritage Walks button hidden - only shown in login form */}
-                  {!authLoading && user && null}
-                </div>
+                {/* CTA buttons removed as requested */}
               </div>
             </div>
 
@@ -225,22 +221,36 @@ export default function LandingPage() {
             </div>
 
             <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {showcaseImages.map((item, index) => (
-                <div key={item.id} className="group relative h-56 overflow-hidden rounded-3xl">
-                  <Image
-                    src={item.imageUrl}
-                    alt={item.description}
-                    fill
-                    className="object-cover transition duration-500 group-hover:scale-105"
-                    data-ai-hint={item.imageHint}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white">
-                    <p className="text-sm font-semibold">{["Bags", "Shoes", "Accessories"][index]}</p>
-                    <span className="rounded-full border border-white/50 px-2 py-0.5 text-[10px]">Shop</span>
-                  </div>
-                </div>
-              ))}
+              {allTours.slice(0, 3).map((tour: any, index: number) => {
+                const fallbackImage = PlaceHolderImages[index % PlaceHolderImages.length]
+                return (
+                  <Link key={tour.id} href={`/tours/${tour.id}`} className="group relative h-56 overflow-hidden rounded-3xl block cursor-pointer">
+                    {isSupabaseStorageUrl(tour.imageUrl) ? (
+                      <img
+                        src={tour.imageUrl}
+                        alt={tour.name}
+                        className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <Image
+                        src={tour.imageUrl || fallbackImage.imageUrl}
+                        alt={tour.name}
+                        fill
+                        className="object-cover transition duration-500 group-hover:scale-105"
+                        data-ai-hint={tour.imageHint || fallbackImage.imageHint}
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white">
+                      <div>
+                        <p className="text-sm font-bold truncate max-w-[150px] sm:max-w-[180px]">{tour.name}</p>
+                        <p className="text-[10px] text-white/80">Rp {Number(tour.price || 0).toLocaleString("id-ID")}</p>
+                      </div>
+                      <span className="rounded-full border border-white/50 bg-white/10 px-3 py-1 text-[10px] backdrop-blur-sm">Lihat Detail</span>
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           </div>
         </section>
@@ -254,9 +264,11 @@ export default function LandingPage() {
                     <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Rute Populer</p>
                     <h3 className="text-2xl font-black uppercase md:text-5xl">Jelajah Kota dari Sudut Terbaik</h3>
                   </div>
-                  <Button variant="outline" className="rounded-full text-xs">
-                    Explore Routes
-                  </Button>
+                  <Link href="/tours">
+                    <Button variant="outline" className="rounded-full text-xs hover:bg-[#10221f] hover:text-white transition-colors">
+                      Explore Routes
+                    </Button>
+                  </Link>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -355,20 +367,20 @@ export default function LandingPage() {
 
                 <Accordion type="single" collapsible className="w-full">
                   <AccordionItem value="item-1">
-                    <AccordionTrigger className="text-left">Do I need prior walking experience?</AccordionTrigger>
-                    <AccordionContent>No. Tur kami dirancang untuk pemula dan peserta berpengalaman.</AccordionContent>
+                    <AccordionTrigger className="text-left">Apakah saya membutuhkan pengalaman berjalan kaki sebelumnya?</AccordionTrigger>
+                    <AccordionContent>Tidak. Tur kami dirancang untuk pemula maupun peserta berpengalaman dengan ritme yang santai.</AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="item-2">
-                    <AccordionTrigger className="text-left">How do I choose the right route for my trip?</AccordionTrigger>
-                    <AccordionContent>Pilih paket sesuai jarak, durasi, dan rekomendasi kebutuhan perjalanan.</AccordionContent>
+                    <AccordionTrigger className="text-left">Bagaimana cara memilih rute yang tepat untuk perjalanan saya?</AccordionTrigger>
+                    <AccordionContent>Pilih paket sesuai jarak, durasi, dan rekomendasi kebutuhan perjalanan yang tersedia di halaman detail tur.</AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="item-3">
-                    <AccordionTrigger className="text-left">Are your tours guided by local experts?</AccordionTrigger>
-                    <AccordionContent>Ya, setiap rute dipandu oleh tim lokal yang memahami cerita dan konteks tempat.</AccordionContent>
+                    <AccordionTrigger className="text-left">Apakah tur ini dipandu oleh pemandu lokal berpengalaman?</AccordionTrigger>
+                    <AccordionContent>Ya, setiap rute dipandu oleh warga lokal yang memahami sejarah, budaya, dan cerita unik kawasan tersebut.</AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="item-4">
-                    <AccordionTrigger className="text-left">What if the route does not fit my needs?</AccordionTrigger>
-                    <AccordionContent>Tim kami membantu penyesuaian sebelum keberangkatan agar tetap nyaman.</AccordionContent>
+                    <AccordionTrigger className="text-left">Bagaimana jika rute yang tersedia tidak sesuai dengan kebutuhan saya?</AccordionTrigger>
+                    <AccordionContent>Tim kami siap membantu melakukan penyesuaian jadwal atau rute khusus sebelum keberangkatan agar perjalanan Anda tetap nyaman.</AccordionContent>
                   </AccordionItem>
                 </Accordion>
               </CardContent>
@@ -376,52 +388,43 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="mt-10 w-full bg-[#d8d8d5] px-4 py-12 md:px-8 md:py-16">
+        <section className="mt-10 w-full bg-[#10221f] text-white px-4 py-12 md:px-8 md:py-16">
           <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-10 md:grid-cols-2 xl:grid-cols-4">
             <div className="space-y-4">
-              <div className="flex items-center gap-3 text-zinc-700">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#6f846d] text-white">
+              <div className="flex items-center gap-3 text-white">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#98DDCA] text-[#10221f]">
                   <Map className="h-5 w-5" />
                 </span>
                 <p className="text-3xl font-bold md:text-4xl">BDJ Tour</p>
               </div>
-              <p className="max-w-xs text-base leading-8 text-[#667665] md:text-lg">
+              <p className="max-w-xs text-base leading-8 text-white/70 md:text-lg">
                 Mitra terpercaya Anda dalam menjelajahi rahasia kota melalui pengalaman jalan kaki yang terkurasi.
               </p>
             </div>
 
-            <div className="space-y-4 text-[#3b443b]">
-              <p className="text-3xl font-bold md:text-4xl">Bantuan</p>
-              <div className="space-y-2 text-base md:text-lg">
-                <Link href="#faq" className="block transition-colors hover:text-[#1f2a1f]">FAQ</Link>
-                <Link href="/" className="block transition-colors hover:text-[#1f2a1f]">Kebijakan Privasi</Link>
-                <a href="mailto:support@bdjwalkingtour.com" className="block transition-colors hover:text-[#1f2a1f]">Kontak Support</a>
+            <div className="space-y-4">
+              <p className="text-3xl font-bold md:text-4xl text-[#98DDCA]">Bantuan</p>
+              <div className="space-y-2 text-base md:text-lg text-white/80">
+                <Link href="#faq" className="block transition-colors hover:text-white">FAQ</Link>
+                <Link href="/" className="block transition-colors hover:text-white">Kebijakan Privasi</Link>
+                <a href="mailto:support@bdjwalkingtour.com" className="block transition-colors hover:text-white">Kontak Support</a>
               </div>
             </div>
 
-            <div className="space-y-4 text-[#3b443b]">
-              <p className="text-3xl font-bold md:text-4xl">Newsletter</p>
-              <form className="flex items-center gap-3" onSubmit={handleNewsletterSubmit}>
-                <input
-                  type="email"
-                  placeholder="Email Anda"
-                  className="h-12 flex-1 rounded-xl border border-transparent bg-white/65 px-4 text-base outline-none ring-0 placeholder:text-[#8c968c] focus:border-[#c38972]"
-                  value={newsletterEmail}
-                  onChange={(e) => setNewsletterEmail(e.target.value)}
-                  required
-                />
-                <button
-                  type="submit"
-                  className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#c38972] text-white transition hover:bg-[#b6775f]"
-                  aria-label="Kirim newsletter"
-                >
-                  <ArrowRight className="h-5 w-5" />
-                </button>
-              </form>
+            <div className="space-y-4">
+              <p className="text-3xl font-bold md:text-4xl text-[#98DDCA]">Hubungi Kami</p>
+              <div className="space-y-2 text-base md:text-lg text-white/80">
+                <p>Email: <a href="mailto:info@bdjwalkingtour.com" className="hover:underline">info@bdjwalkingtour.com</a></p>
+                <p>WhatsApp: <a href="https://wa.me/6281234567890" target="_blank" rel="noopener noreferrer" className="hover:underline">+62 812-3456-7890</a></p>
+                <p>Lokasi: Banjarmasin, Kalimantan Selatan</p>
+              </div>
             </div>
           </div>
 
-          <p className="mt-12 text-center text-base text-[#667665] md:text-lg">Â© 2026 BDJ Walking Tour. Hak cipta dilindungi.</p>
+          <div className="mt-12 border-t border-white/10 pt-6 text-center text-xs text-white/50 space-y-1">
+            <p className="uppercase tracking-wider">POLITEKNIK NEGERI BANJARMASIN & UNIVERSITAS ISLAM NEGERI BANJARMASIN 2026</p>
+            <p className="font-semibold text-[#98DDCA]">Haikal x Nazar</p>
+          </div>
         </section>
       </main>
 
