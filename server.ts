@@ -8,6 +8,7 @@ import { listAuditLogs, logAuditEvent } from './src/lib/audit-log';
 import { getDatabaseProvider, isDatabaseProviderEnabled } from './src/lib/database-provider';
 import { createTour, deleteTour, getBookingByAttendanceCode, getBookingById, getTourById, listBookings, listTours, updateBooking, updateTour } from './src/lib/data-store';
 import { initializeDummyBookings, findDummyBookingByAttendanceCode, getDummyBooking, updateDummyBooking } from './src/lib/dummy-booking-store';
+import { resolveGoogleMapsUrl } from './src/lib/maps';
 import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail } from './src/lib/payment-helpers';
 import { sendEmail } from './src/lib/email';
 
@@ -465,6 +466,11 @@ app.post(
       return;
     }
 
+    let routeMapUrl = req.body.routeMapUrl ? String(req.body.routeMapUrl) : '';
+    if (routeMapUrl) {
+      routeMapUrl = await resolveGoogleMapsUrl(routeMapUrl);
+    }
+
     const tour = await createTour({
       name: String(req.body.name),
       price: Number(req.body.price || 0),
@@ -472,6 +478,12 @@ app.post(
       description: req.body.description ? String(req.body.description) : '',
       distance: req.body.distance ? String(req.body.distance) : '3 KM',
       duration: req.body.duration ? String(req.body.duration) : '2 Jam',
+      descriptionFull: req.body.descriptionFull ? String(req.body.descriptionFull) : '',
+      historyCulture: req.body.historyCulture ? String(req.body.historyCulture) : '',
+      historyHighlights: req.body.historyHighlights ? String(req.body.historyHighlights) : '[]',
+      routeDetail: req.body.routeDetail ? String(req.body.routeDetail) : '',
+      routeMapUrl: routeMapUrl,
+      poiList: req.body.poiList ? String(req.body.poiList) : '[]',
     });
 
     res.status(201).json({ tour });
@@ -492,6 +504,11 @@ app.get(
       return;
     }
 
+    // Resolve on the fly if it is a short link or unconverted long URL
+    if (tour.routeMapUrl && (tour.routeMapUrl.includes('maps.app.goo.gl') || (tour.routeMapUrl.includes('google.com/maps') && !tour.routeMapUrl.includes('output=embed') && !tour.routeMapUrl.includes('/embed')))) {
+      tour.routeMapUrl = await resolveGoogleMapsUrl(tour.routeMapUrl);
+    }
+
     res.json({ tour });
   })
 );
@@ -505,6 +522,11 @@ app.put(
     }
 
     const tourId = String(req.params.id);
+    let routeMapUrl = typeof req.body?.routeMapUrl === 'undefined' ? undefined : String(req.body.routeMapUrl || '');
+    if (routeMapUrl) {
+      routeMapUrl = await resolveGoogleMapsUrl(routeMapUrl);
+    }
+
     const tour = await updateTour(tourId, {
       name: typeof req.body?.name === 'undefined' ? undefined : String(req.body.name),
       price: typeof req.body?.price === 'undefined' ? undefined : Number(req.body.price),
@@ -512,6 +534,12 @@ app.put(
       description: typeof req.body?.description === 'undefined' ? undefined : String(req.body.description || ''),
       distance: typeof req.body?.distance === 'undefined' ? undefined : String(req.body.distance || ''),
       duration: typeof req.body?.duration === 'undefined' ? undefined : String(req.body.duration || ''),
+      descriptionFull: typeof req.body?.descriptionFull === 'undefined' ? undefined : String(req.body.descriptionFull || ''),
+      historyCulture: typeof req.body?.historyCulture === 'undefined' ? undefined : String(req.body.historyCulture || ''),
+      historyHighlights: typeof req.body?.historyHighlights === 'undefined' ? undefined : String(req.body.historyHighlights || '[]'),
+      routeDetail: typeof req.body?.routeDetail === 'undefined' ? undefined : String(req.body.routeDetail || ''),
+      routeMapUrl: routeMapUrl,
+      poiList: typeof req.body?.poiList === 'undefined' ? undefined : String(req.body.poiList || '[]'),
     });
 
     if (!tour) {

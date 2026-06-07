@@ -2,8 +2,8 @@ export function convertLongUrlToEmbed(longUrl: string): string {
   try {
     const urlObj = new URL(longUrl);
 
-    // If it is already an embed URL, return as is
-    if (longUrl.includes('/maps/embed') || longUrl.includes('output=embed')) {
+    // If it is already an embed URL or contains output=embed, return as is
+    if (longUrl.includes('/maps/embed') || longUrl.includes('output=embed') || longUrl.includes('pb=!1m')) {
       return longUrl;
     }
 
@@ -31,13 +31,14 @@ export function convertLongUrlToEmbed(longUrl: string): string {
       }
     }
 
-    // Check if it's a place/search URL: /maps/place/Address/
-    if (urlObj.pathname.includes('/maps/place/')) {
-      const parts = urlObj.pathname.split('/maps/place/');
+    // Check if it's a place/search URL: /maps/place/Address/ or /maps/search/Address/
+    if (urlObj.pathname.includes('/maps/place/') || urlObj.pathname.includes('/maps/search/')) {
+      const typeStr = urlObj.pathname.includes('/maps/place/') ? '/maps/place/' : '/maps/search/';
+      const parts = urlObj.pathname.split(typeStr);
       if (parts[1]) {
         const pathParts = parts[1].split('/');
         const place = pathParts[0];
-        if (place) {
+        if (place && !place.startsWith('@')) {
           return `https://maps.google.com/maps?q=${place}&output=embed`;
         }
       }
@@ -57,14 +58,45 @@ export function convertLongUrlToEmbed(longUrl: string): string {
 
 export async function resolveGoogleMapsUrl(url: string): Promise<string> {
   if (!url || typeof url !== 'string') return '';
-  const trimmed = url.trim();
-  if (!trimmed.startsWith('http')) return trimmed;
+  let trimmed = url.trim();
+  
+  // Add https:// if it is missing but looks like a google maps link
+  if (!trimmed.startsWith('http')) {
+    if (trimmed.startsWith('maps.') || trimmed.startsWith('www.') || trimmed.startsWith('goo.gl') || trimmed.startsWith('g.page')) {
+      trimmed = 'https://' + trimmed;
+    } else {
+      return trimmed;
+    }
+  }
 
   try {
-    if (trimmed.includes('maps.app.goo.gl')) {
+    const isShortLink = trimmed.includes('maps.app.goo.gl') || 
+                        trimmed.includes('goo.gl/maps') || 
+                        trimmed.includes('g.page/') || 
+                        trimmed.includes('maps.page.link');
+    
+    if (isShortLink) {
       // Server-side fetch follows the redirects to get the long URL
-      const res = await fetch(trimmed, { method: 'GET', redirect: 'follow' });
-      return convertLongUrlToEmbed(res.url);
+      // Add a timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      try {
+        const res = await fetch(trimmed, { 
+          method: 'GET', 
+          redirect: 'follow',
+          signal: controller.signal,
+          headers: {
+            // Some shorteners require a User-Agent
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+          }
+        });
+        clearTimeout(timeoutId);
+        return convertLongUrlToEmbed(res.url);
+      } catch (err) {
+        clearTimeout(timeoutId);
+        console.error('Error resolving Google Maps URL:', err);
+        return convertLongUrlToEmbed(trimmed);
+      }
     }
     return convertLongUrlToEmbed(trimmed);
   } catch (e) {

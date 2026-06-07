@@ -39,8 +39,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const body = await request.json();
 
     let routeMapUrl = typeof body?.routeMapUrl === 'undefined' ? undefined : String(body.routeMapUrl || '');
+    console.log('PUT received routeMapUrl:', routeMapUrl);
     if (routeMapUrl) {
       routeMapUrl = await resolveGoogleMapsUrl(routeMapUrl);
+      console.log('PUT resolved routeMapUrl:', routeMapUrl);
     }
 
     const tour = await updateTour(id, {
