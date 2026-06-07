@@ -131,7 +131,7 @@ export default function LandingPage() {
                   <Map className="h-5 w-5" />
                 </span>
                 <span className="flex flex-col leading-tight">
-                  <span className="text-[10px] uppercase tracking-[0.3em] text-white/65 md:text-[11px]">Banjarmasin Route</span>
+                  <span className="text-[10px] tracking-[0.3em] text-white/65 md:text-[11px]">Banjarmasin Route</span>
                   <span className="font-headline text-base font-bold text-white md:text-lg">BDJ WalkingTour</span>
                 </span>
               </Link>
@@ -181,7 +181,7 @@ export default function LandingPage() {
             <div className="flex flex-1 items-center py-14 md:py-20 lg:py-24">
               <div className="space-y-5">
                 {/* Heritage Walks badge hidden - only shown in login form */}
-                <h1 className="max-w-4xl text-5xl font-black uppercase leading-[0.9] tracking-[0.08em] text-white sm:text-6xl md:text-7xl lg:text-[7.25rem]">
+                <h1 className="max-w-4xl text-5xl font-bold uppercase leading-[0.9] tracking-[0.08em] text-white sm:text-6xl md:text-7xl lg:text-[7.25rem]">
                   Banjarmasin
                   <span className="block text-[#98DDCA]">Walking Tour</span>
                 </h1>
@@ -196,7 +196,7 @@ export default function LandingPage() {
               {stats.map((stat) => (
                 <div key={stat.label} className="rounded-3xl border border-white/15 bg-black/20 p-4 backdrop-blur-md md:p-5">
                   <p className="text-3xl font-bold text-white md:text-4xl">{stat.value}</p>
-                  <p className="mt-1 text-[11px] uppercase tracking-[0.25em] text-white/80 md:text-xs">{stat.label}</p>
+                  <p className="mt-1 text-[11px] tracking-[0.25em] text-white/80 md:text-xs">{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -206,15 +206,15 @@ export default function LandingPage() {
         <section className="mx-auto w-full max-w-7xl px-4 md:px-8" id="tours">
           <div className="rounded-[34px] bg-white p-6 shadow-sm md:p-10">
             <div className="text-center">
-              <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Pilihan Tur</p>
-              <h2 className="mt-2 text-3xl font-black uppercase leading-tight md:text-5xl">
+              <p className="text-sm font-semibold tracking-[0.25em] text-zinc-500">Pilihan Tur</p>
+              <h2 className="mt-2 text-3xl font-bold leading-tight md:text-5xl">
                 Temukan Rute Favorit untuk Perjalanan Berikutnya
               </h2>
               <p className="mx-auto mt-3 max-w-2xl text-sm text-zinc-600 md:text-base">
                 Pilih rute jalan kaki populer, lihat harga, dan pesan slot terbaik untuk jadwal kamu.
               </p>
-                  <Link href="/tours">
-                <Button variant="outline" className="mt-5 rounded-full border-zinc-900 px-6 text-xs font-bold uppercase">
+              <Link href="/tours">
+                <Button variant="outline" className="mt-5 rounded-full border-zinc-900 px-6 text-xs font-bold ">
                   Lihat Semua Tur
                 </Button>
               </Link>
@@ -261,8 +261,8 @@ export default function LandingPage() {
               <CardContent className="p-4 md:p-6">
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Rute Populer</p>
-                    <h3 className="text-2xl font-black uppercase md:text-5xl">Jelajah Kota dari Sudut Terbaik</h3>
+                    <p className="text-sm font-semibold tracking-[0.2em] text-zinc-500">Rute Populer</p>
+                    <h3 className="text-2xl font-bold md:text-5xl">Jelajah Kota dari Sudut Terbaik</h3>
                   </div>
                   <Link href="/tours">
                     <Button variant="outline" className="rounded-full text-xs hover:bg-[#10221f] hover:text-white transition-colors">
@@ -272,10 +272,10 @@ export default function LandingPage() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {allTours.slice(0, 6).map((tour: any, idx: number) => {
+                  {allTours.slice(0, 3).map((tour: any, idx: number) => {
                     const tourImg = PlaceHolderImages[idx % PlaceHolderImages.length]
                     return (
-                      <Link key={tour.id} href={`/book/${tour.id}`} className="group">
+                      <Link key={tour.id} href={`/tours/${tour.id}`} className="group">
                         <div className="relative h-56 overflow-hidden rounded-2xl">
                           {isSupabaseStorageUrl(tour.imageUrl) ? (
                             <img
@@ -312,14 +312,14 @@ export default function LandingPage() {
               <CardContent className="p-4 md:p-6">
                 <div className="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">Detail Paket Tur</p>
-                    <h4 className="text-xl font-black uppercase md:text-3xl">Pilihan Jadwal Terbaru</h4>
+                    <p className="text-sm font-semibold tracking-[0.2em] text-zinc-400">Detail Paket Tur</p>
+                    <h4 className="text-xl font-bold md:text-3xl">Pilihan Jadwal Terbaru</h4>
                   </div>
                   <Badge className="bg-white/10 text-white hover:bg-white/10">{allTours.length} Paket</Badge>
                 </div>
 
                 <div className="grid gap-3">
-                  {allTours.slice(0, 6).map((tour: any) => (
+                  {allTours.slice(0, 3).map((tour: any) => (
                     <div key={tour.id} className="rounded-2xl border border-zinc-700 bg-zinc-800/50 p-4">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-sm font-bold md:text-base">{tour.name}</p>
@@ -361,8 +361,8 @@ export default function LandingPage() {
             <Card id="faq" className="rounded-[28px] border-none bg-white shadow-md">
               <CardContent className="space-y-4 p-4 md:p-6">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">FAQ</p>
-                  <h4 className="text-2xl font-black uppercase md:text-4xl">Pertanyaan Umum</h4>
+                  <p className="text-sm font-semibold tracking-[0.2em] text-zinc-500">FAQ</p>
+                  <h4 className="text-2xl font-bold md:text-4xl">Pertanyaan Umum</h4>
                 </div>
 
                 <Accordion type="single" collapsible className="w-full">
@@ -422,7 +422,7 @@ export default function LandingPage() {
           </div>
 
           <div className="mt-12 border-t border-white/10 pt-6 text-center text-xs text-white/50 space-y-1">
-            <p className="uppercase tracking-wider">POLITEKNIK NEGERI BANJARMASIN & UNIVERSITAS ISLAM NEGERI BANJARMASIN 2026</p>
+            <p className=" tracking-wider">POLITEKNIK NEGERI BANJARMASIN & UNIVERSITAS ISLAM NEGERI BANJARMASIN 2026</p>
             <p className="font-semibold text-[#98DDCA]">Haikal x Nazar</p>
           </div>
         </section>
@@ -450,4 +450,5 @@ export default function LandingPage() {
     </div>
   )
 }
+
 

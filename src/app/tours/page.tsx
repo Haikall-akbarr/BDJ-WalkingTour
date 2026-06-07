@@ -86,7 +86,7 @@ export default function ToursPage() {
               <Badge className="w-fit rounded-full bg-white/10 text-white hover:bg-white/10">
                 <Sparkles className="mr-2 h-3.5 w-3.5" /> Katalog Tur
               </Badge>
-              <h1 className="max-w-3xl text-4xl font-black uppercase leading-tight md:text-6xl">
+              <h1 className="max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
                 Semua Tur BDJ WalkingTour dalam satu halaman
               </h1>
               <p className="max-w-2xl text-sm leading-7 text-white/75 md:text-base">
@@ -108,20 +108,20 @@ export default function ToursPage() {
 
             <div className="grid grid-cols-2 gap-3 text-sm text-white/80">
               <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                <p className="text-3xl font-black text-white">{tours.length}</p>
-                <p className="mt-1 uppercase tracking-[0.25em] text-white/55">Paket Tur</p>
+                <p className="text-3xl font-bold text-white">{tours.length}</p>
+                <p className="mt-1 tracking-[0.25em] text-white/55">Paket Tur</p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                <p className="text-3xl font-black text-white">3-4h</p>
-                <p className="mt-1 uppercase tracking-[0.25em] text-white/55">Rata-rata Durasi</p>
+                <p className="text-3xl font-bold text-white">3-4h</p>
+                <p className="mt-1 tracking-[0.25em] text-white/55">Rata-rata Durasi</p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                <p className="text-3xl font-black text-white">Local</p>
-                <p className="mt-1 uppercase tracking-[0.25em] text-white/55">Guide Berpengalaman</p>
+                <p className="text-3xl font-bold text-white">Local</p>
+                <p className="mt-1 tracking-[0.25em] text-white/55">Guide Berpengalaman</p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                <p className="text-3xl font-black text-white">QR</p>
-                <p className="mt-1 uppercase tracking-[0.25em] text-white/55">Payment & Barcode</p>
+                <p className="text-3xl font-bold text-white">QR</p>
+                <p className="mt-1 tracking-[0.25em] text-white/55">Payment & Barcode</p>
               </div>
             </div>
           </div>
@@ -156,7 +156,7 @@ export default function ToursPage() {
                       <Badge className="rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#98DDCA]">Rp {Number(tour.price || 0).toLocaleString("id-ID")}</Badge>
                     </div>
                     <div className="absolute bottom-4 left-4 right-4 text-white">
-                      <h2 className="text-2xl font-black leading-tight">{tour.name}</h2>
+                      <h2 className="text-2xl font-bold leading-tight">{tour.name}</h2>
                       <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/78">
                         {tour.description || "Tur pilihan dengan pengalaman lokal yang terkurasi."}
                       </p>
@@ -172,7 +172,7 @@ export default function ToursPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Rute Populer</p>
+                    <p className="text-xs tracking-[0.25em] text-zinc-500">Rute Populer</p>
                     <Link href={`/book/${tour.id}`}>
                       <Button className="rounded-full bg-[#10221f] text-white hover:bg-[#0b1715]">
                         Pesan Sekarang
@@ -242,3 +242,4 @@ export default function ToursPage() {
     </div>
   )
 }
+

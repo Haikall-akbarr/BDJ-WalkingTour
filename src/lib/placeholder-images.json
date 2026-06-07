@@ -21,7 +21,7 @@
     {
       "id": "hero-bg",
       "description": "Pemandangan ikonik Pasar Terapung Lok Baintan.",
-      "imageUrl": "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=1600&q=80",
+      "imageUrl": "/bg-bdj.jpg",
       "imageHint": "floating market"
     }
   ]

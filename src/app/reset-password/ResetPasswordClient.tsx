@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 
 import { useEffect, useState } from "react"
@@ -85,7 +85,7 @@ export default function ResetPasswordPage() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#98DDCA] text-[#10221f]">
               <ShieldCheck className="h-7 w-7" />
             </div>
-            <CardTitle className="text-3xl font-black uppercase">Atur Ulang Password</CardTitle>
+            <CardTitle className="text-3xl font-bold ">Atur Ulang Password</CardTitle>
             <CardDescription>Gunakan tautan dari email untuk mengatur ulang password. Token diproses otomatis dan tidak ditampilkan di halaman.</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
@@ -133,4 +133,5 @@ export default function ResetPasswordPage() {
     </div>
   )
 }
+
 

@@ -1,4 +1,4 @@
-﻿
+
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
@@ -211,21 +211,6 @@ export default function OwnerDashboard() {
               </div>
 
               <div className="inline-flex w-full flex-wrap items-center gap-2 rounded-2xl border border-white/30 bg-white/15 p-2 backdrop-blur md:w-auto">
-                {[
-                  "Home",
-                  "Gears",
-                  "About",
-                  "Destination",
-                  "Contact",
-                ].map((menu) => (
-                  <span
-                    key={menu}
-                    className="rounded-full px-3 py-1 text-xs font-medium text-white/90 hover:bg-white/20"
-                  >
-                    {menu}
-                  </span>
-                ))}
-
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="outline" size="sm" className="h-8 rounded-full border-white/40 bg-white/10 text-xs text-white hover:bg-white/20 hover:text-white">
@@ -251,8 +236,8 @@ export default function OwnerDashboard() {
             </div>
 
             <div className="mt-8 md:mt-12 space-y-4">
-              <p className="text-[10px] uppercase tracking-[0.35em] text-white/70">Owner Dashboard</p>
-              <h1 className="max-w-3xl text-4xl font-extrabold uppercase leading-tight tracking-wide text-white sm:text-5xl md:text-7xl">
+              <p className="text-[10px] tracking-[0.35em] text-white/70">Owner Dashboard</p>
+              <h1 className="max-w-3xl text-4xl font-extrabold leading-tight tracking-wide text-white sm:text-5xl md:text-7xl">
                 New Heights
               </h1>
               <p className="max-w-2xl text-xs text-white/90 md:text-sm">
@@ -260,7 +245,7 @@ export default function OwnerDashboard() {
               </p>
 
               <div className="pt-2">
-                <Button className="h-10 rounded-full bg-white px-5 text-xs font-bold uppercase text-black hover:bg-white/90">
+                <Button className="h-10 rounded-full bg-white px-5 text-xs font-bold text-black hover:bg-white/90">
                   Connect <ArrowUpRight className="ml-1 h-4 w-4" />
                 </Button>
               </div>
@@ -270,7 +255,7 @@ export default function OwnerDashboard() {
               {STATS.map((stat) => (
                 <div key={stat.label} className="rounded-2xl border border-white/20 bg-black/20 p-4 backdrop-blur-sm">
                   <p className="text-3xl font-bold text-white">{stat.value}</p>
-                  <p className="text-[11px] uppercase tracking-wide text-white/80">{stat.label}</p>
+                  <p className="text-[11px] tracking-wide text-white/80">{stat.label}</p>
                   <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-200">
                     <TrendingUp className="h-3 w-3" /> {stat.trend}
                   </p>
@@ -284,8 +269,8 @@ export default function OwnerDashboard() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-stretch">
             <div className="flex flex-col justify-between rounded-[28px] bg-[#10221f] p-6 text-white md:p-8">
               <div className="space-y-4">
-                <p className="text-[10px] uppercase tracking-[0.35em] text-white/60">Destination Picks</p>
-                <h2 className="max-w-xs text-3xl font-black uppercase leading-[0.95] md:text-5xl lg:text-[3.75rem]">
+                <p className="text-[10px] tracking-[0.35em] text-white/60">Destination Picks</p>
+                <h2 className="max-w-xs text-3xl font-bold leading-[0.95] md:text-5xl lg:text-[3.75rem]">
                   Not Sure Where To Go Next
                 </h2>
                 <p className="max-w-sm text-sm leading-7 text-white/75">
@@ -297,7 +282,7 @@ export default function OwnerDashboard() {
                 <Button className="w-full rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc]">
                   Explore Routes
                 </Button>
-                <p className="text-[11px] uppercase tracking-[0.3em] text-white/45">Where every route begins with the right step</p>
+                <p className="text-[11px] tracking-[0.3em] text-white/45">Where every route begins with the right step</p>
               </div>
             </div>
 
@@ -313,10 +298,10 @@ export default function OwnerDashboard() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between text-white">
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.3em] text-white/70">Featured</p>
+                    <p className="text-[10px] tracking-[0.3em] text-white/70">Featured</p>
                     <p className="text-lg font-bold">River & Heritage Route</p>
                   </div>
-                  <span className="rounded-full border border-white/40 bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] backdrop-blur">
+                  <span className="rounded-full border border-white/40 bg-white/10 px-3 py-1 text-[10px] tracking-[0.2em] backdrop-blur">
                     Explore
                   </span>
                 </div>
@@ -358,7 +343,7 @@ export default function OwnerDashboard() {
           <div className="space-y-6 lg:col-span-3">
             <Card className="overflow-hidden rounded-[28px] border-none shadow-md">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-2xl font-black uppercase">
+                <CardTitle className="flex items-center gap-2 text-2xl font-bold ">
                   <Compass className="h-6 w-6" /> Not Sure Where To Go Next
                 </CardTitle>
                 <CardDescription>Jelajahi rute paling cocok untuk level petualangan Anda.</CardDescription>
@@ -415,7 +400,7 @@ export default function OwnerDashboard() {
 
           <Card className="rounded-[28px] border-none bg-white shadow-md lg:col-span-2">
             <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-xl md:text-2xl font-black uppercase">
+                <CardTitle className="flex items-center gap-2 text-xl md:text-2xl font-bold ">
                 <Mountain className="h-5 w-5" /> Alokasi Pemandu
               </CardTitle>
               <CardDescription>Tugaskan pemandu untuk pesanan yang sudah dibayar dan belum memiliki pemandu.</CardDescription>
@@ -492,8 +477,8 @@ export default function OwnerDashboard() {
 
             <div className="relative z-10 grid gap-8 lg:grid-cols-[1.3fr_0.8fr_0.9fr]">
               <div className="space-y-4">
-                <p className="text-[10px] uppercase tracking-[0.35em] text-white/55">BDJ WalkingTour</p>
-                <h4 className="max-w-lg text-3xl font-black uppercase leading-tight md:text-5xl">
+                <p className="text-[10px] tracking-[0.35em] text-white/55">BDJ WalkingTour</p>
+                <h4 className="max-w-lg text-3xl font-bold leading-tight md:text-5xl">
                   Professional routing for the city of rivers.
                 </h4>
                 <p className="max-w-xl text-sm leading-7 text-white/70 md:text-base">
@@ -510,7 +495,7 @@ export default function OwnerDashboard() {
               </div>
 
               <div className="space-y-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-white/55">Quick Access</p>
+                <p className="text-xs tracking-[0.25em] text-white/55">Quick Access</p>
                 <div className="flex flex-col gap-2 text-sm text-white/75">
                   <Link href="/" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10 hover:text-white">
                     Beranda
@@ -525,7 +510,7 @@ export default function OwnerDashboard() {
               </div>
 
               <div className="space-y-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-white/55">Contact</p>
+                <p className="text-xs tracking-[0.25em] text-white/55">Contact</p>
                 <div className="space-y-3 text-sm text-white/75">
                   <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                     <p className="text-white">hello@bdjwalkingtour.com</p>
@@ -545,7 +530,7 @@ export default function OwnerDashboard() {
 
             <div className="relative z-10 mt-8 flex flex-col gap-3 border-t border-white/10 pt-5 text-xs text-white/55 sm:flex-row sm:items-center sm:justify-between">
               <p>Â© 2026 BDJ WalkingTour. All rights reserved.</p>
-              <p className="uppercase tracking-[0.25em]">Owner Dashboard UI Refresh</p>
+              <p className=" tracking-[0.25em]">Owner Dashboard UI Refresh</p>
             </div>
           </div>
         </footer>
@@ -553,4 +538,5 @@ export default function OwnerDashboard() {
     </div>
   )
 }
+
 

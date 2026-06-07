@@ -350,15 +350,15 @@ export default function GuideDashboard() {
             </div>
 
             <div className="mt-8 space-y-3 md:mt-12">
-              <p className="text-[10px] uppercase tracking-[0.35em] text-white/75">Guide Dashboard</p>
-              <h1 className="max-w-2xl text-4xl font-extrabold uppercase leading-tight tracking-wide text-white sm:text-5xl md:text-6xl">
+              <p className="text-[10px] tracking-[0.35em] text-white/75">Guide Dashboard</p>
+              <h1 className="max-w-2xl text-4xl font-extrabold leading-tight tracking-wide text-white sm:text-5xl md:text-6xl">
                 Route Briefing
               </h1>
               <p className="text-sm font-semibold text-white/90">Selamat datang, {currentGuideName}</p>
               <p className="max-w-2xl text-xs text-white/90 md:text-sm">
                 Kelola jadwal, data peserta, dan laporan tur harian dalam satu panel bergaya eksplorasi.
               </p>
-              <Button className="h-10 rounded-full bg-white px-5 text-xs font-bold uppercase text-black hover:bg-white/90">
+              <Button className="h-10 rounded-full bg-white px-5 text-xs font-bold text-black hover:bg-white/90">
                 Explore Routes <ArrowUpRight className="ml-1 h-4 w-4" />
               </Button>
             </div>
@@ -367,7 +367,7 @@ export default function GuideDashboard() {
 
         <div className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm">
           <div>
-            <h2 className="text-xl font-black uppercase md:text-2xl">Dashboard Pemandu</h2>
+            <h2 className="text-xl font-bold md:text-2xl">Dashboard Pemandu</h2>
             <p className="text-sm text-zinc-600">Kelola tur jalan kaki Anda.</p>
           </div>
           <Badge variant="outline" className="rounded-full px-3 py-1 text-[10px] md:text-xs">Akses Pemandu Aktif</Badge>
@@ -375,7 +375,7 @@ export default function GuideDashboard() {
 
         <Card className="rounded-[28px] border-none bg-white shadow-md">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg font-black uppercase md:text-2xl">
+            <CardTitle className="flex items-center gap-2 text-lg font-bold md:text-2xl">
               <QrCode className="h-5 w-5" /> Scan Barcode Absensi
             </CardTitle>
             <CardDescription>Scan via kamera atau masukkan kode QR/barcode dari email peserta untuk menandai kehadiran.</CardDescription>
@@ -431,7 +431,7 @@ export default function GuideDashboard() {
 
         <Card className="rounded-[28px] border-none bg-white shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-black uppercase md:text-2xl">Riwayat Scan Pemandu</CardTitle>
+            <CardTitle className="text-lg font-bold md:text-2xl">Riwayat Scan Pemandu</CardTitle>
             <CardDescription>
               Setiap hasil scan berhasil akan tersimpan di dashboard ini dan bisa diunduh ke Excel.
             </CardDescription>
@@ -467,7 +467,7 @@ export default function GuideDashboard() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Card className="rounded-[28px] border-none bg-white shadow-md lg:col-span-1">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg font-black uppercase">
+                <CardTitle className="flex items-center gap-2 text-lg font-bold ">
                   <Calendar className="h-4 w-4" /> Jadwal Saya
                 </CardTitle>
                 <CardDescription>Pilih jadwal untuk melihat detail peserta.</CardDescription>
@@ -505,7 +505,7 @@ export default function GuideDashboard() {
                   </div>
                   <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <CardTitle className="truncate text-xl font-black uppercase md:text-2xl">{selectedTour?.tourName}</CardTitle>
+                      <CardTitle className="truncate text-xl font-bold md:text-2xl">{selectedTour?.tourName}</CardTitle>
                       <CardDescription className="mt-1 flex items-center gap-1 text-xs text-zinc-300">
                         <MapPin className="h-3 w-3" /> Lokasi Tur • {selectedTour?.createdAt ? new Date(selectedTour.createdAt).toLocaleDateString("id-ID") : "-"}
                       </CardDescription>
@@ -517,11 +517,11 @@ export default function GuideDashboard() {
                 </CardHeader>
 
                 <CardContent className="space-y-4 p-4 md:p-6">
-                  <h3 className="flex items-center gap-2 border-b pb-2 text-sm font-bold uppercase md:text-base">
+                  <h3 className="flex items-center gap-2 border-b pb-2 text-sm font-bold md:text-base">
                     <Users className="h-4 w-4" /> Detail Peserta
                   </h3>
                   <div className="rounded-2xl bg-zinc-100 p-4 text-sm">
-                    <p className="text-xl font-black uppercase">{selectedTour?.userName}</p>
+                    <p className="text-xl font-bold ">{selectedTour?.userName}</p>
                     <p className="mt-1 text-zinc-600">{selectedTour?.userWhatsApp}</p>
                     <p className="text-xs text-zinc-500">{selectedTour?.userEmail}</p>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -548,7 +548,7 @@ export default function GuideDashboard() {
               <Card className="rounded-[28px] border-none bg-white shadow-sm">
                 <CardContent className="flex items-center justify-between gap-3 p-4 md:p-6">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Trip Reminder</p>
+                    <p className="text-xs tracking-[0.2em] text-zinc-500">Trip Reminder</p>
                     <p className="mt-1 text-base font-bold md:text-lg">Pastikan perlengkapan dan briefing peserta sudah lengkap.</p>
                   </div>
                   <Badge className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 hover:bg-emerald-100">Ready</Badge>
@@ -565,3 +565,4 @@ export default function GuideDashboard() {
     </div>
   )
 }
+

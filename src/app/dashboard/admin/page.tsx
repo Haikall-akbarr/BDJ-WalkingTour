@@ -601,8 +601,8 @@ export default function AdminDashboard() {
             </div>
 
             <div className="mt-8 space-y-3 md:mt-12">
-              <p className="text-[10px] uppercase tracking-[0.35em] text-white/75">Admin Dashboard</p>
-              <h1 className="max-w-3xl text-4xl font-extrabold uppercase leading-tight tracking-wide text-white sm:text-5xl md:text-6xl">
+              <p className="text-[10px] tracking-[0.35em] text-white/75">Admin Dashboard</p>
+              <h1 className="max-w-3xl text-4xl font-extrabold leading-tight tracking-wide text-white sm:text-5xl md:text-6xl">
                 Control Center
               </h1>
               <p className="max-w-2xl text-xs text-white/90 md:text-sm">
@@ -613,7 +613,7 @@ export default function AdminDashboard() {
         </section>
 
         <div className="rounded-2xl bg-white p-4 shadow-sm md:p-6">
-          <h2 className="text-2xl font-black uppercase md:text-3xl">Pusat Kontrol Admin</h2>
+          <h2 className="text-2xl font-bold md:text-3xl">Pusat Kontrol Admin</h2>
           <p className="text-sm text-zinc-600">Kelola pengguna sistem, tur, dan pengaturan global.</p>
         </div>
 
@@ -821,23 +821,23 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent className="space-y-2 px-3 md:px-6">
               {users && users.length > 0 ? users.map((u) => (
-                <div key={u.id} className="flex items-center justify-between p-3 md:p-4 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-colors gap-2">
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline" className="gap-2 rounded-full" onClick={() => {
-                          setResetPasswordTarget(u)
-                          setResetPasswordForm({ password: '', confirmPassword: '' })
-                        }}>
-                          <RefreshCcw className="h-4 w-4" /> Reset Password
-                        </Button>
+                <div key={u.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-colors gap-3 sm:gap-2">
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+                    <Button size="sm" variant="outline" className="gap-2 rounded-full w-full sm:w-auto order-last sm:order-first mt-2 sm:mt-0" onClick={() => {
+                      setResetPasswordTarget(u)
+                      setResetPasswordForm({ password: '', confirmPassword: '' })
+                    }}>
+                      <RefreshCcw className="h-4 w-4" /> <span className="sm:hidden">Reset</span><span className="hidden sm:inline">Reset Password</span>
+                    </Button>
                     <div className="h-8 w-8 md:h-10 md:w-10 bg-zinc-100 rounded-full flex items-center justify-center shrink-0">
                       <span className="text-sm font-bold">{(u.name || u.email || '').slice(0,1).toUpperCase()}</span>
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="font-bold text-sm truncate">{u.name}</p>
                       <p className="text-[10px] md:text-xs text-muted-foreground truncate">{u.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 self-end sm:self-auto -mt-10 sm:mt-0">
                     <Badge variant="secondary" className="text-[10px] md:text-xs shrink-0">{u.role}</Badge>
                     <Button size="icon" variant="ghost" onClick={async () => {
                       // delete
@@ -1206,7 +1206,7 @@ export default function AdminDashboard() {
               </div>
               
               <div className="space-y-3 pt-2 border-t border-zinc-100">
-                <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Highlights Sejarah & Budaya (Opsional)</p>
+                <p className="text-xs font-bold tracking-wider text-zinc-500">Highlights Sejarah & Budaya (Opsional)</p>
                 <div className="grid grid-cols-2 gap-3 p-3 bg-zinc-50/50 rounded-xl border">
                   <div className="col-span-2 space-y-1">
                     <Label className="text-xs font-semibold">Highlight 1</Label>
@@ -1261,7 +1261,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="space-y-3 pt-2 border-t border-zinc-100">
-                <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Titik Kunjungan / Points of Interest (POIs)</p>
+                <p className="text-xs font-bold tracking-wider text-zinc-500">Titik Kunjungan / Points of Interest (POIs)</p>
                 <div className="grid gap-3 p-3 bg-zinc-50/50 rounded-xl border space-y-2">
                   <div className="grid grid-cols-[30px_1fr] items-center gap-2">
                     <span className="font-bold text-sm text-center">1</span>
@@ -1298,3 +1298,4 @@ export default function AdminDashboard() {
     </div>
   )
 }
+

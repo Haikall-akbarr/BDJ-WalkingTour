@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 
 import { useState, useEffect } from "react"
@@ -390,17 +390,17 @@ export default function LoginPage() {
                 <MapPin className="h-5 w-5" />
               </span>
               <span className="flex flex-col leading-tight">
-                <span className="text-[10px] uppercase tracking-[0.3em] text-white/60">Banjarmasin Route</span>
+                <span className="text-[10px] tracking-[0.3em] text-white/60">Banjarmasin Route</span>
                 <span className="font-headline text-lg font-bold">BDJ WalkingTour</span>
               </span>
             </Link>
 
             <div className="max-w-xl space-y-5">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/85 backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-[10px] font-semibold tracking-[0.3em] text-white/85 backdrop-blur-sm">
                 <Sparkles className="h-3.5 w-3.5" />
                 Akses peserta dan Heritage Walks
               </div>
-              <h1 className="text-5xl font-black uppercase leading-[0.92] tracking-[0.08em] xl:text-7xl">
+              <h1 className="text-5xl font-bold leading-[0.92] tracking-[0.08em] xl:text-7xl">
                 Masuk, daftar, dan atur ulang akun dengan mudah.
               </h1>
               <p className="max-w-lg text-sm leading-7 text-white/80 xl:text-base">
@@ -411,15 +411,15 @@ export default function LoginPage() {
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-3xl border border-white/10 bg-black/20 p-4 backdrop-blur-sm">
                 <p className="text-2xl font-bold">01</p>
-                <p className="text-[10px] uppercase tracking-[0.25em] text-white/65">Firebase Login</p>
+                <p className="text-[10px] tracking-[0.25em] text-white/65">Firebase Login</p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-black/20 p-4 backdrop-blur-sm">
                 <p className="text-2xl font-bold">02</p>
-                <p className="text-[10px] uppercase tracking-[0.25em] text-white/65">Buat Akun</p>
+                <p className="text-[10px] tracking-[0.25em] text-white/65">Buat Akun</p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-black/20 p-4 backdrop-blur-sm">
                 <p className="text-2xl font-bold">03</p>
-                <p className="text-[10px] uppercase tracking-[0.25em] text-white/65">Reset Email</p>
+                <p className="text-[10px] tracking-[0.25em] text-white/65">Reset Email</p>
               </div>
             </div>
           </div>
@@ -432,7 +432,7 @@ export default function LoginPage() {
                 <MapPin className="h-7 w-7 text-primary" />
                 <span className="font-headline">BDJ WalkingTour</span>
               </Link>
-              <h2 className="text-3xl font-black uppercase leading-tight md:text-4xl">
+              <h2 className="text-3xl font-bold leading-tight md:text-4xl">
                 {staffMode ? "Heritage Walks Access" : "Selamat Datang Kembali"}
               </h2>
               <p className="text-muted-foreground">
@@ -549,6 +549,7 @@ export default function LoginPage() {
     </div>
   )
 }
+
 
 
 
