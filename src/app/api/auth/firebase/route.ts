@@ -2,6 +2,7 @@ import { createPublicKey, createVerify } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createSession, getUserByEmail, upsertUser } from '@/lib/auth-store';
 import { generateSessionToken, getSessionCookieName, getSessionExpiryDate, hashPassword, hashSessionToken } from '@/lib/auth-session';
+import { signJwt, JWT_COOKIE_NAME } from '@/lib/jwt';
 import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 
 export const runtime = 'nodejs';
@@ -178,6 +179,24 @@ export async function POST(request: NextRequest) {
     response.cookies.set({
       name: getSessionCookieName(),
       value: token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      expires: expiresAt,
+    });
+
+    // Create JWT token for Middleware
+    const jwtToken = await signJwt({
+      id: user!.id,
+      email: user!.email,
+      name: user!.name,
+      role: user!.role,
+    });
+
+    response.cookies.set({
+      name: JWT_COOKIE_NAME,
+      value: jwtToken,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

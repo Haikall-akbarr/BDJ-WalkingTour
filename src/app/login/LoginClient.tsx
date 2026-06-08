@@ -546,6 +546,15 @@ export default function LoginPage() {
           </div>
         </section>
       </div>
+
+      <div className="fixed bottom-4 right-4 z-50">
+        {!staffMode && (
+          <Link href="/login?mode=staff" className="flex items-center gap-2 rounded-full bg-black/5 px-3 py-1.5 text-[10px] font-medium text-black/40 transition-colors hover:bg-black/10 hover:text-black/60">
+            <MapPin className="h-3 w-3" />
+            Heritage Walks Access
+          </Link>
+        )}
+      </div>
     </div>
   )
 }
