@@ -5,6 +5,7 @@ create table if not exists tours (
   id text primary key,
   name text not null,
   price integer not null default 0,
+  price_hemat integer null,
   date text null,
   description text null,
   distance text null,

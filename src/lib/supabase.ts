@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 declare global {
   // eslint-disable-next-line no-var
-  var __bdjSupabaseAdmin: SupabaseClient | undefined;
+  var __bdjSupabaseAdminV2: SupabaseClient | undefined;
 }
 
 function getSupabaseUrl() {
@@ -53,24 +53,35 @@ function assertSupabaseAdminConfig() {
 
 export function getSupabaseClient() {
   const { url, anonKey } = assertSupabaseClientConfig();
-  return createClient(url, anonKey);
+  return createClient(url, anonKey, {
+    global: {
+      fetch: (fetchUrl, init) => {
+        return fetch(fetchUrl, { ...init, cache: 'no-store' });
+      }
+    }
+  });
 }
 
 export function getSupabaseAdmin() {
-  if (global.__bdjSupabaseAdmin) {
-    return global.__bdjSupabaseAdmin;
+  if (global.__bdjSupabaseAdminV2) {
+    return global.__bdjSupabaseAdminV2;
   }
 
   const { url, serviceRoleKey } = assertSupabaseAdminConfig();
 
-  global.__bdjSupabaseAdmin = createClient(url, serviceRoleKey, {
+  global.__bdjSupabaseAdminV2 = createClient(url, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
+    global: {
+      fetch: (fetchUrl, init) => {
+        return fetch(fetchUrl, { ...init, cache: 'no-store' });
+      }
+    }
   });
 
-  return global.__bdjSupabaseAdmin;
+  return global.__bdjSupabaseAdminV2;
 }
 
 export async function checkSupabaseConnection() {

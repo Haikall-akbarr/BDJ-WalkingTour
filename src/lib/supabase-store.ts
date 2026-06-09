@@ -14,6 +14,7 @@ function mapTour(row: AnyRow) {
     id: row.id,
     name: row.name,
     price: Number(row.price || 0),
+    priceHemat: row.price_hemat != null ? Number(row.price_hemat) : null,
     date: row.date || '',
     description: row.description || '',
     distance: row.distance || '3 KM',
@@ -197,6 +198,7 @@ export async function getTourById(id: string) {
 export async function createTour(input: {
   name: string;
   price: number;
+  priceHemat?: number | null;
   date?: string;
   description?: string;
   distance?: string;
@@ -213,6 +215,7 @@ export async function createTour(input: {
     id: randomUUID(),
     name: input.name,
     price: Number(input.price || 0),
+    price_hemat: input.priceHemat != null ? Number(input.priceHemat) : null,
     date: input.date || null,
     description: input.description || null,
     distance: input.distance || '3 KM',
@@ -227,6 +230,12 @@ export async function createTour(input: {
 
   const { data, error } = await admin.from('tours').insert(row).select('*').single();
   if (error) throw error;
+  
+  // VERIFICATION: Check if price_hemat was silently ignored by Supabase (PostgREST schema cache issue)
+  if ('price_hemat' in row && row.price_hemat != null && data.price_hemat === undefined) {
+    throw new Error("Gagal menyimpan Harga Hemat. Kolom price_hemat tidak terdeteksi. Silakan jalankan: NOTIFY pgrst, 'reload schema'; di Supabase SQL Editor.");
+  }
+
   return mapTour(data);
 }
 
@@ -235,6 +244,7 @@ export async function updateTour(
   input: Partial<{
     name: string;
     price: number;
+    priceHemat: number | null;
     date: string;
     description: string;
     distance: string;
@@ -252,6 +262,7 @@ export async function updateTour(
 
   if (typeof input.name !== 'undefined') patch.name = input.name;
   if (typeof input.price !== 'undefined') patch.price = Number(input.price || 0);
+  if (typeof input.priceHemat !== 'undefined') patch.price_hemat = input.priceHemat != null ? Number(input.priceHemat) : null;
   if (typeof input.date !== 'undefined') patch.date = input.date || null;
   if (typeof input.description !== 'undefined') patch.description = input.description || null;
   if (typeof input.distance !== 'undefined') patch.distance = input.distance || null;
@@ -269,9 +280,17 @@ export async function updateTour(
 
   patch.updated_at = new Date().toISOString();
 
+  console.log('updateTour patch payload:', patch);
+
   const { data, error } = await admin.from('tours').update(patch).eq('id', id).select('*').maybeSingle();
   if (error) throw error;
   if (!data) return null;
+
+  // VERIFICATION: Check if price_hemat was silently ignored by Supabase (PostgREST schema cache issue)
+  if ('price_hemat' in patch && data.price_hemat === undefined) {
+    throw new Error("Gagal menyimpan Harga Hemat. Kolom price_hemat tidak terdeteksi. Silakan jalankan: NOTIFY pgrst, 'reload schema'; di Supabase SQL Editor.");
+  }
+
   return mapTour(data);
 }
 

@@ -4,6 +4,8 @@ import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { resolveGoogleMapsUrl } from '@/lib/maps';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 function assertMySql() {
   if (!isDatabaseProviderEnabled()) {
@@ -38,6 +40,7 @@ export async function POST(request: NextRequest) {
     const tour = await createTour({
       name: String(body.name),
       price: Number(body.price || 0),
+      priceHemat: body.priceHemat !== undefined ? Number(body.priceHemat) : null,
       date: body.date ? String(body.date) : '',
       description: body.description ? String(body.description) : '',
       distance: body.distance ? String(body.distance) : '3 KM',

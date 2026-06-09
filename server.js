@@ -194,6 +194,29 @@ function buildDailySeries(rows, valueKey) {
     .map(([day, count]) => ({ day, [valueKey]: count }));
 }
 
+function buildMonthlyRevenueSeries(bookings) {
+  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
+  const counts = {};
+
+  for (const booking of bookings) {
+    const time = getTimestamp(booking);
+    if (!time) continue;
+    const date = new Date(time);
+    const monthName = months[date.getMonth()];
+    counts[monthName] = (counts[monthName] || 0) + (Number(booking.grossAmount) || 0);
+  }
+
+  const result = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const mName = months[d.getMonth()];
+    result.push({ name: mName, value: counts[mName] || 0 });
+  }
+
+  return result;
+}
+
 function buildNotificationsFromBookings(bookings) {
   const items = [];
 
@@ -457,14 +480,14 @@ app.use(
       return;
     }
 
-    if (pathname.startsWith("/api/admin/") && user.role !== "admin") {
+    if (pathname.startsWith("/api/admin/") && !["admin", "owner"].includes(user.role)) {
       res.status(403).json({ error: "Akses admin ditolak." });
       return;
     }
 
     if (
       pathname.startsWith("/api/analytics/") &&
-      !["admin", "owner"].includes(user.role)
+      !["admin", "owner", "guide"].includes(user.role)
     ) {
       res.status(403).json({ error: "Akses analytics ditolak." });
       return;
@@ -480,7 +503,7 @@ app.use(
 
     if (
       (pathname.startsWith("/api/bookings/") || pathname === "/api/bookings") &&
-      !["admin", "owner"].includes(user.role)
+      !["admin", "owner", "guide"].includes(user.role)
     ) {
       res.status(403).json({ error: "Akses booking ditolak." });
       return;
@@ -716,8 +739,11 @@ app.get(
       typeof req.query.paymentStatus === "string"
         ? req.query.paymentStatus
         : undefined;
+    const user = await getCurrentSessionUser(req);
     const guideId =
-      typeof req.query.guideId === "string" ? req.query.guideId : undefined;
+      user?.role === "guide"
+        ? user.id
+        : (typeof req.query.guideId === "string" ? req.query.guideId : undefined);
     const unassigned = String(req.query.unassigned || "") === "true";
     const bookings = await listBookings({
       status,
@@ -1635,6 +1661,48 @@ app.get(
 
     const users = await listUsers();
     res.json({ data: buildDailySeries(users, "users") });
+  }),
+);
+
+app.get(
+  "/api/analytics/revenue",
+  asyncHandler(async (req, res) => {
+    if (!ensureDatabase(res)) {
+      return;
+    }
+
+    const user = await getCurrentSessionUser(req);
+    if (!user) {
+      res.status(401).json({ error: "Login diperlukan." });
+      return;
+    }
+
+    const bookings = await listBookings();
+    const paidBookings = bookings.filter((b) => b.paymentStatus === "paid" || b.status === "paid");
+
+    if (user.role === "guide") {
+      const myBookings = paidBookings.filter((b) => b.guideId === user.id);
+      const myRevenue = myBookings.reduce((sum, b) => sum + (Number(b.grossAmount) || 0) * 0.35, 0);
+      res.json({ totalRevenue: myRevenue });
+      return;
+    }
+
+    if (user.role === "owner" || user.role === "admin") {
+      const totalRevenue = paidBookings.reduce((sum, b) => sum + (Number(b.grossAmount) || 0), 0);
+      const totalGuideRevenue = paidBookings
+        .filter((b) => b.guideId)
+        .reduce((sum, b) => sum + (Number(b.grossAmount) || 0) * 0.35, 0);
+      const monthlyData = buildMonthlyRevenueSeries(paidBookings);
+
+      res.json({
+        totalRevenue,
+        totalGuideRevenue,
+        monthlyData,
+      });
+      return;
+    }
+
+    res.status(403).json({ error: "Akses ditolak." });
   }),
 );
 

@@ -65,6 +65,7 @@ export default function GuideDashboard() {
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
   const [apiTours, setApiTours] = useState<any[]>([]);
   const [apiLoading, setApiLoading] = useState(true);
+  const [myRevenue, setMyRevenue] = useState<number>(0);
 
   useEffect(() => {
     let mounted = true;
@@ -97,7 +98,19 @@ export default function GuideDashboard() {
       }
     };
 
+    const loadMyRevenue = async () => {
+      if (!currentGuideId) return;
+      try {
+        const response = await fetch('/api/analytics/revenue');
+        const result = await response.json();
+        if (response.ok && mounted) {
+          setMyRevenue(result.totalRevenue || 0);
+        }
+      } catch {}
+    };
+
     loadGuideTours();
+    loadMyRevenue();
 
     return () => {
       mounted = false;
@@ -372,6 +385,18 @@ export default function GuideDashboard() {
           </div>
           <Badge variant="outline" className="rounded-full px-3 py-1 text-[10px] md:text-xs">Akses Pemandu Aktif</Badge>
         </div>
+
+        <Card className="rounded-[28px] border-none bg-zinc-900 text-white shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl md:text-2xl">Estimasi Pendapatan Anda</CardTitle>
+            <CardDescription className="text-zinc-300">Total estimasi komisi (35%) dari semua tur berbayar yang ditugaskan kepada Anda.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-4xl font-black text-[#98DDCA]">
+              Rp {myRevenue.toLocaleString("id-ID")}
+            </p>
+          </CardContent>
+        </Card>
 
         <Card className="rounded-[28px] border-none bg-white shadow-md">
           <CardHeader className="pb-2">

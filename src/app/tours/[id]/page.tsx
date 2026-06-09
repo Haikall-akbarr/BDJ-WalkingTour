@@ -14,6 +14,7 @@ import {
   Calendar, 
   Sparkles, 
   ChevronRight, 
+  ChevronLeft,
   Utensils, 
   Building2, 
   Info 
@@ -21,7 +22,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
+import { FloatingNavbar } from "@/components/public/FloatingNavbar"
+import { Footer } from "@/components/public/Footer"
+import { Maximize2 } from "lucide-react"
 
 type TourItem = {
   id: string
@@ -52,6 +57,7 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
   const [tour, setTour] = useState<TourItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedDocIdx, setSelectedDocIdx] = useState<number | null>(null)
 
   const isSupabaseStorageUrl = (value?: string) =>
     typeof value === "string" && value.includes(".supabase.co/storage/v1/object/public/")
@@ -108,22 +114,26 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
     }
   }, [tour?.poiList])
 
-  // Select documentation photos from images (exclude cover or pick the rest)
-  const docPhotos = useMemo(() => {
+  // Select all photos (cover + documentation)
+  const allPhotos = useMemo(() => {
     if (!tour) return []
+    const coverUrl = tour.imageUrl || PlaceHolderImages[0].imageUrl
+    const coverObj = { id: 'cover', url: coverUrl, filename: tour.name, isCover: true }
+    
     if (tour.images && tour.images.length > 0) {
-      // Return images that are not cover, or take up to 4 images
-      const gallery = tour.images.filter(img => !img.isCover)
-      if (gallery.length > 0) return gallery.slice(0, 4)
-      return tour.images.slice(0, 4)
+      const cover = tour.images.find(img => img.isCover) || tour.images[0]
+      const gallery = tour.images.filter(img => img.id !== cover.id)
+      return [cover, ...gallery]
     }
+    
     // Static Fallback pictures
-    return PlaceHolderImages.slice(2, 6).map((img, index) => ({
+    const fallbackGallery = PlaceHolderImages.slice(2, 6).map((img, index) => ({
       id: `fallback-img-${index}`,
       url: img.imageUrl,
       filename: img.imageHint,
       isCover: false
     }))
+    return [coverObj, ...fallbackGallery]
   }, [tour])
 
   if (loading) {
@@ -155,56 +165,49 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="min-h-screen bg-[#f7f4ee] text-zinc-950">
+      <FloatingNavbar />
       {/* Dynamic Cover Header Banner */}
-      <header className="relative w-full h-[40vh] md:h-[50vh] overflow-hidden bg-zinc-900">
-        {isSupabaseStorageUrl(tour.imageUrl) ? (
-          <img
-            src={tour.imageUrl}
-            alt={tour.name}
-            className="absolute inset-0 h-full w-full object-cover opacity-75"
-          />
-        ) : (
-          <Image
-            src={tour.imageUrl || PlaceHolderImages[0].imageUrl}
-            alt={tour.name}
-            fill
-            className="object-cover opacity-75 animate-fade-in"
-            priority
-          />
-        )}
-        {/* Soft elegant gradient overlays */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#f7f4ee] via-black/30 to-black/60" />
-        
-        {/* Top Navbar items inside header */}
-        <div className="absolute top-6 left-4 right-4 md:left-8 md:right-8 flex justify-between items-center z-15">
-          <Link href="/tours">
-            <Button variant="outline" className="rounded-full bg-white/20 hover:bg-white/30 text-white border-white/25 backdrop-blur-md px-4 py-2 gap-2 h-9 text-xs">
-              <ArrowLeft className="h-4 w-4" /> Kembali
-            </Button>
-          </Link>
-          <Badge className="rounded-full bg-[#98DDCA] text-[#10221f] font-bold hover:bg-[#98DDCA] px-3 py-1 text-xs">
-            ID: {tour.id}
-          </Badge>
-        </div>
+      <header className="relative w-full h-[40vh] md:h-[50vh] overflow-hidden bg-zinc-900 pt-32 group">
+            <div className="absolute inset-0 cursor-pointer" onClick={() => setSelectedDocIdx(0)}>
+              {isSupabaseStorageUrl(tour.imageUrl) ? (
+                <img
+                  src={tour.imageUrl}
+                  alt={tour.name}
+                  className="absolute inset-0 h-full w-full object-cover opacity-75 transition-transform duration-700 group-hover:scale-105"
+                />
+              ) : (
+                <Image
+                  src={tour.imageUrl || PlaceHolderImages[0].imageUrl}
+                  alt={tour.name}
+                  fill
+                  className="object-cover opacity-75 animate-fade-in transition-transform duration-700 group-hover:scale-105"
+                  priority
+                />
+              )}
+              {/* Overlay hover effect to indicate clickability */}
+              <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/20" />
+              <div className="absolute right-6 top-24 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white opacity-0 backdrop-blur-md transition-opacity duration-300 group-hover:opacity-100">
+                <Maximize2 className="h-5 w-5" />
+              </div>
+            </div>
+
+        {/* Removed gradient overlay per user request */}
 
         {/* Banner Details Text (Bottom Left Align) */}
-        <div className="absolute bottom-6 left-4 right-4 md:left-8 md:right-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4 z-15 text-zinc-950">
-          <div className="space-y-2">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tight text-[#10221f] leading-none drop-shadow-[0_1.2px_1.2px_rgba(255,255,255,0.7)]">
+        <div className="absolute bottom-6 left-4 right-4 md:left-8 md:right-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4 z-15 pointer-events-none">
+          <div className="space-y-3 bg-[#f7f4ee]/95 backdrop-blur-md p-5 md:p-6 rounded-3xl shadow-2xl border border-white/20 w-fit pointer-events-auto">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tight text-[#10221f] leading-none drop-shadow-sm">
               {tour.name}
             </h1>
-            <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm font-semibold text-zinc-800">
+            <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm font-bold text-[#10221f]">
               <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-[#10221f]" /> Banjarmasin, Kalimantan Selatan</span>
+              <Badge className="rounded-full bg-[#10221f] text-[#98DDCA] hover:bg-[#10221f] px-3.5 py-1.5 font-bold inline-flex items-center gap-1.5 text-xs shadow-sm border border-[#10221f]">
+                <Map className="h-3.5 w-3.5 text-[#98DDCA]" /> {tour.distance || "3 KM"}
+              </Badge>
+              <Badge className="rounded-full bg-[#10221f] text-[#98DDCA] hover:bg-[#10221f] px-3.5 py-1.5 font-bold inline-flex items-center gap-1.5 text-xs shadow-sm border border-[#10221f]">
+                <Clock className="h-3.5 w-3.5 text-[#98DDCA]" /> {tour.duration || "2 Jam"}
+              </Badge>
             </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Badge className="rounded-full bg-[#10221f]/90 text-white hover:bg-[#10221f]/90 px-3.5 py-1.5 font-bold inline-flex items-center gap-1.5 text-xs">
-              <Map className="h-3.5 w-3.5 text-[#98DDCA]" /> {tour.distance || "3 KM"}
-            </Badge>
-            <Badge className="rounded-full bg-[#10221f]/90 text-white hover:bg-[#10221f]/90 px-3.5 py-1.5 font-bold inline-flex items-center gap-1.5 text-xs">
-              <Clock className="h-3.5 w-3.5 text-[#98DDCA]" /> {tour.duration || "2 Jam"}
-            </Badge>
           </div>
         </div>
       </header>
@@ -218,7 +221,7 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
             {/* Full Description Card */}
             <Card className="rounded-[24px] border-none bg-white p-6 md:p-8 shadow-sm">
               <h2 className="text-lg md:text-xl font-black uppercase text-[#10221f] tracking-wide border-b pb-3 mb-4">
-                Deskripsi Lengkap Tur
+                Deskripsi
               </h2>
               <div className="text-zinc-700 text-sm md:text-base leading-relaxed space-y-4 whitespace-pre-line">
                 {tour.descriptionFull || tour.description || "Tidak ada detail deskripsi untuk paket tur ini."}
@@ -252,14 +255,61 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
               )}
             </Card>
 
-            {/* Route Detail Card */}
+            {/* Gallery documentation photos moved to Left Column */}
             <Card className="rounded-[24px] border-none bg-white p-6 md:p-8 shadow-sm">
               <h2 className="text-lg md:text-xl font-black uppercase text-[#10221f] tracking-wide border-b pb-3 mb-4">
-                Detail Rute Maps
+                Dokumentasi Foto Tour
               </h2>
-              <div className="text-zinc-700 text-sm md:text-base leading-relaxed whitespace-pre-line">
-                {tour.routeDetail || "Informasi rute perjalanan jalan kaki belum ditambahkan."}
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                {allPhotos.slice(1, 5).map((img: any, idx: number) => (
+                  <div 
+                    key={img.id || idx} 
+                    className="relative h-28 overflow-hidden rounded-xl bg-zinc-100 group border cursor-pointer"
+                    onClick={() => setSelectedDocIdx(idx + 1)}
+                  >
+                    <img
+                      src={img.url}
+                      alt={img.filename || `Doc ${idx + 1}`}
+                      className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10 flex items-center justify-center">
+                      <Maximize2 className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-md w-6 h-6" />
+                    </div>
+                  </div>
+                ))}
               </div>
+
+              <Dialog open={selectedDocIdx !== null} onOpenChange={(v) => !v && setSelectedDocIdx(null)}>
+                <DialogContent className="max-w-4xl border-none bg-transparent shadow-none p-0 flex items-center justify-center" closeClassName="bg-red-500 text-white hover:bg-red-600 hover:text-white opacity-100 right-2 top-2 z-50">
+                  <DialogTitle className="sr-only">Galeri Dokumentasi Tur</DialogTitle>
+                  {selectedDocIdx !== null && (
+                    <div className="relative w-full aspect-video md:aspect-[21/9] flex items-center justify-center">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setSelectedDocIdx(prev => prev! > 0 ? prev! - 1 : allPhotos.length - 1); }}
+                        className="absolute left-2 md:left-4 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                      >
+                        <ChevronLeft className="w-6 h-6 md:w-8 md:h-8" />
+                      </button>
+                      <img 
+                        src={allPhotos[selectedDocIdx].url} 
+                        alt={allPhotos[selectedDocIdx].filename || `Foto ${selectedDocIdx + 1}`} 
+                        className="w-full h-full object-contain rounded-xl"
+                      />
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setSelectedDocIdx(prev => prev! < allPhotos.length - 1 ? prev! + 1 : 0); }}
+                        className="absolute right-2 md:right-4 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                      >
+                        <ChevronRight className="w-6 h-6 md:w-8 md:h-8" />
+                      </button>
+                      <div className="absolute bottom-4 left-0 right-0 text-center">
+                        <span className="bg-black/60 text-white text-xs px-3 py-1.5 rounded-full">
+                          {selectedDocIdx + 1} / {allPhotos.length}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
             </Card>
           </div>
 
@@ -319,23 +369,7 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
               )}
             </Card>
 
-            {/* Gallery documentation photos */}
-            <Card className="rounded-[24px] border-none bg-white p-6 md:p-8 shadow-sm">
-              <h2 className="text-lg md:text-xl font-black uppercase text-[#10221f] tracking-wide border-b pb-3 mb-4">
-                Dokumentasi Foto Tour
-              </h2>
-              <div className="grid grid-cols-2 gap-3 mt-4">
-                {docPhotos.map((img: any, idx: number) => (
-                  <div key={img.id || idx} className="relative h-28 overflow-hidden rounded-xl bg-zinc-100 group border">
-                    <img
-                      src={img.url}
-                      alt={img.filename || `Doc ${idx + 1}`}
-                      className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                    />
-                  </div>
-                ))}
-              </div>
-            </Card>
+            {/* Documentation photos have been moved to the left column */}
           </div>
         </div>
 
@@ -356,7 +390,7 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
           <div className="flex flex-col sm:flex-row items-center gap-4 shrink-0 z-10 w-full sm:w-auto justify-center">
             <div className="text-center sm:text-right">
               <p className="text-[10px] text-white/55 uppercase tracking-widest">Mulai Dari</p>
-              <p className="text-2xl font-black text-[#98DDCA]">Rp {tour.price?.toLocaleString('id-ID')}</p>
+              <p className="text-2xl font-black text-[#98DDCA]">Rp {((tour.priceHemat != null && tour.priceHemat < tour.price) ? tour.priceHemat : tour.price)?.toLocaleString('id-ID')}</p>
               <p className="text-[10px] text-white/55 uppercase tracking-widest">per pax</p>
             </div>
             <Link href={`/book/${tour.id}`} className="w-full sm:w-auto">
@@ -371,6 +405,7 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
           <div className="absolute left-0 bottom-0 h-40 w-40 rounded-full bg-[#98DDCA]/5 -ml-16 -mb-16 blur-2xl" />
         </section>
       </main>
+      <Footer />
     </div>
   )
 }

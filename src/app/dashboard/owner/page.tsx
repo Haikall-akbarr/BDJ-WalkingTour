@@ -50,15 +50,6 @@ const STATS = [
   { label: "Trusted Reviews", value: "5K+", trend: "Stabil" }
 ];
 
-const REVENUE_DATA = [
-  { name: 'Jan', value: 4000 },
-  { name: 'Feb', value: 3000 },
-  { name: 'Mar', value: 2000 },
-  { name: 'Apr', value: 2780 },
-  { name: 'Mei', value: 1890 },
-  { name: 'Jun', value: 2390 },
-];
-
 export default function OwnerDashboard() {
   const router = useRouter();
   const { toast } = useToast();
@@ -68,6 +59,9 @@ export default function OwnerDashboard() {
   const [loading, setLoading] = useState(true);
   const [bookingChartData, setBookingChartData] = useState<any[]>([]);
   const [userChartData, setUserChartData] = useState<any[]>([]);
+  const [revenueChartData, setRevenueChartData] = useState<any[]>([]);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalGuideRevenue, setTotalGuideRevenue] = useState(0);
 
   const heroImage = useMemo(() => {
     return PlaceHolderImages.find((img) => img.id === "hero-bg")?.imageUrl || PlaceHolderImages[0]?.imageUrl;
@@ -130,6 +124,16 @@ export default function OwnerDashboard() {
         const resp2 = await fetch('/api/analytics/users');
         const d2 = await resp2.json();
         if (resp2.ok) setUserChartData(d2.data || []);
+      } catch {}
+
+      try {
+        const resp3 = await fetch('/api/analytics/revenue');
+        const d3 = await resp3.json();
+        if (resp3.ok) {
+          setRevenueChartData(d3.monthlyData || []);
+          setTotalRevenue(d3.totalRevenue || 0);
+          setTotalGuideRevenue(d3.totalGuideRevenue || 0);
+        }
       } catch {}
     })();
   }, []);
@@ -381,16 +385,24 @@ export default function OwnerDashboard() {
 
             <Card className="rounded-[28px] border-none bg-zinc-900 text-white shadow-md">
               <CardHeader>
-                <CardTitle className="text-xl md:text-2xl">Ikhtisar Pendapatan</CardTitle>
-                <CardDescription className="text-zinc-300">Visualisasi pertumbuhan pendapatan bulanan.</CardDescription>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-xl md:text-2xl">Ikhtisar Pendapatan</CardTitle>
+                    <CardDescription className="text-zinc-300">Visualisasi pertumbuhan pendapatan kotor bulanan.</CardDescription>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-zinc-400">Total Komisi Pemandu Keluar (35%)</p>
+                    <p className="text-lg font-bold text-[#98DDCA]">Rp {totalGuideRevenue.toLocaleString("id-ID")}</p>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="h-[260px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={REVENUE_DATA}>
+                  <BarChart data={revenueChartData.length > 0 ? revenueChartData : []}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3f3f46" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#d4d4d8" }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#d4d4d8" }} />
-                    <Tooltip cursor={{ fill: "rgba(255,255,255,0.08)" }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#d4d4d8" }} tickFormatter={(val) => `Rp ${val/1000}k`} />
+                    <Tooltip cursor={{ fill: "rgba(255,255,255,0.08)" }} formatter={(val: number) => `Rp ${val.toLocaleString("id-ID")}`} />
                     <Bar dataKey="value" fill="#98DDCA" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>

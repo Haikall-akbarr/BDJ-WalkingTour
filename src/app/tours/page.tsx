@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
+import { FloatingNavbar } from "@/components/public/FloatingNavbar"
+import { Footer } from "@/components/public/Footer"
 
 type TourItem = {
   id: string
@@ -79,8 +81,9 @@ export default function ToursPage() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(152,221,202,0.18),_transparent_36%),linear-gradient(180deg,_#f7f4ee_0%,_#ecece7_100%)] text-zinc-900">
-      <section className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 md:py-12">
-        <div className="overflow-hidden rounded-[34px] bg-[#10221f] text-white shadow-[0_24px_80px_rgba(16,34,31,0.16)]">
+      <FloatingNavbar />
+      <section className="mx-auto w-full px-4 py-8 pt-32 md:px-8 md:py-12 md:pt-36">
+        <div className="w-full overflow-hidden rounded-[34px] bg-[#10221f] text-white shadow-[0_24px_80px_rgba(16,34,31,0.16)]">
           <div className="grid gap-6 p-6 md:p-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
             <div className="space-y-4">
               <Badge className="w-fit rounded-full bg-white/10 text-white hover:bg-white/10">
@@ -106,28 +109,21 @@ export default function ToursPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-sm text-white/80">
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                <p className="text-3xl font-bold text-white">{tours.length}</p>
-                <p className="mt-1 tracking-[0.25em] text-white/55">Paket Tur</p>
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                <p className="text-3xl font-bold text-white">3-4h</p>
-                <p className="mt-1 tracking-[0.25em] text-white/55">Rata-rata Durasi</p>
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                <p className="text-3xl font-bold text-white">Local</p>
-                <p className="mt-1 tracking-[0.25em] text-white/55">Guide Berpengalaman</p>
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                <p className="text-3xl font-bold text-white">QR</p>
-                <p className="mt-1 tracking-[0.25em] text-white/55">Payment & Barcode</p>
+            <div className="flex items-center justify-center">
+              <div className="relative h-48 w-72 sm:h-56 sm:w-80">
+                <Image
+                  src="/bekantan_3.png"
+                  alt="Mascot 3 Bekantan"
+                  fill
+                  className="object-contain drop-shadow-2xl"
+                  priority
+                />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full">
           {paginatedTours.map((tour, index) => {
             const fallbackImage = PlaceHolderImages[index % PlaceHolderImages.length]
 
@@ -153,7 +149,7 @@ export default function ToursPage() {
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,34,31,0.05)_0%,rgba(16,34,31,0.78)_100%)]" />
                     <div className="absolute left-4 right-4 top-4 flex items-start justify-between gap-2">
                       <Badge className="rounded-full bg-white/12 text-white hover:bg-white/12">{tour.distance || "3 KM"}</Badge>
-                      <Badge className="rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#98DDCA]">Rp {Number(tour.price || 0).toLocaleString("id-ID")}</Badge>
+                      <Badge className="rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#98DDCA]">Rp {Number(tour.priceHemat != null && tour.priceHemat < (tour.price || 0) ? tour.priceHemat : (tour.price || 0)).toLocaleString("id-ID")}</Badge>
                     </div>
                     <div className="absolute bottom-4 left-4 right-4 text-white">
                       <h2 className="text-2xl font-bold leading-tight">{tour.name}</h2>
@@ -239,6 +235,7 @@ export default function ToursPage() {
           </div>
         )}
       </section>
+      <Footer />
     </div>
   )
 }

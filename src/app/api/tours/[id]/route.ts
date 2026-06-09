@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { deleteTour, updateTour, getTourById } from '@/lib/data-store';
 import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { resolveGoogleMapsUrl } from '@/lib/maps';
+import { revalidatePath } from 'next/cache';
 
 export const runtime = 'nodejs';
 
@@ -48,6 +49,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const tour = await updateTour(id, {
       name: typeof body?.name === 'undefined' ? undefined : String(body.name),
       price: typeof body?.price === 'undefined' ? undefined : Number(body.price),
+      priceHemat: typeof body?.priceHemat === 'undefined' ? undefined : (body.priceHemat != null ? Number(body.priceHemat) : null),
       date: typeof body?.date === 'undefined' ? undefined : String(body.date || ''),
       description: typeof body?.description === 'undefined' ? undefined : String(body.description || ''),
       distance: typeof body?.distance === 'undefined' ? undefined : String(body.distance || ''),
@@ -63,6 +65,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (!tour) {
       return NextResponse.json({ error: 'Tur tidak ditemukan.' }, { status: 404 });
     }
+
+    revalidatePath('/api/tours');
+    revalidatePath('/dashboard/admin');
 
     return NextResponse.json({ tour });
   } catch (error: any) {

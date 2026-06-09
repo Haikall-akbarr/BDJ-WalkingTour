@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const tourId = String(body?.tourId || '')
     const images = Array.isArray(body?.images) ? body.images : []
+    const append = Boolean(body?.append)
 
     if (!tourId) return NextResponse.json({ error: 'tourId wajib disertakan.' }, { status: 400 })
     if (images.length === 0) return NextResponse.json({ error: 'Tidak ada gambar untuk diupload.' }, { status: 400 })
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
         }
 
         const id = generateId()
-        const isCover = i === 0
+        const isCover = append ? false : (i === 0)
 
         const { error: insertError } = await admin.from('tour_images').insert({
           id,
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
       }
 
       const id = generateId()
-      const isCover = i === 0 ? 1 : 0
+      const isCover = append ? 0 : (i === 0 ? 1 : 0)
       await pool.execute(
         `INSERT INTO tour_images (id, tour_id, url, filename, is_cover, uploaded_by, uploaded_at)
          VALUES (?, ?, ?, ?, ?, NULL, NOW())`,

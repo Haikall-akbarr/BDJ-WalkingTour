@@ -68,6 +68,7 @@ export default function AdminDashboard() {
   const [tourFormData, setTourFormData] = useState({
     name: "",
     price: "",
+    priceHemat: "",
     date: "",
     description: "",
     distance: "3 KM",
@@ -109,7 +110,7 @@ export default function AdminDashboard() {
   const fetchTours = async () => {
     setToursLoading(true);
     try {
-      const response = await fetch("/api/tours", { cache: "no-store" });
+      const response = await fetch(`/api/tours?_t=${Date.now()}`, { cache: "no-store" });
       const result = await response.json();
 
       if (!response.ok) {
@@ -329,6 +330,7 @@ export default function AdminDashboard() {
     setTourFormData({
       name: "",
       price: "",
+      priceHemat: "",
       date: "",
       description: "",
       distance: "3 KM",
@@ -373,6 +375,7 @@ export default function AdminDashboard() {
     setTourFormData({
       name: tour.name || "",
       price: tour.price?.toString() || "",
+      priceHemat: tour.priceHemat?.toString() || "",
       date: tour.date || "",
       description: tour.description || "",
       distance: tour.distance || "3 KM",
@@ -421,6 +424,7 @@ export default function AdminDashboard() {
     const payload = {
       name: tourFormData.name,
       price: Number(tourFormData.price),
+      priceHemat: tourFormData.priceHemat ? Number(tourFormData.priceHemat) : null,
       date: tourFormData.date,
       description: tourFormData.description,
       distance: tourFormData.distance,
@@ -495,7 +499,7 @@ export default function AdminDashboard() {
           await fetch('/api/tours/images', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tourId, images }),
+            body: JSON.stringify({ tourId, images, append: !!editingTour }),
           });
         } catch (err) {
           toast({ variant: 'destructive', title: 'Gagal upload gambar', description: 'Gambar galeri mungkin belum tersimpan.' })
@@ -1125,15 +1129,25 @@ export default function AdminDashboard() {
                   onChange={(e) => setTourFormData({...tourFormData, name: e.target.value})}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="tour-price">Harga (Rp)</Label>
+                  <Label htmlFor="tour-price">Harga Reguler (Rp)</Label>
                   <Input 
                     id="tour-price" 
                     type="number"
                     placeholder="65000"
                     value={tourFormData.price}
                     onChange={(e) => setTourFormData({...tourFormData, price: e.target.value})}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="tour-price-hemat">Harga Hemat (Rp)</Label>
+                  <Input 
+                    id="tour-price-hemat" 
+                    type="number"
+                    placeholder="45000"
+                    value={tourFormData.priceHemat}
+                    onChange={(e) => setTourFormData({...tourFormData, priceHemat: e.target.value})}
                   />
                 </div>
                 <div className="grid gap-2">
@@ -1179,7 +1193,38 @@ export default function AdminDashboard() {
               <div className="grid gap-2">
                 <Label>Foto Galeri Paket (opsional, ganda)</Label>
                 <input type="file" accept="image/*" multiple onChange={(e) => setTourFiles(Array.from(e.target.files || []))} className="text-sm cursor-pointer" />
-                {tourFiles && tourFiles.length > 0 && <p className="text-xs text-muted-foreground">{tourFiles.length} file dipilih</p>}
+                {tourFiles && tourFiles.length > 0 && <p className="text-xs text-muted-foreground">{tourFiles.length} file dipilih (Akan ditambahkan ke foto sebelumnya)</p>}
+                {editingTour && tourFiles.length === 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs font-semibold text-zinc-500 mb-2">Foto Saat Ini:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {editingTour.imageUrl && (
+                        <div className="relative w-16 h-16 rounded border border-zinc-200 overflow-hidden bg-zinc-100">
+                          <img src={editingTour.imageUrl} alt="Cover" className="object-cover w-full h-full" />
+                          <div className="absolute bottom-0 w-full bg-black/50 text-[9px] text-center text-white py-0.5">Cover</div>
+                        </div>
+                      )}
+                      {(() => {
+                        try {
+                          const gallery = JSON.parse(editingTour.gallery || "[]");
+                          if (Array.isArray(gallery)) {
+                            return gallery.map((img: any, idx: number) => {
+                              if (img.url === editingTour.imageUrl) return null; // don't duplicate cover
+                              return (
+                                <div key={idx} className="relative w-16 h-16 rounded border border-zinc-200 overflow-hidden bg-zinc-100">
+                                  <img src={img.url || img} alt={`Galeri ${idx + 1}`} className="object-cover w-full h-full" />
+                                </div>
+                              );
+                            });
+                          }
+                        } catch (e) {
+                          return null;
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
             </TabsContent>
 

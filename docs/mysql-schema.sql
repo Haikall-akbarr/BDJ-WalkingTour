@@ -1,7 +1,8 @@
-﻿CREATE TABLE IF NOT EXISTS tours (
+CREATE TABLE IF NOT EXISTS tours (
   id VARCHAR(36) PRIMARY KEY,
   name VARCHAR(191) NOT NULL,
   price INT NOT NULL DEFAULT 0,
+  price_hemat INT NULL,
   date VARCHAR(64) NULL,
   description TEXT NULL,
   distance VARCHAR(64) NULL,

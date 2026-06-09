@@ -15,6 +15,8 @@ import { Progress } from "@/components/ui/progress"
 import { CheckCircle2, ChevronLeft, ChevronRight, QrCode, Loader2, CreditCard } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useSessionUser } from "@/hooks/use-session-user"
+import { FloatingNavbar } from "@/components/public/FloatingNavbar"
+import { Footer } from "@/components/public/Footer"
 
 const MOCK_TOURS = [
   { id: "pacinan", name: "Pacinan Walking Tour", price: 65000 },
@@ -42,6 +44,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     whatsapp: "",
     email: "",
     tourId: "",
+    packageType: "reguler",
     pax: 1
   });
 
@@ -57,7 +60,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       setToursLoading(true);
 
       try {
-        const response = await fetch("/api/tours", { cache: "no-store" });
+        const response = await fetch(`/api/tours?_t=${Date.now()}`, { cache: "no-store" });
         const result = await response.json();
 
         if (!response.ok) {
@@ -131,23 +134,32 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     
     setLoading(true);
 
-    fetch("/api/payments/create", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: nameToSubmit,
-        whatsapp: formData.whatsapp,
-        email: emailToSubmit,
-        domicile,
-        customDomicile,
-        tourId: formData.tourId,
-        tourName: selectedTour.name,
-        tourPrice: Number(selectedTour.price || 0),
-        pax: Number(formData.pax),
-      }),
-    })
+      let selectedPrice = Number(selectedTour.price || 0);
+      let tName = selectedTour.name;
+      if (formData.packageType === "hemat" && selectedTour.priceHemat != null) {
+        selectedPrice = Number(selectedTour.priceHemat);
+        tName = `${tName} (Paket Hemat)`;
+      } else {
+        tName = `${tName} (Paket Reguler)`;
+      }
+
+      fetch("/api/payments/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: nameToSubmit,
+          whatsapp: formData.whatsapp,
+          email: emailToSubmit,
+          domicile,
+          customDomicile,
+          tourId: formData.tourId,
+          tourName: tName,
+          tourPrice: selectedPrice,
+          pax: Number(formData.pax),
+        }),
+      })
       .then(async (response) => {
         const result = await response.json();
 
@@ -219,26 +231,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(152,221,202,0.18),_transparent_36%),linear-gradient(180deg,_#f7f4ee_0%,_#ecece7_100%)] px-4 py-6 md:px-8 md:py-10">
-      <div className="mx-auto max-w-5xl space-y-8">
-        <div className="flex w-full flex-col gap-3 rounded-[28px] border border-white/15 bg-[#10221f]/85 px-4 py-3 text-white shadow-md backdrop-blur-md lg:flex-row lg:items-center lg:justify-between lg:rounded-full lg:px-5">
-          <Link href="/" className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#98DDCA] text-[#16302c] shadow-sm">
-              <QrCode className="h-5 w-5" />
-            </span>
-            <span className="flex flex-col leading-tight">
-              <span className="text-[10px] uppercase tracking-[0.3em] text-white/65 md:text-[11px]">Booking Flow</span>
-              <span className="font-headline text-base font-bold text-white md:text-lg">BDJ WalkingTour</span>
-            </span>
-          </Link>
-
-          <div className="flex flex-wrap items-center gap-1 text-sm font-medium text-white/85">
-            <Link href="/" className="rounded-full px-4 py-2 transition-colors hover:bg-white/10 hover:text-white">Beranda</Link>
-            <Link href="/tours" className="rounded-full px-4 py-2 transition-colors hover:bg-white/10 hover:text-white">Semua Tur</Link>
-            <Link href="/book/new" className="rounded-full bg-[#98DDCA] px-4 py-2 text-[#16302c] transition-colors hover:bg-[#b8eadc]">Pesan Tur</Link>
-          </div>
-        </div>
-
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(152,221,202,0.18),_transparent_36%),linear-gradient(180deg,_#f7f4ee_0%,_#ecece7_100%)] text-zinc-900">
+      <FloatingNavbar />
+      <div className="mx-auto max-w-5xl space-y-8 px-4 py-6 pt-32 md:px-8 md:py-10 md:pt-36">
         <div className="max-w-3xl mx-auto space-y-8">
           <div className="space-y-2 text-center">
             <h1 className="text-3xl font-black uppercase tracking-wide">Pesan Tur Anda</h1>
@@ -381,7 +376,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           ) : allTours && allTours.length > 0 ? (
                             allTours.map((t: any) => (
                               <SelectItem key={t.id} value={t.id}>
-                                {t.name} - Rp {t.price?.toLocaleString('id-ID')}
+                                {t.name}
                               </SelectItem>
                             ))
                           ) : (
@@ -391,6 +386,31 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           )}
                         </SelectContent>
                       </Select>
+                      {selectedTour && selectedTour.priceHemat != null && (
+                        <div className="mt-4 space-y-3">
+                          <Label>Pilihan Paket</Label>
+                          <RadioGroup 
+                            value={formData.packageType} 
+                            onValueChange={(val) => setFormData({...formData, packageType: val})} 
+                            className="grid grid-cols-2 gap-4"
+                          >
+                            <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                              <RadioGroupItem value="reguler" id="pkg-reguler" />
+                              <div className="flex flex-col">
+                                <Label htmlFor="pkg-reguler" className="cursor-pointer font-semibold">Reguler</Label>
+                                <span className="text-xs text-muted-foreground">Rp {selectedTour.price?.toLocaleString('id-ID')}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                              <RadioGroupItem value="hemat" id="pkg-hemat" />
+                              <div className="flex flex-col">
+                                <Label htmlFor="pkg-hemat" className="cursor-pointer font-semibold">Hemat</Label>
+                                <span className="text-xs text-muted-foreground">Rp {selectedTour.priceHemat?.toLocaleString('id-ID')}</span>
+                              </div>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="pax">Jumlah Peserta</Label>
@@ -438,7 +458,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     {selectedTour && (
                       <div className="rounded-2xl bg-white p-4 text-sm">
                         <p className="text-muted-foreground">Total yang harus dibayar:</p>
-                        <p className="text-xl font-black text-zinc-900">Rp {(selectedTour.price * formData.pax).toLocaleString('id-ID')}</p>
+                        <p className="text-xl font-black text-zinc-900">
+                          Rp {((formData.packageType === "hemat" && selectedTour.priceHemat != null ? selectedTour.priceHemat : selectedTour.price) * formData.pax).toLocaleString('id-ID')}
+                        </p>
                         <p className="mt-2 text-xs text-muted-foreground">Setelah pembayaran berhasil, barcode absensi akan dikirim ke email pembeli.</p>
                       </div>
                     )}
@@ -496,6 +518,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
           </Card>
         </div>
       </div>
+      <Footer />
     </div>
   )
 }
