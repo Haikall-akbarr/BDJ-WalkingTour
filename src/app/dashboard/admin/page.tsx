@@ -824,12 +824,23 @@ export default function AdminDashboard() {
                       <span className="text-sm font-bold">{(u.name || u.email || '').slice(0,1).toUpperCase()}</span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-sm truncate">{u.name}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold text-sm truncate">{u.name}</p>
+                        <Badge 
+                          className={`text-[10px] py-0.5 px-2 font-semibold shrink-0 rounded-full border-none text-white ${
+                            u.role === 'admin' ? 'bg-emerald-500 hover:bg-emerald-500' :
+                            u.role === 'guide' ? 'bg-green-500 hover:bg-green-500' :
+                            u.role === 'owner' ? 'bg-blue-500 hover:bg-blue-500' :
+                            'bg-orange-500 hover:bg-orange-500'
+                          }`}
+                        >
+                          {u.role}
+                        </Badge>
+                      </div>
                       <p className="text-[10px] md:text-xs text-muted-foreground truncate">{u.email}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-auto -mt-10 sm:mt-0">
-                    <Badge variant="secondary" className="text-[10px] md:text-xs shrink-0">{u.role}</Badge>
                     <Button size="icon" variant="ghost" onClick={async () => {
                       // delete
                       if (!confirm('Hapus pengguna ini?')) return;

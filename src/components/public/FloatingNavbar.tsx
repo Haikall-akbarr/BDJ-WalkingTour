@@ -2,19 +2,21 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Map } from "lucide-react"
+import { Map, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSessionUser } from "@/hooks/use-session-user"
 import { signOutFirebase } from "@/lib/firebaseClient"
 import { NotificationBell } from "@/components/NotificationBell"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 
 export function FloatingNavbar() {
   const { user, loading: authLoading } = useSessionUser()
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
   const [faqOpen, setFaqOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const handleLogout = async () => {
     try {
@@ -29,25 +31,25 @@ export function FloatingNavbar() {
   return (
     <>
       <div className="absolute top-6 left-0 right-0 z-50 mx-auto w-full max-w-7xl px-4 md:px-8">
-        <div className="flex w-full flex-col gap-3 rounded-[28px] border border-white/15 bg-black/20 px-4 py-3 backdrop-blur-md lg:flex-row lg:items-center lg:justify-between lg:rounded-full lg:px-5">
-          <Link href="/" className="flex items-center gap-3 text-white">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#98DDCA] text-[#16302c] shadow-sm">
+        <div className="flex w-full flex-row items-center justify-between rounded-full border border-white/15 bg-black/20 px-4 py-2.5 backdrop-blur-md lg:px-5 lg:py-3">
+          <Link href="/" className="flex items-center gap-2 text-white shrink-0">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#98DDCA] text-[#16302c] shadow-sm shrink-0">
               <Map className="h-5 w-5" />
             </span>
             <span className="flex flex-col leading-tight">
-              <span className="text-[10px] tracking-[0.3em] text-white/65 md:text-[11px]">Banjarmasin Route</span>
-              <span className="font-headline text-base font-bold text-white md:text-lg">BDJ WalkingTour</span>
+              <span className="hidden sm:inline text-[9px] tracking-[0.3em] text-white/65">Banjarmasin Route</span>
+              <span className="font-headline text-sm font-bold text-white md:text-lg">BDJ WalkingTour</span>
             </span>
           </Link>
 
-          <div className="flex flex-wrap items-center gap-1 text-sm font-medium text-white/85">
+          <div className="hidden lg:flex items-center gap-1 text-sm font-medium text-white/85">
             <Link href="/" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Beranda</Link>
             <Link href="/tours" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Explore</Link>
             <Link href="/book/new" className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">Pesan Sekarang</Link>
             <button onClick={() => setFaqOpen(true)} className="rounded-full px-4 py-2 transition-colors hover:bg-white/8 hover:text-white">FAQ</button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2">
             {!authLoading && !user && (
               <Link href="/login">
                 <Button
@@ -79,6 +81,33 @@ export function FloatingNavbar() {
                 </Button>
               </>
             )}
+
+            <div className="lg:hidden">
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white hover:bg-white/10 hover:text-white">
+                    <Menu className="h-5 w-5" />
+                    <span className="sr-only">Menu</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[280px] border-l border-white/10 bg-[#16302c]/95 text-white backdrop-blur-xl">
+                  <div className="flex flex-col gap-4">
+                    <SheetTitle className="flex items-center gap-3 text-xl font-headline text-white mt-4">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#98DDCA] text-[#16302c]">
+                        <Map className="h-5 w-5" />
+                      </span>
+                      <span className="leading-tight">BDJ WalkingTour</span>
+                    </SheetTitle>
+                  </div>
+                  <nav className="mt-8 flex flex-col gap-2">
+                    <Link href="/" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium transition-colors hover:bg-white/10 hover:text-white">Beranda</Link>
+                    <Link href="/tours" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium transition-colors hover:bg-white/10 hover:text-white">Explore</Link>
+                    <Link href="/book/new" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium transition-colors hover:bg-white/10 hover:text-white">Pesan Sekarang</Link>
+                    <button onClick={() => { setFaqOpen(true); setMobileMenuOpen(false); }} className="text-left rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium transition-colors hover:bg-white/10 hover:text-white">FAQ</button>
+                  </nav>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
         </div>
       </div>
