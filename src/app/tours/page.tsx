@@ -21,6 +21,8 @@ type TourItem = {
   duration?: string
   imageHint?: string
   imageUrl?: string
+  descriptionFull?: string
+  priceHemat?: number
 }
 
 
@@ -154,7 +156,7 @@ export default function ToursPage() {
                     <div className="absolute bottom-4 left-4 right-4 text-white">
                       <h2 className="text-2xl font-bold leading-tight">{tour.name}</h2>
                       <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/78">
-                        {tour.description || "Tur pilihan dengan pengalaman lokal yang terkurasi."}
+                        {tour.description || tour.descriptionFull || "Tur pilihan dengan pengalaman lokal yang terkurasi."}
                       </p>
                     </div>
                   </div>

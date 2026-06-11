@@ -69,6 +69,8 @@ export default function AdminDashboard() {
     name: "",
     price: "",
     priceHemat: "",
+    priceRegulerDesc: "",
+    priceHematDesc: "",
     date: "",
     description: "",
     distance: "3 KM",
@@ -81,13 +83,9 @@ export default function AdminDashboard() {
     highlight2Desc: "",
     highlight3Title: "",
     highlight3Desc: "",
-    routeDetail: "",
+    highlight3Desc: "",
     routeMapUrl: "",
-    poi1: "",
-    poi2: "",
-    poi3: "",
-    poi4: "",
-    poi5: ""
+    pois: ["", "", "", "", ""]
   });
   const [routeMapFile, setRouteMapFile] = useState<File | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -331,6 +329,8 @@ export default function AdminDashboard() {
       name: "",
       price: "",
       priceHemat: "",
+      priceRegulerDesc: "",
+      priceHematDesc: "",
       date: "",
       description: "",
       distance: "3 KM",
@@ -343,13 +343,8 @@ export default function AdminDashboard() {
       highlight2Desc: "",
       highlight3Title: "",
       highlight3Desc: "",
-      routeDetail: "",
       routeMapUrl: "",
-      poi1: "",
-      poi2: "",
-      poi3: "",
-      poi4: "",
-      poi5: ""
+      pois: ["", "", "", "", ""]
     });
     setTourFiles([]);
     setRouteMapFile(null);
@@ -376,6 +371,8 @@ export default function AdminDashboard() {
       name: tour.name || "",
       price: tour.price?.toString() || "",
       priceHemat: tour.priceHemat?.toString() || "",
+      priceRegulerDesc: tour.priceRegulerDesc || "",
+      priceHematDesc: tour.priceHematDesc || "",
       date: tour.date || "",
       description: tour.description || "",
       distance: tour.distance || "3 KM",
@@ -388,13 +385,8 @@ export default function AdminDashboard() {
       highlight2Desc: highlights[1]?.desc || "",
       highlight3Title: highlights[2]?.title || "",
       highlight3Desc: highlights[2]?.desc || "",
-      routeDetail: tour.routeDetail || "",
       routeMapUrl: tour.routeMapUrl || "",
-      poi1: pois[0] || "",
-      poi2: pois[1] || "",
-      poi3: pois[2] || "",
-      poi4: pois[3] || "",
-      poi5: pois[4] || ""
+      pois: pois.length > 0 ? pois : ["", "", "", "", ""]
     });
     setTourFiles([]);
     setRouteMapFile(null);
@@ -413,18 +405,14 @@ export default function AdminDashboard() {
       highlightsList.push({ title: tourFormData.highlight3Title, desc: tourFormData.highlight3Desc });
     }
 
-    const poisList = [
-      tourFormData.poi1,
-      tourFormData.poi2,
-      tourFormData.poi3,
-      tourFormData.poi4,
-      tourFormData.poi5
-    ].map(p => p.trim()).filter(Boolean);
+    const poisList = tourFormData.pois.map(p => p.trim()).filter(Boolean);
 
     const payload = {
       name: tourFormData.name,
       price: Number(tourFormData.price),
       priceHemat: tourFormData.priceHemat ? Number(tourFormData.priceHemat) : null,
+      priceRegulerDesc: tourFormData.priceRegulerDesc,
+      priceHematDesc: tourFormData.priceHematDesc,
       date: tourFormData.date,
       description: tourFormData.description,
       distance: tourFormData.distance,
@@ -432,7 +420,6 @@ export default function AdminDashboard() {
       descriptionFull: tourFormData.descriptionFull,
       historyCulture: tourFormData.historyCulture,
       historyHighlights: JSON.stringify(highlightsList),
-      routeDetail: tourFormData.routeDetail,
       routeMapUrl: tourFormData.routeMapUrl,
       poiList: JSON.stringify(poisList),
     };
@@ -1129,43 +1116,66 @@ export default function AdminDashboard() {
                   onChange={(e) => setTourFormData({...tourFormData, name: e.target.value})}
                 />
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="tour-price">Harga Reguler (Rp)</Label>
-                  <Input 
-                    id="tour-price" 
-                    type="number"
-                    placeholder="65000"
-                    value={tourFormData.price}
-                    onChange={(e) => setTourFormData({...tourFormData, price: e.target.value})}
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="tour-price">Harga Reguler (Rp)</Label>
+                    <Input 
+                      id="tour-price" 
+                      type="number"
+                      placeholder="65000"
+                      value={tourFormData.price}
+                      onChange={(e) => setTourFormData({...tourFormData, price: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="tour-price-reguler-desc">Deskripsi Reguler</Label>
+                    <Input 
+                      id="tour-price-reguler-desc" 
+                      placeholder="Misal: (Peta, Snack, Minum)"
+                      value={tourFormData.priceRegulerDesc}
+                      onChange={(e) => setTourFormData({...tourFormData, priceRegulerDesc: e.target.value})}
+                    />
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="tour-price-hemat">Harga Hemat (Rp)</Label>
-                  <Input 
-                    id="tour-price-hemat" 
-                    type="number"
-                    placeholder="45000"
-                    value={tourFormData.priceHemat}
-                    onChange={(e) => setTourFormData({...tourFormData, priceHemat: e.target.value})}
-                  />
+
+                <div className="space-y-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="tour-price-hemat">Harga Hemat (Rp)</Label>
+                    <Input 
+                      id="tour-price-hemat" 
+                      type="number"
+                      placeholder="45000"
+                      value={tourFormData.priceHemat}
+                      onChange={(e) => setTourFormData({...tourFormData, priceHemat: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="tour-price-hemat-desc">Deskripsi Hemat</Label>
+                    <Input 
+                      id="tour-price-hemat-desc" 
+                      placeholder="Misal: (PETA)"
+                      value={tourFormData.priceHematDesc}
+                      onChange={(e) => setTourFormData({...tourFormData, priceHematDesc: e.target.value})}
+                    />
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="tour-date">Tanggal Opsional</Label>
-                  <Input 
-                    id="tour-date" 
-                    placeholder="15 Jan 2024"
-                    value={tourFormData.date}
-                    onChange={(e) => setTourFormData({...tourFormData, date: e.target.value})}
-                  />
-                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="tour-date">Tanggal Opsional</Label>
+                <Input 
+                  id="tour-date" 
+                  placeholder="15 Jan 2024"
+                  value={tourFormData.date}
+                  onChange={(e) => setTourFormData({...tourFormData, date: e.target.value})}
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="tour-distance">Jarak (KM)</Label>
+                  <Label htmlFor="tour-distance">Jarak (KM / Meter)</Label>
                   <Input 
                     id="tour-distance" 
-                    placeholder="3 KM"
+                    placeholder="3 KM atau 500 Meter"
                     value={tourFormData.distance}
                     onChange={(e) => setTourFormData({...tourFormData, distance: e.target.value})}
                   />
@@ -1180,16 +1190,7 @@ export default function AdminDashboard() {
                   />
                 </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="tour-desc">Deskripsi Singkat</Label>
-                <Textarea 
-                  id="tour-desc" 
-                  placeholder="Ceritakan sejarah singkat atau rute tur ini..."
-                  className="min-h-[70px]"
-                  value={tourFormData.description}
-                  onChange={(e) => setTourFormData({...tourFormData, description: e.target.value})}
-                />
-              </div>
+              {/* Deskripsi Singkat dihapus berdasarkan request */}
               <div className="grid gap-2">
                 <Label>Foto Galeri Paket (opsional, ganda)</Label>
                 <input type="file" accept="image/*" multiple onChange={(e) => setTourFiles(Array.from(e.target.files || []))} className="text-sm cursor-pointer" />
@@ -1277,16 +1278,7 @@ export default function AdminDashboard() {
             </TabsContent>
 
             <TabsContent value="route" className="space-y-4 py-2 max-h-[400px] overflow-y-auto pr-2">
-              <div className="grid gap-2">
-                <Label htmlFor="tour-route-detail">Detail Rute Maps</Label>
-                <Textarea 
-                  id="tour-route-detail" 
-                  placeholder="Detail rute jalan kaki..."
-                  className="min-h-[80px]"
-                  value={tourFormData.routeDetail}
-                  onChange={(e) => setTourFormData({...tourFormData, routeDetail: e.target.value})}
-                />
-              </div>
+              {/* Detail Rute Maps dihapus berdasarkan request */}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
@@ -1308,26 +1300,42 @@ export default function AdminDashboard() {
               <div className="space-y-3 pt-2 border-t border-zinc-100">
                 <p className="text-xs font-bold tracking-wider text-zinc-500">Titik Kunjungan / Points of Interest (POIs)</p>
                 <div className="grid gap-3 p-3 bg-zinc-50/50 rounded-xl border space-y-2">
-                  <div className="grid grid-cols-[30px_1fr] items-center gap-2">
-                    <span className="font-bold text-sm text-center">1</span>
-                    <Input placeholder="Lokasi 1 (misal: Vihara Soetji Nurani)" className="h-8 text-xs" value={tourFormData.poi1} onChange={(e) => setTourFormData({...tourFormData, poi1: e.target.value})} />
-                  </div>
-                  <div className="grid grid-cols-[30px_1fr] items-center gap-2">
-                    <span className="font-bold text-sm text-center">2</span>
-                    <Input placeholder="Lokasi 2 (misal: Toko Jamu Tua)" className="h-8 text-xs" value={tourFormData.poi2} onChange={(e) => setTourFormData({...tourFormData, poi2: e.target.value})} />
-                  </div>
-                  <div className="grid grid-cols-[30px_1fr] items-center gap-2">
-                    <span className="font-bold text-sm text-center">3</span>
-                    <Input placeholder="Lokasi 3 (misal: Pasar Sudimampir)" className="h-8 text-xs" value={tourFormData.poi3} onChange={(e) => setTourFormData({...tourFormData, poi3: e.target.value})} />
-                  </div>
-                  <div className="grid grid-cols-[30px_1fr] items-center gap-2">
-                    <span className="font-bold text-sm text-center">4</span>
-                    <Input placeholder="Lokasi 4" className="h-8 text-xs" value={tourFormData.poi4} onChange={(e) => setTourFormData({...tourFormData, poi4: e.target.value})} />
-                  </div>
-                  <div className="grid grid-cols-[30px_1fr] items-center gap-2">
-                    <span className="font-bold text-sm text-center">5</span>
-                    <Input placeholder="Lokasi 5" className="h-8 text-xs" value={tourFormData.poi5} onChange={(e) => setTourFormData({...tourFormData, poi5: e.target.value})} />
-                  </div>
+                  {tourFormData.pois.map((poi, idx) => (
+                    <div key={idx} className="grid grid-cols-[30px_1fr_auto] items-center gap-2">
+                      <span className="font-bold text-sm text-center">{idx + 1}</span>
+                      <Input 
+                        placeholder={`Lokasi ${idx + 1}`} 
+                        className="h-8 text-xs" 
+                        value={poi} 
+                        onChange={(e) => {
+                          const newPois = [...tourFormData.pois];
+                          newPois[idx] = e.target.value;
+                          setTourFormData({...tourFormData, pois: newPois});
+                        }} 
+                      />
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => {
+                          const newPois = tourFormData.pois.filter((_, i) => i !== idx);
+                          setTourFormData({...tourFormData, pois: newPois.length > 0 ? newPois : [""]});
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full text-xs border-dashed"
+                    onClick={() => setTourFormData({...tourFormData, pois: [...tourFormData.pois, ""]})}
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Tambah POI
+                  </Button>
                 </div>
               </div>
             </TabsContent>

@@ -39,6 +39,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const body = await request.json();
 
+    console.log('[PUT /api/tours] Full body received:', JSON.stringify(body, null, 2));
+    console.log('[PUT /api/tours] priceRegulerDesc:', body.priceRegulerDesc, '| priceHematDesc:', body.priceHematDesc);
+    console.log('[PUT /api/tours] price:', body.price, '| priceHemat:', body.priceHemat);
+
     let routeMapUrl = typeof body?.routeMapUrl === 'undefined' ? undefined : String(body.routeMapUrl || '');
     console.log('PUT received routeMapUrl:', routeMapUrl);
     if (routeMapUrl) {
@@ -48,9 +52,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const tour = await updateTour(id, {
       name: typeof body?.name === 'undefined' ? undefined : String(body.name),
-      price: typeof body?.price === 'undefined' ? undefined : Number(body.price),
+      price: typeof body?.price === 'undefined' ? undefined : Number(body.price || 0),
       priceHemat: typeof body?.priceHemat === 'undefined' ? undefined : (body.priceHemat != null ? Number(body.priceHemat) : null),
-      date: typeof body?.date === 'undefined' ? undefined : String(body.date || ''),
+      priceRegulerDesc: typeof body?.priceRegulerDesc === 'undefined' ? undefined : (body.priceRegulerDesc ? String(body.priceRegulerDesc) : null),
+      priceHematDesc: typeof body?.priceHematDesc === 'undefined' ? undefined : (body.priceHematDesc ? String(body.priceHematDesc) : null),
+      date: typeof body?.date === 'undefined' ? undefined : (body.date ? String(body.date) : ''),
       description: typeof body?.description === 'undefined' ? undefined : String(body.description || ''),
       distance: typeof body?.distance === 'undefined' ? undefined : String(body.distance || ''),
       duration: typeof body?.duration === 'undefined' ? undefined : String(body.duration || ''),

@@ -41,6 +41,8 @@ export async function POST(request: NextRequest) {
       name: String(body.name),
       price: Number(body.price || 0),
       priceHemat: body.priceHemat !== undefined ? Number(body.priceHemat) : null,
+      priceRegulerDesc: body.priceRegulerDesc ? String(body.priceRegulerDesc) : null,
+      priceHematDesc: body.priceHematDesc ? String(body.priceHematDesc) : null,
       date: body.date ? String(body.date) : '',
       description: body.description ? String(body.description) : '',
       distance: body.distance ? String(body.distance) : '3 KM',

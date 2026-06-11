@@ -583,6 +583,9 @@ app.post(
     const tour = await createTour({
       name: String(req.body.name),
       price: Number(req.body.price || 0),
+      priceHemat: req.body.priceHemat !== undefined ? Number(req.body.priceHemat) : null,
+      priceRegulerDesc: req.body.priceRegulerDesc ? String(req.body.priceRegulerDesc) : null,
+      priceHematDesc: req.body.priceHematDesc ? String(req.body.priceHematDesc) : null,
       date: req.body.date ? String(req.body.date) : "",
       description: req.body.description ? String(req.body.description) : "",
       distance: req.body.distance ? String(req.body.distance) : "3 KM",
@@ -660,6 +663,18 @@ app.put(
         typeof req.body?.price === "undefined"
           ? undefined
           : Number(req.body.price),
+      priceHemat:
+        typeof req.body?.priceHemat === "undefined"
+          ? undefined
+          : (req.body.priceHemat != null ? Number(req.body.priceHemat) : null),
+      priceRegulerDesc:
+        typeof req.body?.priceRegulerDesc === "undefined"
+          ? undefined
+          : (req.body.priceRegulerDesc ? String(req.body.priceRegulerDesc) : null),
+      priceHematDesc:
+        typeof req.body?.priceHematDesc === "undefined"
+          ? undefined
+          : (req.body.priceHematDesc ? String(req.body.priceHematDesc) : null),
       date:
         typeof req.body?.date === "undefined"
           ? undefined

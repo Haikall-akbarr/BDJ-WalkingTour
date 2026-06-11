@@ -399,6 +399,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                               <div className="flex flex-col">
                                 <Label htmlFor="pkg-reguler" className="cursor-pointer font-semibold">Reguler</Label>
                                 <span className="text-xs text-muted-foreground">Rp {selectedTour.price?.toLocaleString('id-ID')}</span>
+                                {selectedTour.priceRegulerDesc && (
+                                  <span className="text-[10px] text-zinc-500 mt-0.5">{selectedTour.priceRegulerDesc}</span>
+                                )}
                               </div>
                             </div>
                             <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
@@ -406,6 +409,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                               <div className="flex flex-col">
                                 <Label htmlFor="pkg-hemat" className="cursor-pointer font-semibold">Hemat</Label>
                                 <span className="text-xs text-muted-foreground">Rp {selectedTour.priceHemat?.toLocaleString('id-ID')}</span>
+                                {selectedTour.priceHematDesc && (
+                                  <span className="text-[10px] text-zinc-500 mt-0.5">{selectedTour.priceHematDesc}</span>
+                                )}
                               </div>
                             </div>
                           </RadioGroup>

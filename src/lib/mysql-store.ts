@@ -7,6 +7,8 @@ type DbTourRow = RowDataPacket & {
   name: string;
   price: number;
   price_hemat: number | null;
+  price_reguler_desc: string | null;
+  price_hemat_desc: string | null;
   date: string | null;
   description: string | null;
   distance: string | null;
@@ -68,6 +70,8 @@ function mapTour(row: DbTourRow) {
     name: row.name,
     price: Number(row.price || 0),
     priceHemat: row.price_hemat != null ? Number(row.price_hemat) : null,
+    priceRegulerDesc: row.price_reguler_desc || '',
+    priceHematDesc: row.price_hemat_desc || '',
     date: row.date || '',
     description: row.description || '',
     distance: row.distance || '3 KM',
@@ -164,6 +168,8 @@ export async function createTour(input: {
   name: string;
   price: number;
   priceHemat?: number | null;
+  priceRegulerDesc?: string | null;
+  priceHematDesc?: string | null;
   date?: string;
   description?: string;
   distance?: string;
@@ -179,13 +185,15 @@ export async function createTour(input: {
   const id = randomUUID();
 
   await pool.execute(
-    `INSERT INTO tours (id, name, price, price_hemat, date, description, distance, duration, description_full, history_culture, history_highlights, route_detail, route_map_url, poi_list, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+    `INSERT INTO tours (id, name, price, price_hemat, price_reguler_desc, price_hemat_desc, date, description, distance, duration, description_full, history_culture, history_highlights, route_detail, route_map_url, poi_list, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
     [
       id,
       input.name,
       Number(input.price || 0),
       input.priceHemat != null ? Number(input.priceHemat) : null,
+      input.priceRegulerDesc || null,
+      input.priceHematDesc || null,
       input.date || null,
       input.description || null,
       input.distance || '3 KM',
@@ -208,6 +216,8 @@ export async function updateTour(
     name: string;
     price: number;
     priceHemat: number | null;
+    priceRegulerDesc: string | null;
+    priceHematDesc: string | null;
     date: string;
     description: string;
     distance: string;
@@ -227,6 +237,8 @@ export async function updateTour(
   if (typeof input.name !== 'undefined') { fields.push('name = ?'); values.push(input.name); }
   if (typeof input.price !== 'undefined') { fields.push('price = ?'); values.push(Number(input.price || 0)); }
   if (typeof input.priceHemat !== 'undefined') { fields.push('price_hemat = ?'); values.push(input.priceHemat != null ? Number(input.priceHemat) : null); }
+  if (typeof input.priceRegulerDesc !== 'undefined') { fields.push('price_reguler_desc = ?'); values.push(input.priceRegulerDesc || null); }
+  if (typeof input.priceHematDesc !== 'undefined') { fields.push('price_hemat_desc = ?'); values.push(input.priceHematDesc || null); }
   if (typeof input.date !== 'undefined') { fields.push('date = ?'); values.push(input.date || null); }
   if (typeof input.description !== 'undefined') { fields.push('description = ?'); values.push(input.description || null); }
   if (typeof input.distance !== 'undefined') { fields.push('distance = ?'); values.push(input.distance || null); }

@@ -1,0 +1,2 @@
+ALTER TABLE tours ADD COLUMN price_reguler_desc TEXT DEFAULT NULL;
+ALTER TABLE tours ADD COLUMN price_hemat_desc TEXT DEFAULT NULL;

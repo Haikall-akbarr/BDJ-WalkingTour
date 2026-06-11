@@ -114,6 +114,15 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
     }
   }, [tour?.poiList])
 
+  const renderText = (text: string) => {
+    if (!text) return null;
+    return text.split(/\n\s*\n/).map((paragraph, idx) => (
+      <p key={idx} className="mb-4 last:mb-0 text-justify">
+        {paragraph.replace(/\n/g, ' ')}
+      </p>
+    ));
+  }
+
   // Select all photos (cover + documentation)
   const allPhotos = useMemo(() => {
     if (!tour) return []
@@ -223,8 +232,8 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
               <h2 className="text-lg md:text-xl font-black uppercase text-[#10221f] tracking-wide border-b pb-3 mb-4">
                 Deskripsi
               </h2>
-              <div className="text-zinc-700 text-sm md:text-base leading-relaxed space-y-4 whitespace-pre-line">
-                {tour.descriptionFull || tour.description || "Tidak ada detail deskripsi untuk paket tur ini."}
+              <div className="text-zinc-700 text-sm md:text-base leading-relaxed">
+                {renderText(tour.descriptionFull || tour.description || "Tidak ada detail deskripsi untuk paket tur ini.")}
               </div>
             </Card>
 
@@ -233,8 +242,8 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
               <h2 className="text-lg md:text-xl font-black uppercase text-[#10221f] tracking-wide border-b pb-3 mb-4">
                 Sejarah & Budaya
               </h2>
-              <div className="text-zinc-700 text-sm md:text-base leading-relaxed mb-6 whitespace-pre-line">
-                {tour.historyCulture || "Informasi latar belakang sejarah untuk kawasan rute ini belum ditambahkan."}
+              <div className="text-zinc-700 text-sm md:text-base leading-relaxed mb-6">
+                {renderText(tour.historyCulture || "Informasi latar belakang sejarah untuk kawasan rute ini belum ditambahkan.")}
               </div>
 
               {/* Highlights section inside History */}

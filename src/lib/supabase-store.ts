@@ -15,6 +15,8 @@ function mapTour(row: AnyRow) {
     name: row.name,
     price: Number(row.price || 0),
     priceHemat: row.price_hemat != null ? Number(row.price_hemat) : null,
+    priceRegulerDesc: row.price_reguler_desc || '',
+    priceHematDesc: row.price_hemat_desc || '',
     date: row.date || '',
     description: row.description || '',
     distance: row.distance || '3 KM',
@@ -199,6 +201,8 @@ export async function createTour(input: {
   name: string;
   price: number;
   priceHemat?: number | null;
+  priceRegulerDesc?: string | null;
+  priceHematDesc?: string | null;
   date?: string;
   description?: string;
   distance?: string;
@@ -216,6 +220,8 @@ export async function createTour(input: {
     name: input.name,
     price: Number(input.price || 0),
     price_hemat: input.priceHemat != null ? Number(input.priceHemat) : null,
+    price_reguler_desc: input.priceRegulerDesc || null,
+    price_hemat_desc: input.priceHematDesc || null,
     date: input.date || null,
     description: input.description || null,
     distance: input.distance || '3 KM',
@@ -245,6 +251,8 @@ export async function updateTour(
     name: string;
     price: number;
     priceHemat: number | null;
+    priceRegulerDesc: string | null;
+    priceHematDesc: string | null;
     date: string;
     description: string;
     distance: string;
@@ -263,6 +271,8 @@ export async function updateTour(
   if (typeof input.name !== 'undefined') patch.name = input.name;
   if (typeof input.price !== 'undefined') patch.price = Number(input.price || 0);
   if (typeof input.priceHemat !== 'undefined') patch.price_hemat = input.priceHemat != null ? Number(input.priceHemat) : null;
+  if (typeof input.priceRegulerDesc !== 'undefined') patch.price_reguler_desc = input.priceRegulerDesc || null;
+  if (typeof input.priceHematDesc !== 'undefined') patch.price_hemat_desc = input.priceHematDesc || null;
   if (typeof input.date !== 'undefined') patch.date = input.date || null;
   if (typeof input.description !== 'undefined') patch.description = input.description || null;
   if (typeof input.distance !== 'undefined') patch.distance = input.distance || null;
@@ -283,12 +293,27 @@ export async function updateTour(
   console.log('updateTour patch payload:', patch);
 
   const { data, error } = await admin.from('tours').update(patch).eq('id', id).select('*').maybeSingle();
-  if (error) throw error;
+
+  if (error) {
+    console.error('Error updating tour in Supabase:', error);
+    throw new Error(error.message);
+  }
+
   if (!data) return null;
 
-  // VERIFICATION: Check if price_hemat was silently ignored by Supabase (PostgREST schema cache issue)
+  console.log('[updateTour] Supabase returned data:', JSON.stringify({
+    price: data.price,
+    price_hemat: data.price_hemat,
+    price_reguler_desc: data.price_reguler_desc,
+    price_hemat_desc: data.price_hemat_desc,
+  }));
+
+  // VERIFICATION: Check if price_hemat or descriptions were silently ignored by Supabase (PostgREST schema cache issue)
   if ('price_hemat' in patch && data.price_hemat === undefined) {
     throw new Error("Gagal menyimpan Harga Hemat. Kolom price_hemat tidak terdeteksi. Silakan jalankan: NOTIFY pgrst, 'reload schema'; di Supabase SQL Editor.");
+  }
+  if ('price_reguler_desc' in patch && data.price_reguler_desc === undefined) {
+    throw new Error("Gagal menyimpan Deskripsi. Kolom price_reguler_desc tidak terdeteksi. Silakan jalankan: NOTIFY pgrst, 'reload schema'; di Supabase SQL Editor.");
   }
 
   return mapTour(data);
