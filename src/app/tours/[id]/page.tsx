@@ -176,50 +176,48 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
     <div className="min-h-screen bg-[#f7f4ee] text-zinc-950">
       <FloatingNavbar />
       {/* Dynamic Cover Header Banner */}
-      <header className="relative w-full h-[40vh] md:h-[50vh] overflow-hidden bg-zinc-900 pt-32 group">
+      <header className="relative w-full h-[45vh] md:h-[55vh] overflow-hidden bg-zinc-900 group">
             <div className="absolute inset-0 cursor-pointer" onClick={() => setSelectedDocIdx(0)}>
               {isSupabaseStorageUrl(tour.imageUrl) ? (
                 <img
                   src={tour.imageUrl}
                   alt={tour.name}
-                  className="absolute inset-0 h-full w-full object-cover opacity-75 transition-transform duration-700 group-hover:scale-105"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
               ) : (
                 <Image
                   src={tour.imageUrl || PlaceHolderImages[0].imageUrl}
                   alt={tour.name}
                   fill
-                  className="object-cover opacity-75 animate-fade-in transition-transform duration-700 group-hover:scale-105"
+                  className="object-cover animate-fade-in transition-transform duration-700 group-hover:scale-105"
                   priority
                 />
               )}
               {/* Overlay hover effect to indicate clickability */}
-              <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/20" />
+              <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/10" />
               <div className="absolute right-6 top-24 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white opacity-0 backdrop-blur-md transition-opacity duration-300 group-hover:opacity-100">
                 <Maximize2 className="h-5 w-5" />
               </div>
             </div>
+      </header>
 
-        {/* Removed gradient overlay per user request */}
-
-        {/* Banner Details Text (Bottom Left Align) */}
-        <div className="absolute bottom-6 left-4 right-4 md:left-8 md:right-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4 z-15 pointer-events-none">
-          <div className="space-y-3 bg-[#f7f4ee]/95 backdrop-blur-md p-5 md:p-6 rounded-3xl shadow-2xl border border-white/20 w-fit pointer-events-auto">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tight text-[#10221f] leading-none drop-shadow-sm">
-              {tour.name}
-            </h1>
-            <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm font-bold text-[#10221f]">
-              <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-[#10221f]" /> Banjarmasin, Kalimantan Selatan</span>
-              <Badge className="rounded-full bg-[#10221f] text-[#98DDCA] hover:bg-[#10221f] px-3.5 py-1.5 font-bold inline-flex items-center gap-1.5 text-xs shadow-sm border border-[#10221f]">
-                <Map className="h-3.5 w-3.5 text-[#98DDCA]" /> {tour.distance || "3 KM"}
-              </Badge>
-              <Badge className="rounded-full bg-[#10221f] text-[#98DDCA] hover:bg-[#10221f] px-3.5 py-1.5 font-bold inline-flex items-center gap-1.5 text-xs shadow-sm border border-[#10221f]">
-                <Clock className="h-3.5 w-3.5 text-[#98DDCA]" /> {tour.duration || "2 Jam"}
-              </Badge>
-            </div>
+      {/* Tour Name & Info - Below the full photo */}
+      <div className="mx-auto w-full max-w-7xl px-4 md:px-8 -mt-12 relative z-10">
+        <div className="bg-[#f7f4ee] backdrop-blur-md p-5 md:p-7 rounded-3xl shadow-xl border border-white/20 w-fit">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black uppercase tracking-tight text-[#10221f] leading-none">
+            {tour.name}
+          </h1>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs md:text-sm font-bold text-[#10221f]">
+            <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-[#10221f]" /> Banjarmasin, Kalimantan Selatan</span>
+            <Badge className="rounded-full bg-[#10221f] text-[#98DDCA] hover:bg-[#10221f] px-3.5 py-1.5 font-bold inline-flex items-center gap-1.5 text-xs shadow-sm border border-[#10221f]">
+              <Map className="h-3.5 w-3.5 text-[#98DDCA]" /> {tour.distance || "3 KM"}
+            </Badge>
+            <Badge className="rounded-full bg-[#10221f] text-[#98DDCA] hover:bg-[#10221f] px-3.5 py-1.5 font-bold inline-flex items-center gap-1.5 text-xs shadow-sm border border-[#10221f]">
+              <Clock className="h-3.5 w-3.5 text-[#98DDCA]" /> {tour.duration || "2 Jam"}
+            </Badge>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Grid Content */}
       <main className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 space-y-8">

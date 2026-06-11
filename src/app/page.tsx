@@ -284,21 +284,7 @@ export default function LandingPage() {
                   ))}
                 </div>
 
-                <div className="mt-5">
-                  {!authLoading && !user && null}
-                  {!authLoading && user && (
-                    <div className="flex flex-wrap gap-2">
-                      <Link href="/dashboard/user">
-                        <Button className="rounded-full bg-white text-zinc-900 hover:bg-white/90">
-                          Profil Saya <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </Link>
-                      <Button variant="outline" className="rounded-full border-zinc-300 text-zinc-900 hover:bg-zinc-100 hover:text-zinc-900" onClick={handleLogout}>
-                        Keluar
-                      </Button>
-                    </div>
-                  )}
-                </div>
+
               </CardContent>
             </Card>
 

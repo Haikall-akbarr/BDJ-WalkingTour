@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowRight, CalendarDays, Clock3, Loader2, MapPin, Sparkles, Users } from "lucide-react"
+import { ArrowRight, CalendarDays, Clock3, Loader2, MapPin, Sparkles, Users, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -23,13 +23,20 @@ type TourItem = {
   imageUrl?: string
   descriptionFull?: string
   priceHemat?: number
+  images?: { id: string; url: string; filename: string; isCover: boolean }[]
 }
 
+const FALLBACK_SLIDER_IMAGES = [
+  "https://images.unsplash.com/photo-1537482165635-f6fb126fbc01?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1920",
+  "https://si-praswita.banjarkab.go.id/assets/img/destinasi/Pasar_Terapung_Lokbaintan-gbr0.jpg",
+  "https://picsum.photos/seed/pacinan/1920/800",
+]
 
 export default function ToursPage() {
   const [apiTours, setApiTours] = useState<TourItem[]>([])
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
+  const [currentSlide, setCurrentSlide] = useState(0)
   const itemsPerPage = 9
 
   const isSupabaseStorageUrl = (value?: string) =>
@@ -70,6 +77,46 @@ export default function ToursPage() {
     }
   }, [])
 
+  // Collect all unique tour images for the slideshow
+  const sliderImages = useMemo(() => {
+    const images: string[] = []
+    for (const tour of apiTours) {
+      if (tour.images && tour.images.length > 0) {
+        for (const img of tour.images) {
+          if (img.url && !images.includes(img.url)) {
+            images.push(img.url)
+          }
+        }
+      } else if (tour.imageUrl && isSupabaseStorageUrl(tour.imageUrl)) {
+        if (!images.includes(tour.imageUrl)) {
+          images.push(tour.imageUrl)
+        }
+      }
+    }
+    return images.length > 0 ? images : FALLBACK_SLIDER_IMAGES
+  }, [apiTours])
+
+  // Auto-slide every 5 seconds
+  useEffect(() => {
+    if (sliderImages.length <= 1) return
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % sliderImages.length)
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [sliderImages.length])
+
+  const goToSlide = useCallback((index: number) => {
+    setCurrentSlide(index)
+  }, [])
+
+  const goToPrev = useCallback(() => {
+    setCurrentSlide((prev) => (prev - 1 + sliderImages.length) % sliderImages.length)
+  }, [sliderImages.length])
+
+  const goToNext = useCallback(() => {
+    setCurrentSlide((prev) => (prev + 1) % sliderImages.length)
+  }, [sliderImages.length])
+
   const tours = useMemo(() => {
     return apiTours
   }, [apiTours])
@@ -84,48 +131,102 @@ export default function ToursPage() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(152,221,202,0.18),_transparent_36%),linear-gradient(180deg,_#f7f4ee_0%,_#ecece7_100%)] text-zinc-900">
       <FloatingNavbar />
-      <section className="mx-auto w-full px-4 py-8 pt-32 md:px-8 md:py-12 md:pt-36">
-        <div className="w-full overflow-hidden rounded-[34px] bg-[#10221f] text-white shadow-[0_24px_80px_rgba(16,34,31,0.16)]">
-          <div className="grid gap-6 p-6 md:p-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-            <div className="space-y-4">
-              <Badge className="w-fit rounded-full bg-white/10 text-white hover:bg-white/10">
-                <Sparkles className="mr-2 h-3.5 w-3.5" /> Katalog Tur
-              </Badge>
-              <h1 className="max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
-                Semua Tur BDJ WalkingTour dalam satu halaman
-              </h1>
-              <p className="max-w-2xl text-sm leading-7 text-white/75 md:text-base">
-                Pilih rute favorit, baca deskripsi singkat, dan lanjutkan ke pemesanan tanpa perlu kembali ke beranda.
-              </p>
-              <div className="flex flex-wrap gap-3 pt-2">
-                <Link href="/book/new">
-                  <Button className="rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc]">
-                    Pesan Tur <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/">
-                  <Button variant="outline" className="rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white">
-                    Kembali ke Beranda
-                  </Button>
-                </Link>
-              </div>
-            </div>
 
-            <div className="flex items-center justify-center">
-              <div className="relative h-48 w-72 sm:h-56 sm:w-80">
-                <Image
-                  src="/bekantan_3.png"
-                  alt="Mascot 3 Bekantan"
-                  fill
-                  className="object-contain drop-shadow-2xl"
-                  priority
-                />
-              </div>
-            </div>
+      {/* Full-width Image Slideshow Hero */}
+      <section className="relative w-full h-[50vh] sm:h-[60vh] md:h-[70vh] overflow-hidden">
+        {/* Slide images with crossfade */}
+        {sliderImages.map((imgUrl, index) => (
+          <div
+            key={index}
+            className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
+            style={{ opacity: index === currentSlide ? 1 : 0 }}
+          >
+            <img
+              src={imgUrl}
+              alt={`Slide ${index + 1}`}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </div>
+        ))}
+
+        {/* Subtle gradient overlay at bottom for readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
+
+        {/* Navigation Arrows */}
+        {sliderImages.length > 1 && (
+          <>
+            <button
+              onClick={goToPrev}
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/20 text-white/80 backdrop-blur-sm transition-all hover:bg-black/40 hover:text-white md:left-6 md:h-12 md:w-12"
+              aria-label="Previous slide"
+            >
+              <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
+            </button>
+            <button
+              onClick={goToNext}
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/20 text-white/80 backdrop-blur-sm transition-all hover:bg-black/40 hover:text-white md:right-6 md:h-12 md:w-12"
+              aria-label="Next slide"
+            >
+              <ChevronRight className="h-5 w-5 md:h-6 md:w-6" />
+            </button>
+          </>
+        )}
+
+        {/* Dot Indicators */}
+        {sliderImages.length > 1 && (
+          <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2 md:bottom-6 md:right-6">
+            {sliderImages.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToSlide(index)}
+                className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${
+                  index === currentSlide
+                    ? "bg-white scale-110 shadow-md"
+                    : "bg-white/40 hover:bg-white/60"
+                }`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Tour catalog section */}
+      <section className="mx-auto w-full px-4 py-8 md:px-8 md:py-12">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <Badge className="mb-3 w-fit rounded-full bg-[#10221f]/10 text-[#10221f] hover:bg-[#10221f]/10">
+              <Sparkles className="mr-2 h-3.5 w-3.5" /> Katalog Tur
+            </Badge>
+            <h1 className="text-3xl font-bold leading-tight md:text-5xl">
+              Semua Paket Tur
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-zinc-600 md:text-base">
+              Pilih rute favorit, baca deskripsi singkat, dan lanjutkan ke pemesanan.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/book/new">
+              <Button className="rounded-full bg-[#10221f] text-white hover:bg-[#0b1715]">
+                Pesan Tur <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="/">
+              <Button variant="outline" className="rounded-full border-zinc-300">
+                Kembali ke Beranda
+              </Button>
+            </Link>
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full">
+        {loading && (
+          <div className="flex items-center justify-center py-12 gap-2 text-zinc-500">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Memuat daftar tur...</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full">
           {paginatedTours.map((tour, index) => {
             const fallbackImage = PlaceHolderImages[index % PlaceHolderImages.length]
 
@@ -177,12 +278,6 @@ export default function ToursPage() {
                       </Button>
                     </Link>
                   </div>
-
-                  {loading && index === 0 && (
-                    <div className="flex items-center gap-2 text-sm text-zinc-500">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Memuat daftar terbaru dari database...
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             )
@@ -241,4 +336,3 @@ export default function ToursPage() {
     </div>
   )
 }
-
