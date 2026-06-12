@@ -93,7 +93,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("bookings");
   const [users, setUsers] = useState<any[]>([]);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
-  const [userForm, setUserForm] = useState({ name: '', email: '', role: 'user' });
+  const [userForm, setUserForm] = useState({ name: '', email: '', role: 'user', password: '' });
   const [createdCreds, setCreatedCreds] = useState<{id:string,email:string,password:string}|null>(null);
   const [resetPasswordTarget, setResetPasswordTarget] = useState<any | null>(null);
   const [resetPasswordForm, setResetPasswordForm] = useState({ password: '', confirmPassword: '' });
@@ -653,7 +653,6 @@ export default function AdminDashboard() {
                       <th className="p-3 md:p-4 text-center font-medium">Pax</th>
                       <th className="p-3 md:p-4 text-left font-medium">Tanggal</th>
                       <th className="p-3 md:p-4 text-left font-medium">Status</th>
-                      <th className="p-3 md:p-4 text-right font-medium">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -680,24 +679,6 @@ export default function AdminDashboard() {
                             <Badge variant="outline" className={`text-[10px] md:text-xs whitespace-nowrap ${getBookingStatusBadge(booking).className}`}>
                               {getBookingStatusBadge(booking).label}
                             </Badge>
-                          </td>
-                          <td className="p-3 md:p-4 text-right space-x-1 whitespace-nowrap">
-                            <Button 
-                              size="icon" 
-                              variant="ghost" 
-                              className="h-7 w-7 md:h-8 md:w-8 text-green-600 hover:bg-green-50"
-                              onClick={() => handleUpdateBookingStatus(booking.id, "approved")}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="icon" 
-                              variant="ghost" 
-                              className="h-7 w-7 md:h-8 md:w-8 text-red-600 hover:bg-red-50"
-                              onClick={() => handleUpdateBookingStatus(booking.id, "rejected")}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
                           </td>
                         </tr>
                       ))
@@ -806,50 +787,72 @@ export default function AdminDashboard() {
                 <CardDescription className="text-xs md:text-sm">Atur peran dan kelola akses staf.</CardDescription>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" className="gap-2" onClick={() => setIsUserDialogOpen(true)}><Plus className="h-4 w-4" /> Tambah Pengguna</Button>
-                <Button size="sm" variant="outline" className="w-full sm:w-auto gap-2"><Settings className="h-4 w-4" /> Peran</Button>
+                <Button size="sm" variant="outline" className="gap-2 w-full sm:w-auto" onClick={() => { setUserForm({ name: '', email: '', role: 'user', password: '' }); setIsUserDialogOpen(true); }}><Plus className="h-4 w-4" /> Tambah Pengguna</Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-2 px-3 md:px-6">
-              {users && users.length > 0 ? users.map((u) => (
-                <div key={u.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-colors gap-3 sm:gap-2">
-                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                    <Button size="sm" variant="outline" className="gap-2 rounded-full w-full sm:w-auto order-last sm:order-first mt-2 sm:mt-0" onClick={() => {
-                      setResetPasswordTarget(u)
-                      setResetPasswordForm({ password: '', confirmPassword: '' })
-                    }}>
-                      <RefreshCcw className="h-4 w-4" /> <span className="sm:hidden">Reset</span><span className="hidden sm:inline">Reset Password</span>
-                    </Button>
-                    <div className="h-8 w-8 md:h-10 md:w-10 bg-zinc-100 rounded-full flex items-center justify-center shrink-0">
-                      <span className="text-sm font-bold">{(u.name || u.email || '').slice(0,1).toUpperCase()}</span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-bold text-sm truncate">{u.name}</p>
-                        <Badge 
-                          className={`text-[10px] py-0.5 px-2 font-semibold shrink-0 rounded-full border-none text-white ${
-                            u.role === 'admin' ? 'bg-emerald-500 hover:bg-emerald-500' :
-                            u.role === 'guide' ? 'bg-green-500 hover:bg-green-500' :
-                            u.role === 'owner' ? 'bg-blue-500 hover:bg-blue-500' :
-                            'bg-orange-500 hover:bg-orange-500'
-                          }`}
-                        >
-                          {u.role}
-                        </Badge>
+              {users && users.length > 0 ? (
+                ['admin', 'owner', 'guide', 'user'].map((roleKey) => {
+                  const filtered = users.filter(u => (u.role || '').toLowerCase() === roleKey);
+                  if (filtered.length === 0) return null;
+
+                  const roleLabels: Record<string, string> = {
+                    admin: 'Administrator (Admin)',
+                    owner: 'Owner / Pemilik',
+                    guide: 'Pemandu / Guide',
+                    user: 'Pengguna / User'
+                  };
+
+                  return (
+                    <div key={roleKey} className="space-y-3 pt-4 border-t border-zinc-100 first:border-none">
+                      <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest px-1">
+                        {roleLabels[roleKey]} ({filtered.length})
+                      </h3>
+                      <div className="space-y-2">
+                        {filtered.map((u) => (
+                          <div key={u.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-colors gap-3 sm:gap-2">
+                            <div className="flex items-center gap-3 w-full sm:w-auto">
+                              <div className="h-8 w-8 md:h-10 md:w-10 bg-zinc-100 rounded-full flex items-center justify-center shrink-0">
+                                <span className="text-sm font-bold">{(u.name || u.email || '').slice(0,1).toUpperCase()}</span>
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-bold text-sm truncate">{u.name}</p>
+                                  <Badge 
+                                    className={`text-[10px] py-0.5 px-2 font-semibold shrink-0 rounded-full border-none text-white ${
+                                      u.role === 'admin' ? 'bg-emerald-500 hover:bg-emerald-500' :
+                                      u.role === 'guide' ? 'bg-green-500 hover:bg-green-500' :
+                                      u.role === 'owner' ? 'bg-blue-500 hover:bg-blue-500' :
+                                      'bg-orange-500 hover:bg-orange-500'
+                                    }`}
+                                  >
+                                    {u.role}
+                                  </Badge>
+                                </div>
+                                <p className="text-[10px] md:text-xs text-muted-foreground truncate">{u.email}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                              <Button size="sm" variant="outline" className="gap-2 rounded-full text-xs h-8" onClick={() => {
+                                setResetPasswordTarget(u)
+                                setResetPasswordForm({ password: '', confirmPassword: '' })
+                              }}>
+                                <RefreshCcw className="h-3.5 w-3.5" /> <span>Reset Password</span>
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 hover:text-red-600 hover:bg-red-50" onClick={async () => {
+                                if (!confirm('Hapus pengguna ini?')) return;
+                                if (!confirm('Apakah Anda yakin ingin menghapus pengguna ini secara permanen?')) return;
+                                await fetch(`/api/admin/users/${u.id}`, { method: 'DELETE' })
+                                fetchUsers()
+                              }}> <Trash2 className="h-4 w-4" /> </Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <p className="text-[10px] md:text-xs text-muted-foreground truncate">{u.email}</p>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 self-end sm:self-auto -mt-10 sm:mt-0">
-                    <Button size="icon" variant="ghost" onClick={async () => {
-                      // delete
-                      if (!confirm('Hapus pengguna ini?')) return;
-                      await fetch(`/api/admin/users/${u.id}`, { method: 'DELETE' })
-                      fetchUsers()
-                    }}> <Trash2 className="h-4 w-4" /> </Button>
-                  </div>
-                </div>
-              )) : (
+                  );
+                })
+              ) : (
                 <div className="p-6 text-sm text-muted-foreground">Belum ada pengguna terdaftar.</div>
               )}
             </CardContent>
@@ -970,6 +973,10 @@ export default function AdminDashboard() {
               <div className="grid gap-2">
                 <Label>Email</Label>
                 <Input value={userForm.email} onChange={(e)=>setUserForm({...userForm,email:e.target.value})} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Password</Label>
+                <Input type="password" value={userForm.password} onChange={(e)=>setUserForm({...userForm,password:e.target.value})} placeholder="Masukkan password (opsional, kosongkan untuk acak)" />
               </div>
               <div className="grid gap-2">
                 <Label>Role</Label>

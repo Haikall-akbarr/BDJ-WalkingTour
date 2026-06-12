@@ -26,6 +26,7 @@ type PaymentStatusResponse = {
     userName?: string | null;
     userEmail?: string | null;
     grossAmount?: number | null;
+    createdAt?: string | null;
   };
 };
 
@@ -36,6 +37,7 @@ export default function PaymentSuccessPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [payload, setPayload] = useState<PaymentStatusResponse | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   const booking = payload?.booking;
   const isPaid = booking?.paymentStatus === 'paid' || booking?.status === 'paid';
@@ -91,6 +93,25 @@ export default function PaymentSuccessPage() {
     return () => window.clearInterval(timer);
   }, [bookingId, isPaid, hasBarcode]);
 
+  useEffect(() => {
+    if (!booking || isPaid) {
+      setTimeLeft(null);
+      return;
+    }
+
+    const createdTime = booking.createdAt ? new Date(booking.createdAt).getTime() : Date.now();
+    const expiryTime = createdTime + 10 * 60 * 1000;
+
+    const updateTimer = () => {
+      const remaining = Math.max(0, Math.floor((expiryTime - Date.now()) / 1000));
+      setTimeLeft(remaining);
+    };
+
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, [booking, isPaid]);
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(152,221,202,0.18),_transparent_36%),linear-gradient(180deg,_#f7f4ee_0%,_#ecece7_100%)] px-4 py-10 md:px-8">
       <div className="mx-auto max-w-2xl">
@@ -116,6 +137,20 @@ export default function PaymentSuccessPage() {
                 Status: <span className={isPaid ? 'font-semibold text-emerald-700' : 'font-semibold text-amber-700'}>{booking?.paymentStatus || 'pending_payment'}</span>
               </p>
             </div>
+
+            {!isPaid && timeLeft !== null && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 text-center">
+                <p className="text-xs font-semibold uppercase tracking-wider text-amber-800">Sisa Waktu Pembayaran</p>
+                <p className="mt-1 font-mono text-2xl font-black text-amber-900">
+                  {timeLeft > 0 ? (
+                    `${Math.floor(timeLeft / 60).toString().padStart(2, '0')}:${(timeLeft % 60).toString().padStart(2, '0')}`
+                  ) : (
+                    "Waktu Pembayaran Habis"
+                  )}
+                </p>
+                <p className="mt-1 text-[11px] text-amber-700">Pemesanan otomatis ditolak setelah 10 menit jika belum dibayar.</p>
+              </div>
+            )}
 
             {loading ? (
               <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-sm text-zinc-600">

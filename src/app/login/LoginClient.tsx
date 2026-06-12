@@ -196,6 +196,7 @@ export default function LoginPage() {
   }
 
   const handleFirebaseGoogleSignIn = async () => {
+    if (loading) return // Prevent multiple simultaneous sign-in attempts
     setLoading(true)
     try {
       console.log('[LoginClient] handleFirebaseGoogleSignIn clicked')
@@ -204,17 +205,18 @@ export default function LoginPage() {
 
       console.log('[LoginClient] Calling signInWithFirebaseGoogle (popup)...')
       const data = await helper.signInWithFirebaseGoogle()
-      if (!data?.firebaseIdToken) {
-        console.log('[LoginClient] Firebase sign-in handed off to redirect flow.')
+      
+      // null = popup was cancelled/closed by user or handed off to redirect
+      if (!data) {
+        console.log('[LoginClient] Firebase sign-in was cancelled or handed off to redirect flow.')
         return
       }
-      console.log('[LoginClient] signInWithFirebaseGoogle returned:', { hasToken: !!data?.firebaseIdToken })
-
-      if (!data?.firebaseIdToken) {
+      
+      if (!data.firebaseIdToken) {
         throw new Error('Tidak menerima token dari Firebase.')
       }
-
-      console.log('[LoginClient] Posting token to /api/auth/firebase...')
+      
+      console.log('[LoginClient] signInWithFirebaseGoogle returned token, posting to API...')
       const response = await fetch("/api/auth/firebase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -228,16 +230,23 @@ export default function LoginPage() {
 
       routeAfterLogin(result?.user?.role || 'user')
     } catch (err: any) {
-      console.error('[LoginClient] handleFirebaseGoogleSignIn error:', err?.message)
-      const errorMessage = String(err?.message || err || "")
+      // Silently ignore cancelled/closed popup errors
+      const errCode = String(err?.code || "")
+      const errMsg = String(err?.message || err || "")
+      if (errCode.includes('cancelled-popup') || errCode.includes('popup-closed') || errMsg.includes('cancelled-popup') || errMsg.includes('popup-closed')) {
+        console.log('[LoginClient] Popup was cancelled or closed by user, ignoring.')
+        return
+      }
+      
+      console.error('[LoginClient] handleFirebaseGoogleSignIn error:', errMsg)
       toast({
         variant: "destructive",
         title: "Firebase login gagal",
-        description: errorMessage.includes("Konfigurasi Firebase belum lengkap")
-          ? errorMessage
-          : errorMessage.includes("auth/network-request-failed")
+        description: errMsg.includes("Konfigurasi Firebase belum lengkap")
+          ? errMsg
+          : errMsg.includes("auth/network-request-failed")
             ? "Firebase tidak bisa terhubung ke jaringan atau konfigurasi authDomain/projectId belum benar. Periksa environment Firebase Anda."
-            : errorMessage || "Login Google gagal.",
+            : errMsg || "Login Google gagal.",
       })
     } finally {
       setLoading(false)

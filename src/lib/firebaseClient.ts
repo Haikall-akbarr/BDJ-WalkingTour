@@ -53,8 +53,12 @@ export async function signInWithFirebaseGoogle() {
     console.log('[firebaseClient] Popup sign-in success, got ID token length:', firebaseIdToken.length)
     return { result, firebaseIdToken }
   } catch (err: any) {
+    if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+      console.log('[firebaseClient] Popup sign-in closed or cancelled by user.')
+      return null
+    }
     console.error('[firebaseClient] signInWithPopup error:', err?.code, err?.message)
-    if (err?.code === 'auth/popup-blocked' || err?.code === 'auth/popup-closed-by-user') {
+    if (err?.code === 'auth/popup-blocked') {
       console.log('[firebaseClient] Falling back to redirect sign-in...')
       await signInWithRedirect(auth, provider)
       return null

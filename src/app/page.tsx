@@ -205,49 +205,33 @@ export default function LandingPage() {
               <CardContent className="p-4 md:p-6">
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <p className="text-sm font-semibold tracking-[0.2em] text-zinc-500">Rute Populer</p>
-                    <h3 className="text-2xl font-bold md:text-5xl">Jelajah Kota dari Sudut Terbaik</h3>
+                    <p className="text-sm font-semibold tracking-[0.2em] text-zinc-500">Dokumentasi Tur</p>
+                    <h3 className="text-2xl font-bold md:text-5xl">Koleksi Perjalanan Kami</h3>
                   </div>
                   <Link href="/tours">
                     <Button variant="outline" className="rounded-full text-xs hover:bg-[#10221f] hover:text-white transition-colors">
-                      Explore Routes
+                      Lihat Semua
                     </Button>
                   </Link>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {allTours.slice(0, 3).map((tour: any, idx: number) => {
-                    const tourImg = PlaceHolderImages[idx % PlaceHolderImages.length]
-                    return (
-                      <Link key={tour.id} href={`/tours/${tour.id}`} className="group">
-                        <div className="relative h-56 overflow-hidden rounded-2xl">
-                          {isSupabaseStorageUrl(tour.imageUrl) ? (
-                            <img
-                              src={tour.imageUrl}
-                              alt={tour.name}
-                              className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                            />
-                          ) : (
-                            <Image
-                              src={tour.imageUrl || tourImg.imageUrl}
-                              alt={tour.name}
-                              fill
-                              className="object-cover transition duration-500 group-hover:scale-105"
-                              data-ai-hint={tour.imageHint || tourImg.imageHint}
-                            />
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
-                          <div className="absolute bottom-3 left-3 right-3 text-white">
-                            <p className="truncate text-sm font-bold md:text-base">{tour.name}</p>
-                            <p className="text-xs text-white/80 md:text-sm">Rp {Number(tour.priceHemat != null && tour.priceHemat < (tour.price || 0) ? tour.priceHemat : (tour.price || 0)).toLocaleString("id-ID")}</p>
-                            <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-white/75 md:text-xs">
-                              {tour.description || "Tur pilihan dengan pengalaman lokal yang terkurasi."}
-                            </p>
-                          </div>
-                        </div>
-                      </Link>
-                    )
-                  })}
+                  {(() => {
+                    const documentationPhotos = allTours.map((t: any) => t.imageUrl).filter(Boolean).slice(0, 3)
+                    while (documentationPhotos.length < 3) {
+                      documentationPhotos.push(PlaceHolderImages[documentationPhotos.length % PlaceHolderImages.length]?.imageUrl || "")
+                    }
+                    return documentationPhotos.map((imgUrl, idx) => (
+                      <div key={idx} className="relative h-56 overflow-hidden rounded-2xl group border border-black/5 shadow-sm">
+                        <img
+                          src={imgUrl}
+                          alt={`Dokumentasi ${idx + 1}`}
+                          className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition duration-300" />
+                      </div>
+                    ))
+                  })()}
                 </div>
               </CardContent>
             </Card>
@@ -264,27 +248,27 @@ export default function LandingPage() {
 
                 <div className="grid gap-3">
                   {allTours.slice(0, 3).map((tour: any) => (
-                    <div key={tour.id} className="rounded-2xl border border-zinc-700 bg-zinc-800/50 p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-bold md:text-base">{tour.name}</p>
-                        <Badge variant="outline" className="border-zinc-500 text-zinc-200">
-                          Rp {tour.price?.toLocaleString("id-ID")}
-                        </Badge>
+                    <Link key={tour.id} href={`/tours/${tour.id}`} className="block group transition-all duration-300">
+                      <div className="rounded-2xl border border-zinc-700 bg-zinc-800/50 p-4 transition duration-300 group-hover:border-zinc-500 group-hover:bg-zinc-800">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-bold md:text-base group-hover:text-[#98DDCA] transition-colors">{tour.name}</p>
+                          <Badge variant="outline" className="border-zinc-500 text-zinc-200">
+                            Rp {tour.price?.toLocaleString("id-ID")}
+                          </Badge>
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-zinc-300 md:grid-cols-4">
+                          <span className="inline-flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {tour.date || "Jadwal Fleksibel"}</span>
+                          <span className="inline-flex items-center gap-1"><Map className="h-3.5 w-3.5" /> {tour.distance}</span>
+                          <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {tour.duration}</span>
+                          <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> Grup Kecil</span>
+                        </div>
+                        <p className="mt-3 text-sm leading-6 text-zinc-300">
+                          {tour.description || "Deskripsi singkat tur ini akan membantu peserta memilih rute yang paling sesuai."}
+                        </p>
                       </div>
-                      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-zinc-300 md:grid-cols-4">
-                        <span className="inline-flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {tour.date || "Jadwal Fleksibel"}</span>
-                        <span className="inline-flex items-center gap-1"><Map className="h-3.5 w-3.5" /> {tour.distance}</span>
-                        <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {tour.duration}</span>
-                        <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> Grup Kecil</span>
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-zinc-300">
-                        {tour.description || "Deskripsi singkat tur ini akan membantu peserta memilih rute yang paling sesuai."}
-                      </p>
-                    </div>
+                    </Link>
                   ))}
                 </div>
-
-
               </CardContent>
             </Card>
 

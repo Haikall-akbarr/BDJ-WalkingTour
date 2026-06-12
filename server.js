@@ -197,6 +197,7 @@ function buildDailySeries(rows, valueKey) {
 function buildMonthlyRevenueSeries(bookings) {
   const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
   const counts = {};
+  const monthBookings = {};
 
   for (const booking of bookings) {
     const time = getTimestamp(booking);
@@ -204,6 +205,19 @@ function buildMonthlyRevenueSeries(bookings) {
     const date = new Date(time);
     const monthName = months[date.getMonth()];
     counts[monthName] = (counts[monthName] || 0) + (Number(booking.grossAmount) || 0);
+
+    if (!monthBookings[monthName]) {
+      monthBookings[monthName] = [];
+    }
+    monthBookings[monthName].push({
+      id: booking.id,
+      tourName: booking.tourName,
+      userName: booking.userName,
+      userEmail: booking.userEmail,
+      pax: booking.pax,
+      grossAmount: Number(booking.grossAmount || 0),
+      paidAt: booking.paidAt || booking.createdAt,
+    });
   }
 
   const result = [];
@@ -211,7 +225,11 @@ function buildMonthlyRevenueSeries(bookings) {
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const mName = months[d.getMonth()];
-    result.push({ name: mName, value: counts[mName] || 0 });
+    result.push({ 
+      name: mName, 
+      value: counts[mName] || 0,
+      bookings: monthBookings[mName] || []
+    });
   }
 
   return result;

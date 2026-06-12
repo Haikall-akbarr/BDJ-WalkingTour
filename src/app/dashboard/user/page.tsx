@@ -1,18 +1,40 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Compass, MapPin, Ticket, Mail, UserRound } from "lucide-react"
+import { Compass, MapPin, Ticket, Mail, UserRound, Loader2, Home } from "lucide-react"
 import { useSessionUser } from "@/hooks/use-session-user"
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog"
 import { NotificationBell } from "@/components/NotificationBell"
 
 export default function UserDashboardPage() {
   const { user, loading } = useSessionUser()
+  const [bookings, setBookings] = useState<any[]>([])
+  const [bookingsLoading, setBookingsLoading] = useState(true)
 
   const userInitial = (user?.name || user?.email || "U").trim().charAt(0).toUpperCase()
+
+  useEffect(() => {
+    if (!user?.email) return
+    const loadBookings = async () => {
+      try {
+        const res = await fetch("/api/bookings")
+        const data = await res.json()
+        if (res.ok && Array.isArray(data.bookings)) {
+          const filtered = data.bookings.filter((b: any) => b.userEmail?.toLowerCase() === user.email.toLowerCase())
+          setBookings(filtered)
+        }
+      } catch (err) {
+        console.error("Failed to load user bookings:", err)
+      } finally {
+        setBookingsLoading(false)
+      }
+    }
+    loadBookings()
+  }, [user?.email])
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(152,221,202,0.18),_transparent_36%),linear-gradient(180deg,_#f7f4ee_0%,_#ecece7_100%)] px-4 py-6 md:px-8 md:py-10 text-zinc-900">
@@ -38,11 +60,17 @@ export default function UserDashboardPage() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="flex flex-wrap items-center gap-3">
+                <Link href="/">
+                  <Button variant="outline" className="rounded-full border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white gap-2">
+                    <Home className="h-4 w-4" />
+                    <span className="text-xs">Beranda</span>
+                  </Button>
+                </Link>
                 <NotificationBell />
                 <LogoutConfirmDialog>
                   <Button variant="secondary" className="rounded-full bg-white text-[#16302c] hover:bg-white/90">
-                    <span className="mr-2">Keluar</span>
+                    <span className="mr-2 text-xs">Keluar</span>
                   </Button>
                 </LogoutConfirmDialog>
               </div>
@@ -121,14 +149,61 @@ export default function UserDashboardPage() {
             <CardHeader>
               <Badge variant="outline" className="w-fit rounded-full">Booking</Badge>
               <CardTitle className="text-2xl font-bold ">Pemesanan Saya</CardTitle>
-              <CardDescription>Masuk ke halaman pemesanan untuk mengatur jadwal tur Anda.</CardDescription>
+              <CardDescription>Status pemesanan, pembayaran, dan tiket absensi tur Anda.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <Link href="/book/1">
-                <Button variant="outline" className="rounded-full">
-                  <Ticket className="mr-2 h-4 w-4" /> Buat Pemesanan
-                </Button>
-              </Link>
+            <CardContent className="space-y-4 text-center">
+              {bookingsLoading ? (
+                <div className="flex items-center justify-center gap-2 text-sm text-zinc-500 py-6">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Memuat pemesanan Anda...
+                </div>
+              ) : bookings.length > 0 ? (
+                <div className="space-y-3">
+                  {bookings.map((b) => {
+                    const isPaid = b.paymentStatus === "paid" || b.status === "paid"
+                    const isCancelled = ["cancelled", "cancel", "rejected", "expire", "expired", "failed"].includes(String(b.paymentStatus || b.status || "").toLowerCase())
+                    return (
+                      <Link key={b.id} href={`/payments/success/${b.id}`} className="block group">
+                        <div className="rounded-2xl border border-black/5 bg-zinc-50/50 p-4 transition-all hover:bg-zinc-50/80 text-left">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1">
+                              <p className="font-bold text-sm text-zinc-900 group-hover:text-[#16302c] transition-colors">{b.tourName}</p>
+                              <p className="text-xs text-zinc-500">{b.pax} Pax • Rp {Number(b.grossAmount || 0).toLocaleString("id-ID")}</p>
+                              <p className="text-[10px] text-zinc-400">
+                                {b.createdAt ? new Date(b.createdAt).toLocaleDateString("id-ID", { dateStyle: "long" }) : "-"}
+                              </p>
+                            </div>
+                            <Badge 
+                              variant="outline" 
+                              className={`text-[10px] rounded-full border-none shrink-0 text-white font-semibold ${
+                                isPaid ? "bg-emerald-500 hover:bg-emerald-500" : 
+                                isCancelled ? "bg-red-500 hover:bg-red-500" : 
+                                "bg-orange-500 hover:bg-orange-500"
+                              }`}
+                            >
+                              {isPaid ? "Sudah Bayar" : isCancelled ? "Dibatalkan" : "Belum Bayar"}
+                            </Badge>
+                          </div>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                  <Link href="/book/new" className="block pt-2">
+                    <Button variant="outline" className="w-full rounded-full border-zinc-200 text-zinc-700 hover:bg-zinc-50 text-xs h-9">
+                      <Ticket className="mr-2 h-4 w-4" /> Buat Pemesanan Baru
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-zinc-500">Anda belum memiliki riwayat pemesanan tur.</p>
+                  <Link href="/book/new" className="block">
+                    <Button className="w-full rounded-full bg-[#10221f] text-white hover:bg-[#1a3531] text-xs h-9">
+                      <Ticket className="mr-2 h-4 w-4" /> Mulai Pesan Tur
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </CardContent>
           </Card>
         </section>
@@ -136,4 +211,3 @@ export default function UserDashboardPage() {
     </div>
   )
 }
-
