@@ -308,6 +308,32 @@ function buildNotificationsFromBookings(bookings) {
         isRead: false,
       });
     }
+
+    if (booking.reportReply) {
+      items.push({
+        id: `${booking.id}-report-reply`,
+        title: "Balasan Laporan Tur",
+        message: `Laporan Anda untuk ${booking.tourName} telah dibalas oleh Owner: "${booking.reportReply}"`,
+        type: "report_reply",
+        createdAt: booking.reportReplySubmittedAt || createdAt,
+        actionUrl: detailUrl,
+        ctaLabel: "Lihat Balasan",
+        isRead: false,
+      });
+    }
+
+    if (booking.report) {
+      items.push({
+        id: `${booking.id}-report-submitted`,
+        title: "Laporan Tur Terkirim",
+        message: `Laporan Anda untuk ${booking.tourName} telah berhasil dikirim ke Owner.`,
+        type: "report_submitted",
+        createdAt: booking.reportSubmittedAt || createdAt,
+        actionUrl: detailUrl,
+        ctaLabel: "Lihat Detail",
+        isRead: false,
+      });
+    }
   }
 
   return items.sort((left, right) => {
@@ -521,7 +547,7 @@ app.use(
 
     if (
       (pathname.startsWith("/api/bookings/") || pathname === "/api/bookings") &&
-      !["admin", "owner", "guide"].includes(user.role)
+      !["admin", "owner", "guide", "user"].includes(user.role)
     ) {
       res.status(403).json({ error: "Akses booking ditolak." });
       return;
@@ -778,12 +804,18 @@ app.get(
         ? user.id
         : (typeof req.query.guideId === "string" ? req.query.guideId : undefined);
     const unassigned = String(req.query.unassigned || "") === "true";
-    const bookings = await listBookings({
+    let bookings = await listBookings({
       status,
       paymentStatus,
       guideId,
       unassigned,
     });
+
+    if (user?.role === "user") {
+      bookings = bookings.filter(
+        (b) => b.userEmail?.toLowerCase() === user.email.toLowerCase()
+      );
+    }
 
     res.json({ bookings });
   }),
@@ -803,6 +835,15 @@ app.get(
       return;
     }
 
+    const user = await getCurrentSessionUser(req);
+    if (
+      user?.role === "user" &&
+      booking.userEmail?.toLowerCase() !== user.email.toLowerCase()
+    ) {
+      res.status(403).json({ error: "Akses booking ditolak." });
+      return;
+    }
+
     res.json({ booking });
   }),
 );
@@ -816,32 +857,82 @@ app.patch(
     }
 
     const bookingId = String(req.params.id);
-    const booking = await updateBooking(bookingId, {
-      status: req.body?.status,
-      paymentStatus: req.body?.paymentStatus,
-      paymentGateway: req.body?.paymentGateway,
-      paymentOrderId: req.body?.paymentOrderId,
-      paymentTransactionId: req.body?.paymentTransactionId,
-      paymentCheckoutUrl: req.body?.paymentCheckoutUrl,
-      guideId: req.body?.guideId,
-      guideName: req.body?.guideName,
-      report: req.body?.report,
-      reportSubmittedAt: req.body?.reportSubmittedAt,
-      attendanceCode: req.body?.attendanceCode,
-      attendanceQrImageUrl: req.body?.attendanceQrImageUrl,
-      attendanceScannedAt: req.body?.attendanceScannedAt,
-      attendanceScannedBy: req.body?.attendanceScannedBy,
-      attendanceStatus: req.body?.attendanceStatus,
-      paidAt: req.body?.paidAt,
-      barcodeSentAt: req.body?.barcodeSentAt,
-    });
+    const existingBooking = await getBookingById(bookingId);
+    if (!existingBooking) {
+      res.status(404).json({ error: "Booking tidak ditemukan." });
+      return;
+    }
 
+    const user = await getCurrentSessionUser(req);
+    let patch = {};
+    if (user?.role === "user") {
+      if (
+        existingBooking.userEmail?.toLowerCase() !== user.email.toLowerCase()
+      ) {
+        res.status(403).json({ error: "Akses booking ditolak." });
+        return;
+      }
+      patch = {
+        report: req.body?.report,
+        reportSubmittedAt: req.body?.reportSubmittedAt,
+      };
+    } else {
+      patch = {
+        status: req.body?.status,
+        paymentStatus: req.body?.paymentStatus,
+        paymentGateway: req.body?.paymentGateway,
+        paymentOrderId: req.body?.paymentOrderId,
+        paymentTransactionId: req.body?.paymentTransactionId,
+        paymentCheckoutUrl: req.body?.paymentCheckoutUrl,
+        guideId: req.body?.guideId,
+        guideName: req.body?.guideName,
+        report: req.body?.report,
+        reportSubmittedAt: req.body?.reportSubmittedAt,
+        reportReply: req.body?.reportReply,
+        reportReplySubmittedAt: req.body?.reportReplySubmittedAt,
+        attendanceCode: req.body?.attendanceCode,
+        attendanceQrImageUrl: req.body?.attendanceQrImageUrl,
+        attendanceScannedAt: req.body?.attendanceScannedAt,
+        attendanceScannedBy: req.body?.attendanceScannedBy,
+        attendanceStatus: req.body?.attendanceStatus,
+        paidAt: req.body?.paidAt,
+        barcodeSentAt: req.body?.barcodeSentAt,
+      };
+    }
+
+    const isNewReport = req.body?.report && req.body.report !== existingBooking.report;
+
+    const booking = await updateBooking(bookingId, patch);
     if (!booking) {
       res.status(404).json({ error: "Booking tidak ditemukan." });
       return;
     }
 
-    if (req.body?.guideId || req.body?.guideName) {
+    if (isNewReport && booking.userEmail) {
+      const emailHtml = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+          <h2 style="color: #10221f;">Halo, ${booking.userName || 'Peserta'}!</h2>
+          <p>Laporan tur Anda untuk <strong>${booking.tourName || 'Tur'}</strong> telah berhasil kami terima.</p>
+          <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #98DDCA; border-radius: 4px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #333;">Isi Laporan Anda:</h3>
+            <p style="white-space: pre-wrap; color: #555; line-height: 1.6;">${booking.report}</p>
+          </div>
+          <p>Laporan Anda telah diteruskan ke Owner untuk ditinjau. Kami akan mengirimkan notifikasi kembali segera setelah Owner memberikan balasan.</p>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #888; text-align: center;">BDJ Walking Tour - Siap Menemani Petualangan Anda!</p>
+        </div>
+      `;
+      sendEmail(
+        booking.userEmail,
+        `[BDJ Walking Tour] Laporan Tur Anda Telah Diterima`,
+        emailHtml
+      ).catch(err => console.error("Gagal mengirim email laporan ke user:", err));
+    }
+
+    if (
+      user?.role !== "user" &&
+      (req.body?.guideId || req.body?.guideName)
+    ) {
       await logAuditEvent({
         action: "guide_assigned",
         entityType: "booking",
@@ -867,6 +958,12 @@ app.patch(
   jsonBody,
   asyncHandler(async (req, res) => {
     if (!ensureDatabase(res)) {
+      return;
+    }
+
+    const user = await getCurrentSessionUser(req);
+    if (user?.role === "user") {
+      res.status(403).json({ error: "Akses ditolak." });
       return;
     }
 

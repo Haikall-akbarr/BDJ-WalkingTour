@@ -21,7 +21,9 @@ import {
   Compass,
   Mountain,
   Download,
-  X
+  X,
+  MessageSquareText,
+  Send
 } from "lucide-react"
 import { 
   BarChart, 
@@ -46,6 +48,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
+import { Label } from "@/components/ui/label"
 import * as XLSX from "xlsx"
 
 const STATS = [
@@ -73,6 +76,9 @@ export default function OwnerDashboard() {
   const [selectedMonthName, setSelectedMonthName] = useState("");
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [tours, setTours] = useState<any[]>([]);
+  const [reportedBookings, setReportedBookings] = useState<any[]>([]);
+  const [replies, setReplies] = useState<Record<string, string>>({});
+  const [replyLoading, setReplyLoading] = useState<Record<string, boolean>>({});
 
   const heroImage = useMemo(() => {
     return PlaceHolderImages.find((img) => img.id === "hero-bg")?.imageUrl || PlaceHolderImages[0]?.imageUrl;
@@ -128,10 +134,24 @@ export default function OwnerDashboard() {
     }
   };
 
+  const loadReportedBookings = async () => {
+    try {
+      const response = await fetch("/api/bookings", { cache: "no-store" });
+      const result = await response.json();
+      if (response.ok && Array.isArray(result?.bookings)) {
+        const withReports = result.bookings.filter((b: any) => b.report);
+        setReportedBookings(withReports);
+      }
+    } catch {
+      setReportedBookings([]);
+    }
+  };
+
   useEffect(() => {
     loadUnassignedBookings();
     loadGuides();
     loadTours();
+    loadReportedBookings();
     // load analytics
     (async () => {
       try {
@@ -288,6 +308,46 @@ export default function OwnerDashboard() {
       title: "File diunduh",
       description: `Data booking bulan ${selectedMonthName} berhasil diekspor ke Excel.`,
     });
+  };
+
+  const handleSendReply = async (bookingId: string) => {
+    const text = replies[bookingId]?.trim();
+    if (!text) return;
+
+    setReplyLoading(prev => ({ ...prev, [bookingId]: true }));
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reportReply: text,
+          reportReplySubmittedAt: new Date().toISOString(),
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal mengirim balasan.");
+      }
+
+      toast({
+        title: "Balasan Terkirim",
+        description: "Tanggapan Anda telah disimpan dan notifikasi telah dikirim ke pengguna.",
+      });
+
+      setReplies(prev => ({ ...prev, [bookingId]: "" }));
+      await loadReportedBookings();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal mengirim balasan",
+        description: error?.message || "Coba lagi beberapa saat.",
+      });
+    } finally {
+      setReplyLoading(prev => ({ ...prev, [bookingId]: false }));
+    }
   };
 
   return (
@@ -541,7 +601,7 @@ export default function OwnerDashboard() {
                         <span>•</span>
                         <span>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString("id-ID") : "-"}</span>
                         <Badge variant="outline" className="h-5 rounded-full px-2 text-[10px]">
-                          {booking.pax} Pax
+                          {booking.pax} Pax {booking.tourName?.toLowerCase().includes("hemat") ? "(Hemat)" : booking.tourName?.toLowerCase().includes("reguler") ? "(Reguler)" : ""}
                         </Badge>
                         <Badge variant="secondary" className="h-5 rounded-full px-2 text-[10px]">
                           {(booking.paymentStatus || booking.status || "pending_payment").toString()}
@@ -582,6 +642,85 @@ export default function OwnerDashboard() {
               )}
             </CardContent>
           </Card>
+        </section>
+
+        {/* Laporan Tur Masuk Section */}
+        <section className="rounded-[34px] bg-white p-4 shadow-sm md:p-6 lg:p-8">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <MessageSquareText className="h-6 w-6 text-zinc-900" />
+              <h2 className="text-xl md:text-2xl font-bold">Laporan Tur Masuk</h2>
+            </div>
+            <p className="text-sm text-zinc-500">Tinjau narasi pengalaman jalan kaki dari pelanggan dan berikan tanggapan Anda.</p>
+            
+            {reportedBookings.length === 0 ? (
+              <div className="text-center py-8 text-zinc-500 text-sm border-2 border-dashed rounded-2xl">
+                Belum ada laporan tur masuk dari pelanggan.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {reportedBookings.map((b: any) => (
+                  <div key={b.id} className="flex flex-col justify-between rounded-2xl border border-zinc-200 bg-zinc-50 p-5 space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-bold text-base text-zinc-900">{b.tourName}</p>
+                          <p className="text-xs text-zinc-500">Oleh: <span className="font-semibold text-zinc-800">{b.userName}</span> ({b.userEmail})</p>
+                        </div>
+                        <p className="text-[10px] text-zinc-400">
+                          {b.reportSubmittedAt ? new Date(b.reportSubmittedAt).toLocaleDateString("id-ID", { dateStyle: "medium" }) : "-"}
+                        </p>
+                      </div>
+                      
+                      <div className="rounded-xl bg-white p-3 border border-zinc-100">
+                        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Laporan AI Pengguna:</p>
+                        <p className="mt-1 text-xs md:text-sm text-zinc-700 leading-relaxed italic">
+                          "{b.report}"
+                        </p>
+                      </div>
+
+                      {b.reportReply && (
+                        <div className="rounded-xl bg-emerald-50 p-3 border border-emerald-100">
+                          <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Tanggapan Anda:</p>
+                          <p className="mt-1 text-xs md:text-sm text-emerald-800 leading-relaxed font-medium">
+                            "{b.reportReply}"
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2 pt-2 border-t border-zinc-200">
+                      <Label htmlFor={`reply-${b.id}`} className="text-xs font-semibold text-zinc-600">
+                        {b.reportReply ? "Ubah/Kirim Tanggapan Baru" : "Kirim Tanggapan Baru"}
+                      </Label>
+                      <div className="flex gap-2">
+                        <textarea
+                          id={`reply-${b.id}`}
+                          value={replies[b.id] || ""}
+                          onChange={(e) => setReplies({ ...replies, [b.id]: e.target.value })}
+                          placeholder="Ketik tanggapan atau pesan balasan Anda..."
+                          className="flex-1 min-h-[40px] max-h-[80px] p-2 border border-zinc-200 rounded-xl text-xs"
+                        />
+                        <Button
+                          onClick={() => handleSendReply(b.id)}
+                          disabled={replyLoading[b.id] || !replies[b.id]?.trim()}
+                          size="sm"
+                          className="bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl px-3 gap-1 shrink-0 self-end"
+                        >
+                          {replyLoading[b.id] ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Send className="h-3 w-3" />
+                          )}
+                          Kirim
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Footer - same style as user/public footer */}
@@ -660,7 +799,7 @@ export default function OwnerDashboard() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-bold text-sm text-emerald-600">Rp {Number(b.grossAmount || 0).toLocaleString("id-ID")}</p>
-                      <p className="text-[10px] text-zinc-400">{b.pax} Pax</p>
+                      <p className="text-[10px] text-zinc-400">{b.pax} Pax {b.tourName?.toLowerCase().includes("hemat") ? "(Hemat)" : b.tourName?.toLowerCase().includes("reguler") ? "(Reguler)" : ""}</p>
                     </div>
                   </div>
                   <p className="mt-2 text-[10px] text-zinc-400">

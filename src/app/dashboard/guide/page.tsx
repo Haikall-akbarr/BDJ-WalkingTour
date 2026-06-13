@@ -472,7 +472,7 @@ export default function GuideDashboard() {
                       <p className="font-bold text-zinc-900">{item.userName}</p>
                       <Badge variant="outline" className="rounded-full">{item.source === "camera" ? "Kamera" : "Manual"}</Badge>
                     </div>
-                    <p className="mt-1 text-zinc-600">{item.tourName} • {item.pax} pax</p>
+                    <p className="mt-1 text-zinc-600">{item.tourName} • {item.pax} Pax {item.tourName?.toLowerCase().includes("hemat") ? "(Hemat)" : item.tourName?.toLowerCase().includes("reguler") ? "(Reguler)" : ""}</p>
                     <p className="text-xs text-zinc-500">{new Date(item.scannedAt).toLocaleString("id-ID")} • Booking: {item.bookingId}</p>
                   </div>
                 ))}
@@ -554,7 +554,7 @@ export default function GuideDashboard() {
                         Domisili: {selectedTour?.domicile} {selectedTour?.customDomicile ? `(${selectedTour.customDomicile})` : ""}
                       </Badge>
                       <Badge variant="outline" className="rounded-full bg-white px-3 py-1 text-sm font-bold">
-                        {selectedTour?.pax} Pax
+                        {selectedTour?.pax} Pax {selectedTour?.tourName?.toLowerCase().includes("hemat") ? "(Hemat)" : selectedTour?.tourName?.toLowerCase().includes("reguler") ? "(Reguler)" : ""}
                       </Badge>
                     </div>
                   </div>

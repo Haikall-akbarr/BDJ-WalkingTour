@@ -93,6 +93,8 @@ function mapBooking(row: AnyRow) {
     guideName: row.guide_name,
     report: row.report,
     reportSubmittedAt: toIso(row.report_submitted_at),
+    reportReply: row.report_reply,
+    reportReplySubmittedAt: toIso(row.report_reply_submitted_at),
     attendanceCode: row.attendance_code,
     attendanceQrImageUrl: row.attendance_qr_image_url,
     attendanceScannedAt: toIso(row.attendance_scanned_at),
@@ -110,7 +112,7 @@ function normalizeBookingValue(key: string, value: unknown) {
     return Number(value || 0);
   }
 
-  if (key === 'attendanceScannedAt' || key === 'paidAt' || key === 'barcodeSentAt' || key === 'reportSubmittedAt') {
+  if (key === 'attendanceScannedAt' || key === 'paidAt' || key === 'barcodeSentAt' || key === 'reportSubmittedAt' || key === 'reportReplySubmittedAt') {
     if (!value) return null;
     return value instanceof Date ? value.toISOString() : new Date(String(value)).toISOString();
   }
@@ -140,6 +142,8 @@ function bookingPatchToRow(patch: Record<string, unknown>) {
     guideName: 'guide_name',
     report: 'report',
     reportSubmittedAt: 'report_submitted_at',
+    reportReply: 'report_reply',
+    reportReplySubmittedAt: 'report_reply_submitted_at',
     attendanceCode: 'attendance_code',
     attendanceQrImageUrl: 'attendance_qr_image_url',
     attendanceScannedAt: 'attendance_scanned_at',

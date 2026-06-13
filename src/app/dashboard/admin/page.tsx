@@ -83,7 +83,6 @@ export default function AdminDashboard() {
     highlight2Desc: "",
     highlight3Title: "",
     highlight3Desc: "",
-    highlight3Desc: "",
     routeMapUrl: "",
     pois: ["", "", "", "", ""]
   });
@@ -671,7 +670,9 @@ export default function AdminDashboard() {
                             <p className="text-[10px] md:text-xs text-muted-foreground">{booking.userWhatsApp}</p>
                           </td>
                           <td className="p-3 md:p-4 whitespace-nowrap">{booking.tourName}</td>
-                          <td className="p-3 md:p-4 text-center">{booking.pax}</td>
+                          <td className="p-3 md:p-4 text-center font-semibold">
+                            {booking.pax} {booking.tourName?.toLowerCase().includes("hemat") ? "(Hemat)" : booking.tourName?.toLowerCase().includes("reguler") ? "(Reguler)" : ""}
+                          </td>
                           <td className="p-3 md:p-4 whitespace-nowrap">
                             {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('id-ID') : '-'}
                           </td>

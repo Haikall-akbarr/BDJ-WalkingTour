@@ -128,8 +128,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       return;
     }
     
-    // Pastikan nama dan email selalu dari user yang login
-    const nameToSubmit = user?.name || formData.name;
+    // Gunakan nama dari form input agar bisa diubah, email tetap dari login aktif
+    const nameToSubmit = formData.name;
     const emailToSubmit = user?.email || formData.email;
     
     setLoading(true);
@@ -282,12 +282,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                         placeholder="John Doe" 
                         required 
                         value={formData.name}
-                        readOnly={!!user}
                         onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        className={user ? "bg-white" : ""}
-                        title={user ? "Nama mengikuti akun login aktif" : ""}
+                        className="bg-white"
                       />
-                      {user && <p className="text-xs text-slate-500">Nama mengikuti akun login aktif</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="whatsapp">Nomor WhatsApp</Label>
@@ -425,7 +422,23 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                         type="number" 
                         min="1" 
                         value={formData.pax}
-                        onChange={(e) => setFormData({...formData, pax: Number(e.target.value)})}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "") {
+                            setFormData({...formData, pax: "" as any});
+                            return;
+                          }
+                          const cleanVal = val.replace(/^0+(?=[1-9])/, '');
+                          setFormData({...formData, pax: cleanVal ? Number(cleanVal) : 1});
+                        }}
+                        onBlur={(e) => {
+                          const val = Number(e.target.value);
+                          if (isNaN(val) || val < 1) {
+                            setFormData({...formData, pax: 1});
+                          } else {
+                            setFormData({...formData, pax: Math.floor(val)});
+                          }
+                        }}
                         required 
                       />
                     </div>

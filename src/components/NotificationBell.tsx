@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Bell, Loader2, QrCode, Check } from "lucide-react"
+import { Bell, Loader2, QrCode, Check, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -27,6 +27,25 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [scanDetail, setScanDetail] = useState<{ name: string; time: string } | null>(null)
   const [scanDialogOpen, setScanDialogOpen] = useState(false)
+  const [readIds, setReadIds] = useState<string[]>([])
+  const [deletedIds, setDeletedIds] = useState<string[]>([])
+  const [replyDetail, setReplyDetail] = useState<{ title: string; message: string; time: string } | null>(null)
+  const [replyDialogOpen, setReplyDialogOpen] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem("read_notification_ids")
+    if (saved) {
+      try {
+        setReadIds(JSON.parse(saved))
+      } catch {}
+    }
+    const savedDeleted = localStorage.getItem("deleted_notification_ids")
+    if (savedDeleted) {
+      try {
+        setDeletedIds(JSON.parse(savedDeleted))
+      } catch {}
+    }
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -55,9 +74,16 @@ export function NotificationBell() {
     }
   }, [])
 
-  const unreadCount = notifications.length
+  const visibleNotifications = notifications.filter(n => !deletedIds.includes(n.id))
+  const unreadCount = visibleNotifications.filter(n => !readIds.includes(n.id)).length
 
   const handleNotificationClick = (item: NotificationItem) => {
+    if (!readIds.includes(item.id)) {
+      const updated = [...readIds, item.id]
+      setReadIds(updated)
+      localStorage.setItem("read_notification_ids", JSON.stringify(updated))
+    }
+
     if (item.type === 'attendance_scanned') {
       let name = "Peserta"
       let time = item.createdAt || ""
@@ -71,10 +97,28 @@ export function NotificationBell() {
       return
     }
 
+    if (item.type === 'report_reply') {
+      setReplyDetail({
+        title: item.title,
+        message: item.message,
+        time: item.createdAt || ""
+      })
+      setReplyDialogOpen(true)
+      setOpen(false)
+      return
+    }
+
     if (item.actionUrl) {
       router.push(item.actionUrl)
       setOpen(false)
     }
+  }
+
+  const handleNotificationDelete = (e: React.MouseEvent, itemId: string) => {
+    e.stopPropagation()
+    const updated = [...deletedIds, itemId]
+    setDeletedIds(updated)
+    localStorage.setItem("deleted_notification_ids", JSON.stringify(updated))
   }
 
   return (
@@ -107,10 +151,11 @@ export function NotificationBell() {
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Memuat notifikasi...
               </div>
-            ) : unreadCount === 0 ? (
+            ) : visibleNotifications.length === 0 ? (
               <div className="px-3 py-6 text-sm text-white/70">Belum ada progres pembayaran atau absensi terbaru.</div>
             ) : (
-              notifications.map((item) => {
+              visibleNotifications.map((item) => {
+                const isItemRead = readIds.includes(item.id)
                 return (
                   <div key={item.id} className="p-1">
                     <div 
@@ -118,11 +163,25 @@ export function NotificationBell() {
                       className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 transition-colors hover:bg-white/10 cursor-pointer text-left"
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-white">{item.title}</p>
-                          <p className="mt-1 text-xs leading-5 text-white/70">{item.message}</p>
+                        <div className="flex-1">
+                          <p className={`text-sm font-semibold ${isItemRead ? "text-white/60" : "text-white"}`}>{item.title}</p>
+                          <p className={`mt-1 text-xs leading-5 ${isItemRead ? "text-white/50" : "text-white/70"}`}>{item.message}</p>
                         </div>
-                        <span className="mt-1 h-2 w-2 rounded-full bg-[#98DDCA] shrink-0" />
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          {!isItemRead && (
+                            <span className="h-2 w-2 rounded-full bg-[#98DDCA]" />
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 rounded-md hover:bg-white/10 text-white/40 hover:text-white"
+                            onClick={(e) => handleNotificationDelete(e, item.id)}
+                            title="Hapus Notifikasi"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -160,6 +219,38 @@ export function NotificationBell() {
           </div>
           <DialogFooter className="mt-6">
             <Button onClick={() => setScanDialogOpen(false)} className="w-full rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc]">
+              Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={replyDialogOpen} onOpenChange={setReplyDialogOpen}>
+        <DialogContent className="max-w-md rounded-3xl p-6 md:p-8 bg-[#10221f] text-white border border-white/10">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-white">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#98DDCA] text-[#10221f]">
+                <Bell className="h-4 w-4" />
+              </span>
+              {replyDetail?.title}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 space-y-4">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <p className="text-xs text-white/60 tracking-wider uppercase font-semibold">Isi Balasan Owner:</p>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-100 italic">
+                {replyDetail?.message.match(/"(.*?)"/)?.[1] || replyDetail?.message || "-"}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
+              <p className="text-xs text-white/60 tracking-wider uppercase">Waktu Balasan</p>
+              <p className="mt-1 text-xs text-[#98DDCA]">
+                {replyDetail?.time ? new Date(replyDetail.time).toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" }) : "-"}
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="mt-6">
+            <Button onClick={() => setReplyDialogOpen(false)} className="w-full rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc] font-bold">
               Tutup
             </Button>
           </DialogFooter>

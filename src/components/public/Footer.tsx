@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Map } from "lucide-react"
 
 export function Footer() {
@@ -33,6 +34,18 @@ export function Footer() {
             <p>Instagram: <a href="https://www.instagram.com/bdj.walkingtour/" target="_blank" rel="noopener noreferrer" className="hover:underline">@bdj.walkingtour</a></p>
             <p>WhatsApp: <a href="https://wa.me/6281291697428" target="_blank" rel="noopener noreferrer" className="hover:underline">+62 812-9169-7428</a></p>
             <p>Lokasi: Banjarmasin, Kalimantan Selatan</p>
+          </div>
+        </div>
+
+        {/* Bakantan mascot */}
+        <div className="flex items-end justify-center xl:justify-end">
+          <div className="relative w-[180px] h-[220px] md:w-[200px] md:h-[250px]">
+            <Image
+              src="/bekantan.png"
+              alt="Bekantan - Maskot Banjarmasin"
+              fill
+              className="object-contain drop-shadow-[0_4px_24px_rgba(152,221,202,0.35)]"
+            />
           </div>
         </div>
       </div>

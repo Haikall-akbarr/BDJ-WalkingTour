@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Compass, MapPin, Ticket, Mail, UserRound, Loader2, Home } from "lucide-react"
+import { Compass, MapPin, Ticket, Mail, UserRound, Loader2, Home, MessageSquareText } from "lucide-react"
 import { useSessionUser } from "@/hooks/use-session-user"
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog"
 import { NotificationBell } from "@/components/NotificationBell"
@@ -163,29 +163,43 @@ export default function UserDashboardPage() {
                     const isPaid = b.paymentStatus === "paid" || b.status === "paid"
                     const isCancelled = ["cancelled", "cancel", "rejected", "expire", "expired", "failed"].includes(String(b.paymentStatus || b.status || "").toLowerCase())
                     return (
-                      <Link key={b.id} href={`/payments/success/${b.id}`} className="block group">
-                        <div className="rounded-2xl border border-black/5 bg-zinc-50/50 p-4 transition-all hover:bg-zinc-50/80 text-left">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="space-y-1">
-                              <p className="font-bold text-sm text-zinc-900 group-hover:text-[#16302c] transition-colors">{b.tourName}</p>
-                              <p className="text-xs text-zinc-500">{b.pax} Pax • Rp {Number(b.grossAmount || 0).toLocaleString("id-ID")}</p>
-                              <p className="text-[10px] text-zinc-400">
-                                {b.createdAt ? new Date(b.createdAt).toLocaleDateString("id-ID", { dateStyle: "long" }) : "-"}
-                              </p>
-                            </div>
-                            <Badge 
-                              variant="outline" 
-                              className={`text-[10px] rounded-full border-none shrink-0 text-white font-semibold ${
-                                isPaid ? "bg-emerald-500 hover:bg-emerald-500" : 
-                                isCancelled ? "bg-red-500 hover:bg-red-500" : 
-                                "bg-orange-500 hover:bg-orange-500"
-                              }`}
-                            >
-                              {isPaid ? "Sudah Bayar" : isCancelled ? "Dibatalkan" : "Belum Bayar"}
-                            </Badge>
+                      <div key={b.id} className="rounded-2xl border border-black/5 bg-zinc-50/50 p-4 text-left space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <p className="font-bold text-sm text-zinc-900">{b.tourName}</p>
+                            <p className="text-xs text-zinc-500">{b.pax} Pax • Rp {Number(b.grossAmount || 0).toLocaleString("id-ID")}</p>
+                            <p className="text-[10px] text-zinc-400">
+                              {b.createdAt ? new Date(b.createdAt).toLocaleDateString("id-ID", { dateStyle: "long" }) : "-"}
+                            </p>
                           </div>
+                          <Badge 
+                            variant="outline" 
+                            className={`text-[10px] rounded-full border-none shrink-0 text-white font-semibold ${
+                              isPaid ? "bg-emerald-500 hover:bg-emerald-500" : 
+                              isCancelled ? "bg-red-500 hover:bg-red-500" : 
+                              "bg-orange-500 hover:bg-orange-500"
+                            }`}
+                          >
+                            {isPaid ? "Sudah Bayar" : isCancelled ? "Dibatalkan" : "Belum Bayar"}
+                          </Badge>
                         </div>
-                      </Link>
+
+                        <div className="flex items-center gap-2 pt-1">
+                          <Link href={`/payments/success/${b.id}`} className="flex-1">
+                            <Button size="sm" variant="outline" className="w-full rounded-full text-xs h-8">
+                              Detail & Tiket
+                            </Button>
+                          </Link>
+                          {isPaid && (
+                            <Link href={`/dashboard/user/${b.id}/report`} className="flex-1">
+                              <Button size="sm" className="w-full rounded-full text-xs h-8 bg-[#10221f] hover:bg-[#1a3531] text-white gap-1">
+                                <MessageSquareText className="h-3 w-3" />
+                                {b.report ? "Edit Laporan" : "Laporan Tur"}
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
+                      </div>
                     )
                   })}
                   <Link href="/book/new" className="block pt-2">

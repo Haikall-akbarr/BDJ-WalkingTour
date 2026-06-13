@@ -79,6 +79,30 @@ function buildNotificationsFromBookings(bookings: Awaited<ReturnType<typeof list
         isRead: false,
       });
     }
+
+    if (booking.reportReply) {
+      items.push({
+        id: `${booking.id}-report-reply`,
+        title: 'Balasan Laporan Tur',
+        message: `Laporan Anda untuk ${booking.tourName} telah dibalas oleh Owner: "${booking.reportReply}"`,
+        type: 'report_reply',
+        createdAt: booking.reportReplySubmittedAt || createdAt,
+        actionUrl: baseUrl,
+        isRead: false,
+      });
+    }
+
+    if (booking.report) {
+      items.push({
+        id: `${booking.id}-report-submitted`,
+        title: 'Laporan Tur Terkirim',
+        message: `Laporan Anda untuk ${booking.tourName} telah berhasil dikirim ke Owner.`,
+        type: 'report_submitted',
+        createdAt: booking.reportSubmittedAt || createdAt,
+        actionUrl: baseUrl,
+        isRead: false,
+      });
+    }
   }
 
   return items.sort((a, b) => {

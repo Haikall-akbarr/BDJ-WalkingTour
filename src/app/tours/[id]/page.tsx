@@ -32,6 +32,9 @@ type TourItem = {
   id: string
   name: string
   price: number
+  priceHemat?: number | null
+  priceRegulerDesc?: string | null
+  priceHematDesc?: string | null
   date?: string
   description?: string
   distance?: string
