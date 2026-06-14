@@ -11,6 +11,7 @@ export type BookingPaymentPayload = {
   tourName: string;
   tourPrice: number;
   pax: number;
+  participantNames?: string;
 };
 
 export function generateAttendanceCode(orderId: string) {

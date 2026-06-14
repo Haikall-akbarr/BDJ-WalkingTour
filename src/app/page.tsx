@@ -83,6 +83,11 @@ export default function LandingPage() {
     return dbTours.length > 0 ? dbTours : STATIC_TOURS
   }, [dbTours])
 
+  const tourShowcaseImages = useMemo(() => {
+    const toursWithImages = allTours.filter((t: any) => t.imageUrl)
+    return toursWithImages.slice(0, 3)
+  }, [allTours])
+
   const heroImg = PlaceHolderImages.find((img) => img.id === "hero-bg")
   const showcaseImages = PlaceHolderImages.slice(0, 3)
 
@@ -199,80 +204,129 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="w-full px-4 md:px-8">
-          <div className="space-y-6">
-            <Card className="overflow-hidden rounded-[28px] border-none shadow-md">
-              <CardContent className="p-4 md:p-6">
-                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold tracking-[0.2em] text-zinc-500">Dokumentasi Tur</p>
-                    <h3 className="text-2xl font-bold md:text-5xl">Koleksi Perjalanan Kami</h3>
-                  </div>
+        {/* Pilihan Destinasi - Swapped from Owner page */}
+        <section className="mx-auto w-full max-w-full px-4 md:px-8">
+          <div className="rounded-[34px] bg-white p-4 shadow-sm md:p-6 lg:p-8">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-stretch">
+              <div className="flex flex-col justify-between rounded-[28px] bg-[#10221f] p-6 text-white md:p-8">
+                <div className="space-y-4">
+                  <p className="text-[10px] tracking-[0.35em] text-white/60">Pilihan Destinasi</p>
+                  <h2 className="max-w-xs text-3xl font-bold leading-[0.95] md:text-5xl lg:text-[3.75rem]">
+                    Belum Tahu Mau Ke Mana?
+                  </h2>
+                  <p className="max-w-sm text-sm leading-7 text-white/75">
+                    Jangan khawatir, kami menyiapkan pilihan rute dan pengalaman visual terbaik untuk inspirasi perjalanan berikutnya.
+                  </p>
+                </div>
+
+                <div className="mt-8 space-y-4">
                   <Link href="/tours">
-                    <Button variant="outline" className="rounded-full text-xs hover:bg-[#10221f] hover:text-white transition-colors">
-                      Lihat Semua
+                    <Button className="w-full rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc]">
+                      Jelajahi Rute
                     </Button>
                   </Link>
+                  <p className="text-[11px] tracking-[0.3em] text-white/45">Setiap rute dimulai dari langkah yang tepat</p>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {(() => {
-                    const documentationPhotos = allTours.map((t: any) => t.imageUrl).filter(Boolean).slice(0, 3)
-                    while (documentationPhotos.length < 3) {
-                      documentationPhotos.push(PlaceHolderImages[documentationPhotos.length % PlaceHolderImages.length]?.imageUrl || "")
-                    }
-                    return documentationPhotos.map((imgUrl, idx) => (
-                      <div key={idx} className="relative h-56 overflow-hidden rounded-2xl group border border-black/5 shadow-sm">
-                        <img
-                          src={imgUrl}
-                          alt={`Dokumentasi ${idx + 1}`}
-                          className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition duration-300" />
-                      </div>
-                    ))
-                  })()}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-[28px] border-none bg-zinc-900 text-white shadow-md">
-              <CardContent className="p-4 md:p-6">
-                <div className="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
-                  <div>
-                    <p className="text-sm font-semibold tracking-[0.2em] text-zinc-400">Detail Paket Tur</p>
-                    <h4 className="text-xl font-bold md:text-3xl">Pilihan Jadwal Terbaru</h4>
+              <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3 lg:grid-rows-2 lg:h-[540px]">
+                {/* Main large image */}
+                <div className="relative overflow-hidden rounded-[24px] lg:col-span-2 lg:row-span-2">
+                  <Image
+                    src={tourShowcaseImages[0]?.imageUrl || PlaceHolderImages[0]?.imageUrl}
+                    alt={tourShowcaseImages[0]?.name || "Tur Unggulan"}
+                    fill
+                    className="object-cover transition duration-500 hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between text-white">
+                    <div>
+                      <p className="text-[10px] tracking-[0.3em] text-white/70">Unggulan</p>
+                      <p className="text-lg font-bold">{tourShowcaseImages[0]?.name || "Tur Utama"}</p>
+                    </div>
+                    <Link href={tourShowcaseImages[0] ? `/tours/${tourShowcaseImages[0].id}` : "/tours"}>
+                      <span className="rounded-full border border-white/40 bg-white/10 px-3 py-1 text-[10px] tracking-[0.2em] backdrop-blur cursor-pointer hover:bg-white/20 transition-colors">
+                        Jelajahi
+                      </span>
+                    </Link>
                   </div>
-                  <Badge className="bg-white/10 text-white hover:bg-white/10">{allTours.length} Paket</Badge>
                 </div>
 
-                <div className="grid gap-3">
-                  {allTours.slice(0, 3).map((tour: any) => (
-                    <Link key={tour.id} href={`/tours/${tour.id}`} className="block group transition-all duration-300">
-                      <div className="rounded-2xl border border-zinc-700 bg-zinc-800/50 p-4 transition duration-300 group-hover:border-zinc-500 group-hover:bg-zinc-800">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-sm font-bold md:text-base group-hover:text-[#98DDCA] transition-colors">{tour.name}</p>
-                          <Badge variant="outline" className="border-zinc-500 text-zinc-200">
-                            Rp {tour.price?.toLocaleString("id-ID")}
-                          </Badge>
-                        </div>
-                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-zinc-300 md:grid-cols-4">
-                          <span className="inline-flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {tour.date || "Jadwal Fleksibel"}</span>
-                          <span className="inline-flex items-center gap-1"><Map className="h-3.5 w-3.5" /> {tour.distance}</span>
-                          <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {tour.duration}</span>
-                          <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> Grup Kecil</span>
-                        </div>
-                        <p className="mt-3 text-sm leading-6 text-zinc-300">
-                          {tour.description || "Deskripsi singkat tur ini akan membantu peserta memilih rute yang paling sesuai."}
-                        </p>
+                {/* Top right image */}
+                <div className="relative overflow-hidden rounded-[24px]">
+                  <Image
+                    src={tourShowcaseImages[1]?.imageUrl || PlaceHolderImages[1]?.imageUrl || (heroImg?.imageUrl || PlaceHolderImages[0]?.imageUrl)}
+                    alt={tourShowcaseImages[1]?.name || "Tur 2"}
+                    fill
+                    className="object-cover transition duration-500 hover:scale-105"
+                  />
+                  {tourShowcaseImages[1] && (
+                    <Link href={`/tours/${tourShowcaseImages[1].id}`} className="absolute inset-0 z-10">
+                      <div className="absolute bottom-2 left-2 right-2">
+                        <p className="text-[10px] font-semibold text-white drop-shadow-lg truncate">{tourShowcaseImages[1].name}</p>
                       </div>
                     </Link>
-                  ))}
+                  )}
                 </div>
-              </CardContent>
-            </Card>
 
+                {/* Bottom right image */}
+                <div className="relative overflow-hidden rounded-[24px]">
+                  <Image
+                    src={tourShowcaseImages[2]?.imageUrl || PlaceHolderImages[2]?.imageUrl || (heroImg?.imageUrl || PlaceHolderImages[0]?.imageUrl)}
+                    alt={tourShowcaseImages[2]?.name || "Tur 3"}
+                    fill
+                    className="object-cover transition duration-500 hover:scale-105"
+                  />
+                  {tourShowcaseImages[2] && (
+                    <Link href={`/tours/${tourShowcaseImages[2].id}`} className="absolute inset-0 z-10">
+                      <div className="absolute bottom-2 left-2 right-2">
+                        <p className="text-[10px] font-semibold text-white drop-shadow-lg truncate">{tourShowcaseImages[2].name}</p>
+                      </div>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
+        </section>
+
+        {/* Pilihan Jadwal Terbaru */}
+        <section className="w-full px-4 md:px-8">
+          <Card className="rounded-[28px] border-none bg-zinc-900 text-white shadow-md">
+            <CardContent className="p-4 md:p-6">
+              <div className="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-sm font-semibold tracking-[0.2em] text-zinc-400">Detail Paket Tur</p>
+                  <h4 className="text-xl font-bold md:text-3xl">Pilihan Jadwal Terbaru</h4>
+                </div>
+                <Badge className="bg-white/10 text-white hover:bg-white/10">{allTours.length} Paket</Badge>
+              </div>
+
+              <div className="grid gap-3">
+                {allTours.slice(0, 3).map((tour: any) => (
+                  <Link key={tour.id} href={`/tours/${tour.id}`} className="block group transition-all duration-300">
+                    <div className="rounded-2xl border border-zinc-700 bg-zinc-800/50 p-4 transition duration-300 group-hover:border-zinc-500 group-hover:bg-zinc-800">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-bold md:text-base group-hover:text-[#98DDCA] transition-colors">{tour.name}</p>
+                        <Badge variant="outline" className="border-zinc-500 text-zinc-200">
+                          Rp {tour.price?.toLocaleString("id-ID")}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-zinc-300 md:grid-cols-4">
+                        <span className="inline-flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {tour.date || "Jadwal Fleksibel"}</span>
+                        <span className="inline-flex items-center gap-1"><Map className="h-3.5 w-3.5" /> {tour.distance}</span>
+                        <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {tour.duration}</span>
+                        <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> Grup Kecil</span>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-zinc-300">
+                        {tour.description || "Deskripsi singkat tur ini akan membantu peserta memilih rute yang paling sesuai."}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </section>
       </main>
       

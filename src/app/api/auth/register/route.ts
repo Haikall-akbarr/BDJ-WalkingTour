@@ -51,7 +51,8 @@ export async function POST(request: NextRequest) {
         await sendAuthEmail({
           to: user.email,
           subject: 'Akun BDJ WalkingTour berhasil dibuat',
-          html: buildWelcomeEmailHtml({ name: user.name }),
+          html: buildWelcomeEmailHtml({ name: user.name, email: user.email, password }),
+          text: `Halo ${user.name},\n\nSelamat bergabung dengan BDJ Walking Tour!\n\nDetail Login Akun Anda:\nEmail/Username: ${user.email}\nPassword: ${password}\n\nSilakan login ke akun Anda di http://localhost:9002/login\n\nSelamat bergabung!\nBDJ Walking Tour`,
         });
       } catch {
         // Non-blocking: akun tetap dibuat walau email gagal.

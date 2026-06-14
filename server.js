@@ -374,6 +374,7 @@ async function getCurrentSessionUser(req) {
     email: user.email,
     name: user.name,
     role: user.role,
+    createdAt: user.createdAt,
   };
 }
 
@@ -2502,6 +2503,7 @@ app.get(
     }
 
     const user = await getCurrentSessionUser(req);
+    console.log("[server.js /api/notifications] user:", user);
     if (!user) {
       res.json({ notifications: [] });
       return;
@@ -2515,14 +2517,25 @@ app.get(
           (booking) =>
             booking.userEmail?.toLowerCase() === user.email.toLowerCase(),
         );
-    const notifications = buildNotificationsFromBookings(visibleBookings).slice(
-      0,
-      12,
-    );
+    let notifications = buildNotificationsFromBookings(visibleBookings);
+
+    if (user.role === "user") {
+      notifications.unshift({
+        id: `${user.id}-welcome`,
+        title: "Selamat Bergabung!",
+        message: `Selamat bergabung dengan BDJ Walking Tour, ${user.name || "Peserta"}! Siapkan cerita lokal terbaik Anda dan jelajahi keindahan Banjarmasin bersama kami.`,
+        type: "welcome",
+        createdAt: user.createdAt || new Date().toISOString(),
+        actionUrl: "/dashboard/user",
+        isRead: false,
+      });
+    }
+
+    const slicedNotifications = notifications.slice(0, 12);
 
     res.json({
-      notifications,
-      unreadCount: notifications.length,
+      notifications: slicedNotifications,
+      unreadCount: slicedNotifications.length,
     });
   }),
 );

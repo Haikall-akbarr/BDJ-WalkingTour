@@ -108,7 +108,8 @@ export async function POST(request: NextRequest) {
       attendanceQrImageUrl: null,
       attendanceScannedAt: null,
       attendanceScannedBy: null,
-    } as const;
+      participantNames: body.participantNames || '',
+    };
 
     if (isDatabaseProviderEnabled()) {
       const mysqlBooking = await createBooking({
@@ -189,6 +190,7 @@ export async function POST(request: NextRequest) {
           attendanceQrImageUrl: null,
           attendanceScannedAt: null,
           attendanceScannedBy: null,
+          participantNames: body.participantNames || '',
         });
       }
 
@@ -251,6 +253,7 @@ export async function POST(request: NextRequest) {
           attendanceQrImageUrl: null,
           attendanceScannedAt: null,
           attendanceScannedBy: null,
+          participantNames: body.participantNames || '',
         });
       }
 
@@ -295,6 +298,7 @@ export async function POST(request: NextRequest) {
           attendanceQrImageUrl: null,
           attendanceScannedAt: null,
           attendanceScannedBy: null,
+          participantNames: body.participantNames || '',
         });
       }
 

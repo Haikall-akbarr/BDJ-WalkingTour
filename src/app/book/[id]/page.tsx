@@ -34,6 +34,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const [customDomicile, setCustomDomicile] = useState("");
   const [toursLoading, setToursLoading] = useState(true);
   const [dbTours, setDbTours] = useState<any[]>([]);
+  const [otherNames, setOtherNames] = useState<string[]>([]);
   
   const { user, loading: userLoading } = useSessionUser();
   const { toast } = useToast();
@@ -110,6 +111,21 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     }));
   }, [user]);
 
+  useEffect(() => {
+    const paxNum = Number(formData.pax) || 1;
+    const neededLength = paxNum > 1 ? paxNum - 1 : 0;
+    setOtherNames(prev => {
+      const next = [...prev];
+      if (next.length > neededLength) {
+        return next.slice(0, neededLength);
+      }
+      while (next.length < neededLength) {
+        next.push("");
+      }
+      return next;
+    });
+  }, [formData.pax]);
+
   const selectedTour = useMemo(() => {
     if (!allTours || !formData.tourId) return null;
     return allTours.find((t: any) => t.id === formData.tourId);
@@ -158,6 +174,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
           tourName: tName,
           tourPrice: selectedPrice,
           pax: Number(formData.pax),
+          participantNames: otherNames.filter(name => name.trim() !== "").join(", ")
         }),
       })
       .then(async (response) => {
@@ -443,6 +460,31 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                       />
                     </div>
                   </div>
+
+                  {Number(formData.pax) > 1 && (
+                    <div className="space-y-3 p-4 rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Nama Peserta Tambahan</p>
+                      {Array.from({ length: Number(formData.pax) - 1 }).map((_, idx) => (
+                        <div key={idx} className="space-y-1">
+                          <Label htmlFor={`participant-${idx}`} className="text-xs text-zinc-600">
+                            Nama Peserta {idx + 2}
+                          </Label>
+                          <Input
+                            id={`participant-${idx}`}
+                            placeholder={`Masukkan nama lengkap peserta ${idx + 2}`}
+                            required
+                            value={otherNames[idx] || ""}
+                            onChange={(e) => {
+                              const newNames = [...otherNames];
+                              newNames[idx] = e.target.value;
+                              setOtherNames(newNames);
+                            }}
+                            className="bg-white"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="flex items-center space-x-2 bg-primary/10 p-4 rounded-xl">
                     <Checkbox id="consent" required />

@@ -57,6 +57,7 @@ create table if not exists bookings (
   attendance_status text null,
   paid_at timestamptz null,
   barcode_sent_at timestamptz null,
+  participant_names text null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

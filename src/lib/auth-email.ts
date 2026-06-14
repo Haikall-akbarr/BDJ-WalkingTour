@@ -37,7 +37,7 @@ function getSmtpConfig() {
   };
 }
 
-async function sendViaSmtp(params: { to: string; subject: string; html: string }) {
+async function sendViaSmtp(params: { to: string; subject: string; html: string; text?: string }) {
   const smtpConfig = getSmtpConfig();
 
   if (!smtpConfig) {
@@ -59,10 +59,7 @@ async function sendViaSmtp(params: { to: string; subject: string; html: string }
     to: params.to,
     subject: params.subject,
     html: params.html,
-    headers: {
-      'X-Mailer': 'BDJ-WalkingTour/1.0',
-      'X-Priority': '3',
-    },
+    text: params.text,
   });
 
   return {
@@ -71,7 +68,7 @@ async function sendViaSmtp(params: { to: string; subject: string; html: string }
   };
 }
 
-async function sendViaResend(params: { to: string; subject: string; html: string }) {
+async function sendViaResend(params: { to: string; subject: string; html: string; text?: string }) {
   const resendKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.RESEND_FROM_EMAIL;
 
@@ -90,10 +87,7 @@ async function sendViaResend(params: { to: string; subject: string; html: string
       to: [params.to],
       subject: params.subject,
       html: params.html,
-      headers: {
-        'X-Mailer': 'BDJ-WalkingTour/1.0',
-        'X-Priority': '3',
-      },
+      text: params.text,
     }),
   });
 
@@ -107,7 +101,7 @@ async function sendViaResend(params: { to: string; subject: string; html: string
   return response.json();
 }
 
-export async function sendAuthEmail(params: { to: string; subject: string; html: string }) {
+export async function sendAuthEmail(params: { to: string; subject: string; html: string; text?: string }) {
   const preferredProvider = getEmailProvider();
   const smtpConfig = getSmtpConfig();
   const resendConfigured = Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL);
@@ -150,17 +144,26 @@ export async function sendAuthEmail(params: { to: string; subject: string; html:
   return { skipped: true, provider: providerOrder[0] };
 }
 
-export function buildWelcomeEmailHtml(params: { name: string }) {
+export function buildWelcomeEmailHtml(params: { name: string; email: string; password?: string }) {
   const appBaseUrl = getAppBaseUrl();
   return `
-    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10221f;max-width:600px;margin:0 auto;">
-      <h2 style="margin-bottom:20px;">Akun berhasil dibuat</h2>
-      <p>Halo ${params.name}, akun peserta BDJ WalkingTour sudah aktif.</p>
-      <p>Silakan login kembali melalui halaman peserta untuk memesan tur, atau gunakan Google jika akun Anda terhubung.</p>
-      <p>
-        <a href="${appBaseUrl}/login" style="display:inline-block;background:#98DDCA;color:#10221f;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:bold;">Buka Login</a>
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10221f;max-width:600px;margin:0 auto;padding:20px;border:1px solid #eee;border-radius:8px;">
+      <h2 style="color: #10221f; margin-bottom:20px;">Selamat Bergabung dengan BDJ Walking Tour!</h2>
+      <p>Halo <strong>${params.name}</strong>,</p>
+      <p>Akun peserta Anda telah sukses dibuat dan aktif. Selamat bergabung di komunitas petualang BDJ Walking Tour!</p>
+      
+      <div style="background-color:#f9f9f9;padding:15px;border-left:4px solid #98DDCA;border-radius:4px;margin:20px 0;">
+        <h3 style="margin-top:0;color:#333;font-size:15px;">Detail Login Akun Anda:</h3>
+        <p style="margin:5px 0;font-size:14px;color:#555;"><strong>Email/Username:</strong> ${params.email}</p>
+        ${params.password ? `<p style="margin:5px 0;font-size:14px;color:#555;"><strong>Password:</strong> ${params.password}</p>` : ''}
+      </div>
+
+      <p>Silakan login melalui tautan di bawah ini untuk mulai memesan tur jalan kaki terbaik Anda:</p>
+      <p style="margin-top:20px;">
+        <a href="${appBaseUrl}/login" style="display:inline-block;background:#98DDCA;color:#10221f;text-decoration:none;padding:12px 24px;border-radius:999px;font-weight:bold;font-size:14px;">Buka Login</a>
       </p>
-      <p style="font-size:12px;color:#777;margin-top:24px;">Jika Anda tidak merasa membuat akun ini, abaikan email ini.</p>
+      <hr style="border:0;border-top:1px solid #eee;margin:24px 0;" />
+      <p style="font-size:12px;color:#777;text-align:center;">BDJ Walking Tour - Menelusuri Jejak Sejarah Banjarmasin</p>
     </div>
   `;
 }

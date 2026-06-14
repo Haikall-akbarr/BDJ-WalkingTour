@@ -104,6 +104,7 @@ function mapBooking(row: AnyRow) {
     barcodeSentAt: toIso(row.barcode_sent_at),
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
+    participantNames: row.participant_names || '',
   };
 }
 
@@ -151,6 +152,7 @@ function bookingPatchToRow(patch: Record<string, unknown>) {
     attendanceStatus: 'attendance_status',
     paidAt: 'paid_at',
     barcodeSentAt: 'barcode_sent_at',
+    participantNames: 'participant_names',
   };
 
   return Object.entries(patch).reduce<Record<string, unknown>>((accumulator, [key, value]) => {
@@ -408,6 +410,7 @@ export async function createBooking(input: {
   attendanceStatus?: string | null;
   paidAt?: string | null;
   barcodeSentAt?: string | null;
+  participantNames?: string | null;
 }) {
   const admin = getSupabaseAdmin();
   const id = input.id || randomUUID();
@@ -440,6 +443,7 @@ export async function createBooking(input: {
     attendance_status: input.attendanceStatus || null,
     paid_at: input.paidAt || null,
     barcode_sent_at: input.barcodeSentAt || null,
+    participant_names: input.participantNames || null,
   };
 
   const { data, error } = await admin.from('bookings').insert(row).select('*').single();

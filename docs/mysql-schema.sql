@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   attendance_status VARCHAR(64) NULL,
   paid_at DATETIME NULL,
   barcode_sent_at DATETIME NULL,
+  participant_names TEXT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_bookings_status (status),

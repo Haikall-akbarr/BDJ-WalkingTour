@@ -52,9 +52,9 @@ import { Label } from "@/components/ui/label"
 import * as XLSX from "xlsx"
 
 const STATS = [
-  { label: "Climbers Equipped", value: "20K+", trend: "+12%" },
-  { label: "Successful Expeditions", value: "2K+", trend: "+5%" },
-  { label: "Trusted Reviews", value: "5K+", trend: "Stabil" }
+  { label: "Peserta Terdaftar", value: "20K+", trend: "+12%" },
+  { label: "Tur Berhasil", value: "2K+", trend: "+5%" },
+  { label: "Ulasan Terpercaya", value: "5K+", trend: "Stabil" }
 ];
 
 export default function OwnerDashboard() {
@@ -79,6 +79,30 @@ export default function OwnerDashboard() {
   const [reportedBookings, setReportedBookings] = useState<any[]>([]);
   const [replies, setReplies] = useState<Record<string, string>>({});
   const [replyLoading, setReplyLoading] = useState<Record<string, boolean>>({});
+  const [reportFilter, setReportFilter] = useState<'unreplied' | 'replied'>('unreplied');
+  const [reportStartIndex, setReportStartIndex] = useState(0);
+
+  const filteredReports = useMemo(() => {
+    return reportedBookings.filter((b: any) => {
+      const hasReply = b.reportReply && b.reportReply.trim() !== "";
+      if (reportFilter === 'unreplied') return !hasReply;
+      return !!hasReply;
+    });
+  }, [reportedBookings, reportFilter]);
+
+  const displayedReports = useMemo(() => {
+    return filteredReports.slice(reportStartIndex, reportStartIndex + 2);
+  }, [filteredReports, reportStartIndex]);
+
+  useEffect(() => {
+    setReportStartIndex(0);
+  }, [reportFilter]);
+
+  useEffect(() => {
+    if (reportStartIndex >= filteredReports.length) {
+      setReportStartIndex(0);
+    }
+  }, [filteredReports.length, reportStartIndex]);
 
   const heroImage = useMemo(() => {
     return PlaceHolderImages.find((img) => img.id === "hero-bg")?.imageUrl || PlaceHolderImages[0]?.imageUrl;
@@ -196,11 +220,7 @@ export default function OwnerDashboard() {
     return dbBookings || [];
   }, [dbBookings]);
 
-  // Get up to 3 tour images from database for the "Pilihan Destinasi" section
-  const tourShowcaseImages = useMemo(() => {
-    const toursWithImages = tours.filter((t: any) => t.imageUrl);
-    return toursWithImages.slice(0, 3);
-  }, [tours]);
+  // tourShowcaseImages memo removed - layout swapped to user page
 
   const handleAssignGuide = async (bookingId: string) => {
     const guideId = selectedGuides[bookingId];
@@ -284,6 +304,7 @@ export default function OwnerDashboard() {
       No: idx + 1,
       "Nama Tur": b.tourName || "-",
       "Nama Pemesan": b.userName || "-",
+      "Peserta Tambahan": b.participantNames || "-",
       Email: b.userEmail || "-",
       Pax: b.pax || 0,
       "Total (Rp)": b.grossAmount || 0,
@@ -400,15 +421,15 @@ export default function OwnerDashboard() {
             <div className="mt-8 md:mt-12 space-y-4">
               <p className="text-[10px] tracking-[0.35em] text-white/70">Owner Dashboard</p>
               <h1 className="max-w-3xl text-4xl font-extrabold leading-tight tracking-wide text-white sm:text-5xl md:text-7xl">
-                New Heights
+                Petualangan Baru
               </h1>
               <p className="max-w-2xl text-xs text-white/90 md:text-sm">
-                Built for climbers who demand reliability at every altitude. Semua fitur dashboard tetap aktif, kini dalam tampilan eksplorasi yang lebih modern.
+                Dibuat untuk para penjelajah yang menginginkan keandalan di setiap perjalanan. Semua fitur dashboard tetap aktif, kini dalam tampilan eksplorasi yang lebih modern.
               </p>
 
               <div className="pt-2">
                 <Button className="h-10 rounded-full bg-white px-5 text-xs font-bold text-black hover:bg-white/90">
-                  Connect <ArrowUpRight className="ml-1 h-4 w-4" />
+                  Hubungkan <ArrowUpRight className="ml-1 h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -427,87 +448,37 @@ export default function OwnerDashboard() {
           </div>
         </section>
 
-        {/* Pilihan Destinasi - uses tour photos from DB */}
+        {/* Dokumentasi Tur - Koleksi Perjalanan Kami */}
         <section className="rounded-[34px] bg-white p-4 shadow-sm md:p-6 lg:p-8">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-stretch">
-            <div className="flex flex-col justify-between rounded-[28px] bg-[#10221f] p-6 text-white md:p-8">
-              <div className="space-y-4">
-                <p className="text-[10px] tracking-[0.35em] text-white/60">Pilihan Destinasi</p>
-                <h2 className="max-w-xs text-3xl font-bold leading-[0.95] md:text-5xl lg:text-[3.75rem]">
-                  Belum Tahu Mau Ke Mana?
-                </h2>
-                <p className="max-w-sm text-sm leading-7 text-white/75">
-                  Jangan khawatir, kami menyiapkan pilihan rute dan pengalaman visual terbaik untuk inspirasi perjalanan berikutnya.
-                </p>
-              </div>
-
-              <div className="mt-8 space-y-4">
-                <Link href="/tours">
-                  <Button className="w-full rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc]">
-                    Jelajahi Rute
-                  </Button>
-                </Link>
-                <p className="text-[11px] tracking-[0.3em] text-white/45">Setiap rute dimulai dari langkah yang tepat</p>
-              </div>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold tracking-[0.2em] text-zinc-500">Dokumentasi Tur</p>
+              <h3 className="text-2xl font-bold md:text-5xl">Koleksi Perjalanan Kami</h3>
             </div>
+            <Link href="/tours">
+              <Button variant="outline" className="rounded-full text-xs hover:bg-[#10221f] hover:text-white transition-colors">
+                Lihat Semua
+              </Button>
+            </Link>
+          </div>
 
-            <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3 lg:grid-rows-2 lg:h-[540px]">
-              {/* Main large image */}
-              <div className="relative overflow-hidden rounded-[24px] lg:col-span-2 lg:row-span-2">
-                <Image
-                  src={tourShowcaseImages[0]?.imageUrl || PlaceHolderImages[0]?.imageUrl}
-                  alt={tourShowcaseImages[0]?.name || "Tur Unggulan"}
-                  fill
-                  className="object-cover transition duration-500 hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-                <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between text-white">
-                  <div>
-                    <p className="text-[10px] tracking-[0.3em] text-white/70">Unggulan</p>
-                    <p className="text-lg font-bold">{tourShowcaseImages[0]?.name || "Tur Utama"}</p>
-                  </div>
-                  <Link href={tourShowcaseImages[0] ? `/tours/${tourShowcaseImages[0].id}` : "/tours"}>
-                    <span className="rounded-full border border-white/40 bg-white/10 px-3 py-1 text-[10px] tracking-[0.2em] backdrop-blur cursor-pointer hover:bg-white/20 transition-colors">
-                      Jelajahi
-                    </span>
-                  </Link>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {(() => {
+              const documentationPhotos = tours.map((t: any) => t.imageUrl).filter(Boolean).slice(0, 3)
+              while (documentationPhotos.length < 3) {
+                documentationPhotos.push(PlaceHolderImages[documentationPhotos.length % PlaceHolderImages.length]?.imageUrl || "")
+              }
+              return documentationPhotos.map((imgUrl, idx) => (
+                <div key={idx} className="relative h-56 overflow-hidden rounded-2xl group border border-black/5 shadow-sm">
+                  <img
+                    src={imgUrl}
+                    alt={`Dokumentasi ${idx + 1}`}
+                    className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition duration-300" />
                 </div>
-              </div>
-
-              {/* Top right image */}
-              <div className="relative overflow-hidden rounded-[24px]">
-                <Image
-                  src={tourShowcaseImages[1]?.imageUrl || PlaceHolderImages[1]?.imageUrl || heroImage}
-                  alt={tourShowcaseImages[1]?.name || "Tur 2"}
-                  fill
-                  className="object-cover transition duration-500 hover:scale-105"
-                />
-                {tourShowcaseImages[1] && (
-                  <Link href={`/tours/${tourShowcaseImages[1].id}`} className="absolute inset-0 z-10">
-                    <div className="absolute bottom-2 left-2 right-2">
-                      <p className="text-[10px] font-semibold text-white drop-shadow-lg truncate">{tourShowcaseImages[1].name}</p>
-                    </div>
-                  </Link>
-                )}
-              </div>
-
-              {/* Bottom right image */}
-              <div className="relative overflow-hidden rounded-[24px]">
-                <Image
-                  src={tourShowcaseImages[2]?.imageUrl || PlaceHolderImages[2]?.imageUrl || heroImage}
-                  alt={tourShowcaseImages[2]?.name || "Tur 3"}
-                  fill
-                  className="object-cover transition duration-500 hover:scale-105"
-                />
-                {tourShowcaseImages[2] && (
-                  <Link href={`/tours/${tourShowcaseImages[2].id}`} className="absolute inset-0 z-10">
-                    <div className="absolute bottom-2 left-2 right-2">
-                      <p className="text-[10px] font-semibold text-white drop-shadow-lg truncate">{tourShowcaseImages[2].name}</p>
-                    </div>
-                  </Link>
-                )}
-              </div>
-            </div>
+              ))
+            })()}
           </div>
         </section>
 
@@ -607,6 +578,11 @@ export default function OwnerDashboard() {
                           {(booking.paymentStatus || booking.status || "pending_payment").toString()}
                         </Badge>
                       </div>
+                      {booking.participantNames && (
+                        <p className="text-[10px] text-zinc-500 mt-1 max-w-[300px] truncate animate-in fade-in duration-200" title={booking.participantNames}>
+                          <strong>Peserta:</strong> {booking.participantNames}
+                        </p>
+                      )}
                     </div>
 
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -653,71 +629,123 @@ export default function OwnerDashboard() {
             </div>
             <p className="text-sm text-zinc-500">Tinjau narasi pengalaman jalan kaki dari pelanggan dan berikan tanggapan Anda.</p>
             
-            {reportedBookings.length === 0 ? (
+            {/* Toggle Filter Laporan */}
+            <div className="flex gap-2 mb-4">
+              <Button
+                size="sm"
+                variant={reportFilter === 'unreplied' ? 'default' : 'outline'}
+                onClick={() => setReportFilter('unreplied')}
+                className="rounded-full px-4 py-2 text-xs md:text-sm"
+              >
+                Belum Dibalas ({reportedBookings.filter(b => !b.reportReply || b.reportReply.trim() === "").length})
+              </Button>
+              <Button
+                size="sm"
+                variant={reportFilter === 'replied' ? 'default' : 'outline'}
+                onClick={() => setReportFilter('replied')}
+                className="rounded-full px-4 py-2 text-xs md:text-sm"
+              >
+                Sudah Dibalas ({reportedBookings.filter(b => b.reportReply && b.reportReply.trim() !== "").length})
+              </Button>
+            </div>
+
+            {filteredReports.length === 0 ? (
               <div className="text-center py-8 text-zinc-500 text-sm border-2 border-dashed rounded-2xl">
-                Belum ada laporan tur masuk dari pelanggan.
+                {reportFilter === 'unreplied' ? 'Tidak ada laporan yang belum dibalas.' : 'Tidak ada laporan yang sudah dibalas.'}
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {reportedBookings.map((b: any) => (
-                  <div key={b.id} className="flex flex-col justify-between rounded-2xl border border-zinc-200 bg-zinc-50 p-5 space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-bold text-base text-zinc-900">{b.tourName}</p>
-                          <p className="text-xs text-zinc-500">Oleh: <span className="font-semibold text-zinc-800">{b.userName}</span> ({b.userEmail})</p>
-                        </div>
-                        <p className="text-[10px] text-zinc-400">
-                          {b.reportSubmittedAt ? new Date(b.reportSubmittedAt).toLocaleDateString("id-ID", { dateStyle: "medium" }) : "-"}
-                        </p>
-                      </div>
-                      
-                      <div className="rounded-xl bg-white p-3 border border-zinc-100">
-                        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Laporan AI Pengguna:</p>
-                        <p className="mt-1 text-xs md:text-sm text-zinc-700 leading-relaxed italic">
-                          "{b.report}"
-                        </p>
-                      </div>
-
-                      {b.reportReply && (
-                        <div className="rounded-xl bg-emerald-50 p-3 border border-emerald-100">
-                          <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Tanggapan Anda:</p>
-                          <p className="mt-1 text-xs md:text-sm text-emerald-800 leading-relaxed font-medium">
-                            "{b.reportReply}"
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  {displayedReports.map((b: any) => (
+                    <div key={b.id} className="flex flex-col justify-between rounded-2xl border border-zinc-200 bg-zinc-50 p-5 space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-bold text-base text-zinc-900">{b.tourName}</p>
+                            <p className="text-xs text-zinc-500">Oleh: <span className="font-semibold text-zinc-800">{b.userName}</span> ({b.userEmail})</p>
+                            {b.participantNames && (
+                              <p className="text-[10px] text-zinc-500 mt-0.5 animate-in fade-in duration-200"><strong>Peserta:</strong> {b.participantNames}</p>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-zinc-400">
+                            {b.reportSubmittedAt ? new Date(b.reportSubmittedAt).toLocaleDateString("id-ID", { dateStyle: "medium" }) : "-"}
                           </p>
                         </div>
-                      )}
-                    </div>
+                        
+                        <div className="rounded-xl bg-white p-3 border border-zinc-100">
+                          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Laporan AI Pengguna:</p>
+                          <p className="mt-1 text-xs md:text-sm text-zinc-700 leading-relaxed italic">
+                            "{b.report}"
+                          </p>
+                        </div>
 
-                    <div className="space-y-2 pt-2 border-t border-zinc-200">
-                      <Label htmlFor={`reply-${b.id}`} className="text-xs font-semibold text-zinc-600">
-                        {b.reportReply ? "Ubah/Kirim Tanggapan Baru" : "Kirim Tanggapan Baru"}
-                      </Label>
-                      <div className="flex gap-2">
-                        <textarea
-                          id={`reply-${b.id}`}
-                          value={replies[b.id] || ""}
-                          onChange={(e) => setReplies({ ...replies, [b.id]: e.target.value })}
-                          placeholder="Ketik tanggapan atau pesan balasan Anda..."
-                          className="flex-1 min-h-[40px] max-h-[80px] p-2 border border-zinc-200 rounded-xl text-xs"
-                        />
-                        <Button
-                          onClick={() => handleSendReply(b.id)}
-                          disabled={replyLoading[b.id] || !replies[b.id]?.trim()}
-                          size="sm"
-                          className="bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl px-3 gap-1 shrink-0 self-end"
-                        >
-                          {replyLoading[b.id] ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Send className="h-3 w-3" />
-                          )}
-                          Kirim
-                        </Button>
+                        {b.reportReply && (
+                          <div className="rounded-xl bg-emerald-50 p-3 border border-emerald-100">
+                            <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Tanggapan Anda:</p>
+                            <p className="mt-1 text-xs md:text-sm text-emerald-800 leading-relaxed font-medium">
+                              "{b.reportReply}"
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-2 pt-2 border-t border-zinc-200">
+                        <Label htmlFor={`reply-${b.id}`} className="text-xs font-semibold text-zinc-600">
+                          {b.reportReply ? "Ubah/Kirim Tanggapan Baru" : "Kirim Tanggapan Baru"}
+                        </Label>
+                        <div className="flex gap-2">
+                          <textarea
+                            id={`reply-${b.id}`}
+                            value={replies[b.id] || ""}
+                            onChange={(e) => setReplies({ ...replies, [b.id]: e.target.value })}
+                            placeholder="Ketik tanggapan atau pesan balasan Anda..."
+                            className="flex-1 min-h-[40px] max-h-[80px] p-2 border border-zinc-200 rounded-xl text-xs"
+                          />
+                          <Button
+                            onClick={() => handleSendReply(b.id)}
+                            disabled={replyLoading[b.id] || !replies[b.id]?.trim()}
+                            size="sm"
+                            className="bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl px-3 gap-1 shrink-0 self-end"
+                          >
+                            {replyLoading[b.id] ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Send className="h-3 w-3" />
+                            )}
+                            Kirim
+                          </Button>
+                        </div>
                       </div>
                     </div>
+                  ))}
+                </div>
+
+                {/* Navigasi Pagination/Slider Laporan */}
+                {filteredReports.length > 2 && (
+                  <div className="flex justify-between items-center bg-zinc-50 border border-zinc-200 p-3 rounded-2xl mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={reportStartIndex === 0}
+                      onClick={() => setReportStartIndex(prev => Math.max(0, prev - 2))}
+                      className="rounded-full px-4"
+                    >
+                      Sebelumnya
+                    </Button>
+                    <span className="text-xs font-medium text-zinc-600">
+                      Menampilkan {reportStartIndex + 1} - {Math.min(reportStartIndex + 2, filteredReports.length)} dari {filteredReports.length} laporan
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={reportStartIndex + 2 >= filteredReports.length}
+                      onClick={() => setReportStartIndex(prev => prev + 2)}
+                      className="rounded-full px-4"
+                    >
+                      Selanjutnya
+                    </Button>
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
@@ -796,6 +824,9 @@ export default function OwnerDashboard() {
                     <div className="space-y-1 min-w-0">
                       <p className="font-bold text-sm text-zinc-900 truncate">{b.tourName}</p>
                       <p className="text-xs text-zinc-500">{b.userName} • {b.userEmail}</p>
+                      {b.participantNames && (
+                        <p className="text-[10px] text-zinc-500 mt-0.5 animate-in fade-in duration-200"><strong>Peserta:</strong> {b.participantNames}</p>
+                      )}
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-bold text-sm text-emerald-600">Rp {Number(b.grossAmount || 0).toLocaleString("id-ID")}</p>

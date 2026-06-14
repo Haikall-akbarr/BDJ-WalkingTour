@@ -1,7 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { getCurrentSessionUser } from '@/lib/server-auth';
 import { listBookings } from '@/lib/data-store';
+import { getSessionCookieName, hashSessionToken } from '@/lib/auth-session';
+import { getSessionByTokenHash, getUserById } from '@/lib/auth-store';
 
 export const runtime = 'nodejs';
 
@@ -112,27 +114,61 @@ function buildNotificationsFromBookings(bookings: Awaited<ReturnType<typeof list
   });
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     if (!isDatabaseProviderEnabled()) {
+      console.log('[notifications API] DB not enabled');
       return NextResponse.json({ notifications: [] });
     }
 
-    const user = await getCurrentSessionUser();
+    let user = await getCurrentSessionUser();
+    console.log('[notifications API] initial user session:', user);
+
+    if (!user) {
+      const token = request.cookies.get(getSessionCookieName())?.value;
+      console.log('[notifications API] read token from request cookies:', token ? 'exists' : 'empty');
+      if (token) {
+        const tokenHash = hashSessionToken(token);
+        const session = await getSessionByTokenHash(tokenHash);
+        console.log('[notifications API] session found:', session ? 'yes' : 'no');
+        if (session && (!session.expiresAt || new Date(session.expiresAt).getTime() > Date.now())) {
+          user = await getUserById(session.userId);
+          console.log('[notifications API] user found by session:', user ? 'yes' : 'no');
+        }
+      }
+    }
+
     if (!user) {
       return NextResponse.json({ notifications: [] });
     }
 
     const isStaff = ['admin', 'owner', 'guide'].includes(user.role);
     const bookings = await listBookings();
+    console.log('[notifications API] total bookings found:', bookings.length);
     const visibleBookings = isStaff ? bookings : bookings.filter((booking) => booking.userEmail?.toLowerCase() === user.email.toLowerCase());
-    const notifications = buildNotificationsFromBookings(visibleBookings).slice(0, 12);
+    const notifications = buildNotificationsFromBookings(visibleBookings);
+
+    if (user.role === 'user') {
+      notifications.unshift({
+        id: `${user.id}-welcome`,
+        title: 'Selamat Bergabung!',
+        message: `Selamat bergabung dengan BDJ Walking Tour, ${user.name || 'Peserta'}! Siapkan cerita lokal terbaik Anda dan jelajahi keindahan Banjarmasin bersama kami.`,
+        type: 'welcome',
+        createdAt: (user as any).createdAt || new Date().toISOString(),
+        actionUrl: '/dashboard/user',
+        isRead: false,
+      });
+    }
+
+    const slicedNotifications = notifications.slice(0, 12);
+    console.log('[notifications API] returning notifications count:', slicedNotifications.length);
 
     return NextResponse.json({
-      notifications,
-      unreadCount: notifications.length,
+      notifications: slicedNotifications,
+      unreadCount: slicedNotifications.length,
     });
   } catch (error: any) {
+    console.error('[notifications API] ERROR:', error);
     return NextResponse.json({ error: error?.message || 'Gagal mengambil notifikasi.' }, { status: 500 });
   }
 }

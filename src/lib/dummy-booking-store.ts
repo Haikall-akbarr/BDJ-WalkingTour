@@ -29,6 +29,7 @@ type DummyBooking = {
   updatedAt: string;
   paidAt?: string;
   barcodeSentAt?: string;
+  participantNames?: string | null;
 };
 
 const DUMMY_BOOKINGS = new Map<string, DummyBooking>();

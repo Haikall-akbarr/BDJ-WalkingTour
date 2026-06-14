@@ -668,6 +668,11 @@ export default function AdminDashboard() {
                           <td className="p-3 md:p-4 whitespace-nowrap">
                             <p className="font-bold">{booking.userName}</p>
                             <p className="text-[10px] md:text-xs text-muted-foreground">{booking.userWhatsApp}</p>
+                            {booking.participantNames && (
+                              <p className="text-[10px] text-zinc-500 max-w-[200px] truncate animate-in fade-in duration-200" title={booking.participantNames}>
+                                <strong>Peserta:</strong> {booking.participantNames}
+                              </p>
+                            )}
                           </td>
                           <td className="p-3 md:p-4 whitespace-nowrap">{booking.tourName}</td>
                           <td className="p-3 md:p-4 text-center font-semibold">

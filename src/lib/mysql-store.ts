@@ -56,6 +56,7 @@ type DbBookingRow = RowDataPacket & {
   attendance_status: string | null;
   paid_at: Date | string | null;
   barcode_sent_at: Date | string | null;
+  participant_names: string | null;
   created_at: Date | string;
   updated_at: Date | string;
 };
@@ -125,6 +126,7 @@ function mapBooking(row: DbBookingRow) {
     barcodeSentAt: toIso(row.barcode_sent_at),
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
+    participantNames: row.participant_names || '',
   };
 }
 
@@ -351,6 +353,7 @@ export async function createBooking(input: {
   attendanceStatus?: string | null;
   paidAt?: string | null;
   barcodeSentAt?: string | null;
+  participantNames?: string | null;
 }) {
   const pool = getMySqlPool();
   const id = input.id || randomUUID();
@@ -363,8 +366,8 @@ export async function createBooking(input: {
       payment_transaction_id, payment_checkout_url,
       attendance_code, attendance_qr_image_url,
       attendance_scanned_at, attendance_scanned_by, attendance_status,
-      paid_at, barcode_sent_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      paid_at, barcode_sent_at, participant_names, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
     [
       id,
       input.userName,
@@ -390,6 +393,7 @@ export async function createBooking(input: {
       input.attendanceStatus || null,
       input.paidAt ? new Date(input.paidAt) : null,
       input.barcodeSentAt ? new Date(input.barcodeSentAt) : null,
+      input.participantNames || null,
     ]
   );
 
@@ -426,6 +430,7 @@ const BOOKING_COLUMN_MAP: Record<string, string> = {
   attendanceStatus: 'attendance_status',
   paidAt: 'paid_at',
   barcodeSentAt: 'barcode_sent_at',
+  participantNames: 'participant_names',
 };
 
 function normalizeBookingValue(key: string, value: unknown) {

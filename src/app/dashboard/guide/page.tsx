@@ -39,6 +39,7 @@ type ScanHistoryItem = {
   tourName: string;
   pax: number;
   source: "manual" | "camera";
+  participantNames?: string;
 };
 
 export default function GuideDashboard() {
@@ -182,6 +183,7 @@ export default function GuideDashboard() {
       tourName: payload?.booking?.tourName || "-",
       pax: Number(payload?.booking?.pax || 0),
       source,
+      participantNames: payload?.booking?.participantNames || "",
     };
 
     setScanHistory((prev) => [item, ...prev]);
@@ -301,6 +303,7 @@ export default function GuideDashboard() {
       WaktuScan: new Date(item.scannedAt).toLocaleString("id-ID"),
       BookingId: item.bookingId,
       NamaPeserta: item.userName,
+      PesertaTambahan: item.participantNames || "-",
       EmailPeserta: item.userEmail,
       PaketTur: item.tourName,
       Pax: item.pax,
@@ -473,6 +476,11 @@ export default function GuideDashboard() {
                       <Badge variant="outline" className="rounded-full">{item.source === "camera" ? "Kamera" : "Manual"}</Badge>
                     </div>
                     <p className="mt-1 text-zinc-600">{item.tourName} • {item.pax} Pax {item.tourName?.toLowerCase().includes("hemat") ? "(Hemat)" : item.tourName?.toLowerCase().includes("reguler") ? "(Reguler)" : ""}</p>
+                    {item.participantNames && (
+                      <p className="mt-1 text-xs text-zinc-600 font-medium bg-zinc-100 p-1.5 rounded-lg animate-in fade-in duration-200">
+                        <strong>Peserta Tambahan:</strong> {item.participantNames}
+                      </p>
+                    )}
                     <p className="text-xs text-zinc-500">{new Date(item.scannedAt).toLocaleString("id-ID")} • Booking: {item.bookingId}</p>
                   </div>
                 ))}
@@ -549,6 +557,12 @@ export default function GuideDashboard() {
                     <p className="text-xl font-bold ">{selectedTour?.userName}</p>
                     <p className="mt-1 text-zinc-600">{selectedTour?.userWhatsApp}</p>
                     <p className="text-xs text-zinc-500">{selectedTour?.userEmail}</p>
+                    {selectedTour?.participantNames && (
+                      <div className="mt-2 text-xs text-zinc-700 bg-white p-2 rounded-lg border border-black/5 animate-in fade-in duration-200">
+                        <strong className="block text-zinc-800 mb-0.5">Peserta Tambahan:</strong>
+                        {selectedTour.participantNames}
+                      </div>
+                    )}
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <Badge variant="secondary" className="rounded-full bg-white">
                         Domisili: {selectedTour?.domicile} {selectedTour?.customDomicile ? `(${selectedTour.customDomicile})` : ""}
@@ -562,11 +576,6 @@ export default function GuideDashboard() {
 
                 <CardFooter className="flex flex-col items-center justify-between gap-4 border-t bg-zinc-50 p-4 sm:flex-row">
                   <p className="text-xs italic text-zinc-600">Siapkan cerita lokal terbaik Anda!</p>
-                  <Link href={`/dashboard/guide/${selectedTour?.id}/report`} className="w-full sm:w-auto">
-                    <Button className="h-9 w-full rounded-full bg-zinc-900 text-xs text-white hover:bg-zinc-800 sm:w-auto">
-                      <MessageSquareText className="mr-2 h-4 w-4" /> Laporan Tur
-                    </Button>
-                  </Link>
                 </CardFooter>
               </Card>
 
