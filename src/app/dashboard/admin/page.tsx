@@ -83,6 +83,8 @@ export default function AdminDashboard() {
     highlight2Desc: "",
     highlight3Title: "",
     highlight3Desc: "",
+    highlight4Title: "",
+    highlight4Desc: "",
     routeMapUrl: "",
     pois: ["", "", "", "", ""]
   });
@@ -342,6 +344,8 @@ export default function AdminDashboard() {
       highlight2Desc: "",
       highlight3Title: "",
       highlight3Desc: "",
+      highlight4Title: "",
+      highlight4Desc: "",
       routeMapUrl: "",
       pois: ["", "", "", "", ""]
     });
@@ -384,6 +388,8 @@ export default function AdminDashboard() {
       highlight2Desc: highlights[1]?.desc || "",
       highlight3Title: highlights[2]?.title || "",
       highlight3Desc: highlights[2]?.desc || "",
+      highlight4Title: highlights[3]?.title || "",
+      highlight4Desc: highlights[3]?.desc || "",
       routeMapUrl: tour.routeMapUrl || "",
       pois: pois.length > 0 ? pois : ["", "", "", "", ""]
     });
@@ -402,6 +408,9 @@ export default function AdminDashboard() {
     }
     if (tourFormData.highlight3Title && tourFormData.highlight3Desc) {
       highlightsList.push({ title: tourFormData.highlight3Title, desc: tourFormData.highlight3Desc });
+    }
+    if (tourFormData.highlight4Title && tourFormData.highlight4Desc) {
+      highlightsList.push({ title: tourFormData.highlight4Title, desc: tourFormData.highlight4Desc });
     }
 
     const poisList = tourFormData.pois.map(p => p.trim()).filter(Boolean);
@@ -1296,6 +1305,13 @@ export default function AdminDashboard() {
                     <Label className="text-xs font-semibold">Highlight 3</Label>
                     <Input placeholder="Judul" className="h-8 text-xs" value={tourFormData.highlight3Title} onChange={(e) => setTourFormData({...tourFormData, highlight3Title: e.target.value})} />
                     <Textarea placeholder="Deskripsi highlight..." className="min-h-[50px] text-xs" value={tourFormData.highlight3Desc} onChange={(e) => setTourFormData({...tourFormData, highlight3Desc: e.target.value})} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 p-3 bg-zinc-50/50 rounded-xl border">
+                  <div className="col-span-2 space-y-1">
+                    <Label className="text-xs font-semibold">Highlight 4</Label>
+                    <Input placeholder="Judul" className="h-8 text-xs" value={tourFormData.highlight4Title} onChange={(e) => setTourFormData({...tourFormData, highlight4Title: e.target.value})} />
+                    <Textarea placeholder="Deskripsi highlight..." className="min-h-[50px] text-xs" value={tourFormData.highlight4Desc} onChange={(e) => setTourFormData({...tourFormData, highlight4Desc: e.target.value})} />
                   </div>
                 </div>
               </div>

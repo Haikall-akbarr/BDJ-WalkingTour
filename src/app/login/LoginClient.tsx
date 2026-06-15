@@ -46,6 +46,15 @@ declare global {
   interface Window {}
 }
 
+async function safeParseResponse(response: Response): Promise<any> {
+  const text = await response.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new Error(`Respon server tidak valid (${response.status}): ${text.substring(0, 80)}...`)
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -100,7 +109,7 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: emailValue, password: passwordValue }),
       })
-      const result = await response.json()
+      const result = await safeParseResponse(response)
 
       if (!response.ok) {
         throw new Error(result?.error || "Login gagal.")
@@ -138,7 +147,7 @@ export default function LoginPage() {
           confirmPassword,
         }),
       })
-      const result = await response.json()
+      const result = await safeParseResponse(response)
 
       if (!response.ok) {
         throw new Error(result?.error || "Pembuatan akun gagal.")
@@ -170,7 +179,7 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: resetEmail }),
       })
-      const result = await response.json()
+      const result = await safeParseResponse(response)
 
       if (!response.ok) {
         throw new Error(result?.error || "Permintaan reset gagal.")
@@ -223,7 +232,7 @@ export default function LoginPage() {
         body: JSON.stringify({ idToken: data.firebaseIdToken }),
       })
 
-      const result = await response.json()
+      const result = await safeParseResponse(response)
       if (!response.ok) {
         throw new Error(result?.error || 'Login Firebase gagal.')
       }
@@ -271,7 +280,7 @@ export default function LoginPage() {
           body: JSON.stringify({ idToken: data.firebaseIdToken }),
         })
 
-        const result = await response.json()
+        const result = await safeParseResponse(response)
         if (!response.ok) {
           throw new Error(result?.error || 'Login Firebase gagal.')
         }

@@ -218,6 +218,11 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
             <Badge className="rounded-full bg-[#10221f] text-[#98DDCA] hover:bg-[#10221f] px-3.5 py-1.5 font-bold inline-flex items-center gap-1.5 text-xs shadow-sm border border-[#10221f]">
               <Clock className="h-3.5 w-3.5 text-[#98DDCA]" /> {tour.duration || "2 Jam"}
             </Badge>
+            <Link href={`/book/${tour.id}`}>
+              <Button className="rounded-full bg-[#98DDCA] text-[#10221f] hover:bg-[#b8eadc] px-3.5 py-1.5 h-auto font-black text-xs shadow-sm border border-[#98DDCA] gap-1 transition-colors duration-200">
+                Mulai dari Rp {((tour.priceHemat != null && tour.priceHemat < tour.price) ? tour.priceHemat : tour.price)?.toLocaleString('id-ID')} / Pax <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -253,7 +258,14 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
                   {parsedHighlights.map((hl: any, idx: number) => (
                     <div key={idx} className="flex gap-3 p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
                       <div className="h-8 w-8 rounded-full bg-[#98DDCA]/40 text-[#10221f] flex items-center justify-center shrink-0">
-                        {idx % 2 === 0 ? <Building2 className="h-4 w-4" /> : <Utensils className="h-4 w-4" />}
+                        {(() => {
+                          switch (idx % 4) {
+                            case 0: return <Building2 className="h-4 w-4" />;
+                            case 1: return <Utensils className="h-4 w-4" />;
+                            case 2: return <Sparkles className="h-4 w-4" />;
+                            default: return <Compass className="h-4 w-4" />;
+                          }
+                        })()}
                       </div>
                       <div className="space-y-1">
                         <p className="font-bold text-sm text-[#10221f] leading-snug">{hl.title}</p>
