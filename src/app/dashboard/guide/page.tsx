@@ -102,10 +102,10 @@ export default function GuideDashboard() {
     const loadMyRevenue = async () => {
       if (!currentGuideId) return;
       try {
-        const response = await fetch('/api/analytics/revenue');
+        const response = await fetch(`/api/analytics/revenue?guideId=${encodeURIComponent(currentGuideId)}`);
         const result = await response.json();
         if (response.ok && mounted) {
-          setMyRevenue(result.totalRevenue || 0);
+          setMyRevenue(result.totalGuideRevenue || 0);
         }
       } catch {}
     };

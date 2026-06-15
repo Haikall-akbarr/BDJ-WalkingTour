@@ -7,13 +7,15 @@ export const runtime = 'nodejs'
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
 const GUIDE_COMMISSION_RATE = 0.35
 
-export async function GET(_: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     if (!isDatabaseProviderEnabled()) {
       return NextResponse.json({ error: 'Backend database belum aktif.' }, { status: 400 })
     }
 
-    const bookings = await listBookings()
+    const guideId = request.nextUrl.searchParams.get('guideId') || undefined
+
+    const bookings = await listBookings(guideId ? { guideId } : undefined)
     const paidBookings = bookings.filter(
       (b: any) => b.paymentStatus === 'paid' || b.status === 'paid'
     )
