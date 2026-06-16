@@ -168,13 +168,13 @@ export default function AdminDashboard() {
     try {
       const resp = await fetch('/api/admin/audit-logs', { cache: 'no-store' });
       const data = await resp.json();
-      if (!resp.ok) throw new Error(data?.error || 'Gagal memuat audit log');
+      if (!resp.ok) throw new Error(data?.error || 'Gagal memuat log aktivitas');
       setAuditLogs(Array.isArray(data?.logs) ? data.logs : []);
     } catch (error: any) {
       setAuditLogs([]);
       toast({
         variant: 'destructive',
-        title: 'Gagal memuat log audit',
+        title: 'Gagal memuat log aktivitas',
         description: error?.message || 'Periksa backend MySQL.',
       });
     } finally {
@@ -622,7 +622,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="bookings" className="rounded-full px-4 py-2 text-xs md:px-6 md:text-sm data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Pemesanan Pending</TabsTrigger>
             <TabsTrigger value="tours" className="rounded-full px-4 py-2 text-xs md:px-6 md:text-sm data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Kelola Tur</TabsTrigger>
             <TabsTrigger value="users" className="rounded-full px-4 py-2 text-xs md:px-6 md:text-sm data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Kelola Pengguna</TabsTrigger>
-            <TabsTrigger value="audit" className="rounded-full px-4 py-2 text-xs md:px-6 md:text-sm data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Audit Log</TabsTrigger>
+            <TabsTrigger value="audit" className="rounded-full px-4 py-2 text-xs md:px-6 md:text-sm data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Log Aktivitas</TabsTrigger>
           </TabsList>
         </div>
 
@@ -878,7 +878,7 @@ export default function AdminDashboard() {
           <Card className="rounded-[24px] border border-zinc-200 shadow-none">
             <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle className="text-lg md:text-xl">Audit Log Aktivitas</CardTitle>
+                <CardTitle className="text-lg md:text-xl">Log Aktivitas</CardTitle>
                 <CardDescription className="text-xs md:text-sm">
                   Pantau aksi penting seperti assign guide dan scan tiket.
                 </CardDescription>
@@ -889,7 +889,7 @@ export default function AdminDashboard() {
                   <Input
                     value={auditSearchTerm}
                     onChange={(e) => setAuditSearchTerm(e.target.value)}
-                    placeholder="Cari audit log..."
+                    placeholder="Cari log aktivitas..."
                     className="pl-10 text-sm"
                   />
                 </div>
@@ -912,7 +912,7 @@ export default function AdminDashboard() {
                       <tr>
                         <td colSpan={5} className="p-12 text-center">
                           <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-                          <p className="mt-2 text-muted-foreground">Memuat log audit...</p>
+                          <p className="mt-2 text-muted-foreground">Memuat log aktivitas...</p>
                         </td>
                       </tr>
                     ) : filteredAuditLogs.length > 0 ? (
@@ -962,7 +962,7 @@ export default function AdminDashboard() {
                     ) : (
                       <tr>
                         <td colSpan={5} className="p-12 text-center text-muted-foreground">
-                          Belum ada log audit yang cocok.
+                          Belum ada log aktivitas yang cocok.
                         </td>
                       </tr>
                     )}
