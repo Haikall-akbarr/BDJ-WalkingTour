@@ -9,6 +9,7 @@ import { Compass, MapPin, Ticket, Mail, UserRound, Loader2, Home, MessageSquareT
 import { useSessionUser } from "@/hooks/use-session-user"
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog"
 import { NotificationBell } from "@/components/NotificationBell"
+import { Footer } from "@/components/public/Footer"
 
 export default function UserDashboardPage() {
   const { user, loading } = useSessionUser()
@@ -221,6 +222,7 @@ export default function UserDashboardPage() {
             </CardContent>
           </Card>
         </section>
+        <Footer className="w-full rounded-[28px] mt-0" />
       </div>
     </div>
   )

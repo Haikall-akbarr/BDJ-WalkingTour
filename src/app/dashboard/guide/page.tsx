@@ -26,8 +26,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
-import { useToast } from "@/hooks/use-toast"
 import { useSessionUser } from "@/hooks/use-session-user"
+import { useToast } from "@/hooks/use-toast"
+import { Footer } from "@/components/public/Footer"
 
 type ScanHistoryItem = {
   id: string;
@@ -592,9 +593,10 @@ export default function GuideDashboard() {
           </div>
         ) : (
           <Card className="rounded-[28px] border-dashed p-20 text-center">
-              <p className="text-muted-foreground">Anda belum memiliki jadwal tur yang ditugaskan.</p>
+            <p className="text-muted-foreground">Anda belum memiliki jadwal tur yang ditugaskan.</p>
           </Card>
         )}
+        <Footer className="w-full rounded-[34px] mt-0" />
       </div>
     </div>
   )

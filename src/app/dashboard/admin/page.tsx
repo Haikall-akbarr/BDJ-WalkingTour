@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
+import { Footer } from "@/components/public/Footer"
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -1387,6 +1388,7 @@ export default function AdminDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Footer className="w-full rounded-[34px] mt-0" />
       </div>
     </div>
   )
