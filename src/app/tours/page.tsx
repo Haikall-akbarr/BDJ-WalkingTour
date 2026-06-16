@@ -37,7 +37,7 @@ export default function ToursPage() {
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [currentSlide, setCurrentSlide] = useState(0)
-  const itemsPerPage = 9
+  const itemsPerPage = 8
 
   const isSupabaseStorageUrl = (value?: string) =>
     typeof value === "string" && value.includes(".supabase.co/storage/v1/object/public/")
