@@ -29,7 +29,8 @@ import {
   Loader2,
   Calendar as CalendarIcon,
   Clock,
-  Map as MapIcon
+  Map as MapIcon,
+  Download
 } from "lucide-react"
 import {
   AlertDialog,
@@ -51,6 +52,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
+import * as XLSX from "xlsx"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
 import { Footer } from "@/components/public/Footer"
 
@@ -555,6 +559,58 @@ export default function AdminDashboard() {
     });
   };
 
+  const handleExportExcel = () => {
+    if (!filteredBookings || filteredBookings.length === 0) {
+      toast({ variant: "destructive", title: "Tidak ada data", description: "Belum ada booking untuk diekspor." });
+      return;
+    }
+    const rows = filteredBookings.map((b: any, idx: number) => ({
+      No: idx + 1,
+      "Nama Pelanggan": b.userName || "-",
+      "Kontak (WA)": b.userWhatsApp || "-",
+      "Peserta Tambahan": b.participantNames || "-",
+      Tur: b.tourName || "-",
+      Pax: b.pax || 0,
+      "Total (Rp)": b.grossAmount || 0,
+      Tanggal: b.createdAt ? new Date(b.createdAt).toLocaleDateString("id-ID") : "-",
+      Status: String(b.paymentStatus || b.status || "pending").toLowerCase(),
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, `Semua Booking`);
+    const fileData = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([fileData], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `semua-booking-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "File diunduh", description: "Data booking berhasil diekspor ke Excel." });
+  };
+
+  const handleExportPDF = () => {
+    if (!filteredBookings || filteredBookings.length === 0) {
+      toast({ variant: "destructive", title: "Tidak ada data", description: "Belum ada booking untuk diekspor." });
+      return;
+    }
+    const doc = new jsPDF();
+    doc.text("Laporan Pemesanan Tur", 14, 15);
+    const tableColumn = ["No", "Pelanggan", "Tur", "Pax", "Total (Rp)", "Tanggal", "Status"];
+    const tableRows = filteredBookings.map((b: any, idx: number) => [
+      idx + 1,
+      b.userName || "-",
+      b.tourName || "-",
+      b.pax || 0,
+      (b.grossAmount || 0).toLocaleString("id-ID"),
+      b.createdAt ? new Date(b.createdAt).toLocaleDateString("id-ID") : "-",
+      String(b.paymentStatus || b.status || "pending").toLowerCase()
+    ]);
+    autoTable(doc, { head: [tableColumn], body: tableRows, startY: 20 });
+    doc.save(`semua-booking-${new Date().toISOString().slice(0, 10)}.pdf`);
+    toast({ title: "File diunduh", description: "Data booking berhasil diekspor ke PDF." });
+  };
+
   return (
     <div className="min-h-screen bg-[#ecece7] text-zinc-900">
       <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-10 space-y-8 md:space-y-10">
@@ -631,9 +687,19 @@ export default function AdminDashboard() {
           <Card className="overflow-hidden rounded-[24px] border border-zinc-200 shadow-none">
             <CardHeader className="p-4 md:p-6 space-y-4">
               <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
-                <div>
-                  <CardTitle className="text-lg md:text-xl">Permintaan Pemesanan Baru</CardTitle>
-                  <CardDescription className="text-xs md:text-sm">Lihat semua pemesanan, baik belum bayar, sudah bayar, maupun dibatalkan.</CardDescription>
+                <div className="flex-1">
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <CardTitle className="text-lg md:text-xl">Permintaan Pemesanan Baru</CardTitle>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" className="h-8 gap-2 text-xs" onClick={handleExportExcel} disabled={!filteredBookings || filteredBookings.length === 0}>
+                        <Download className="h-3 w-3" /> Excel
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 gap-2 text-xs" onClick={handleExportPDF} disabled={!filteredBookings || filteredBookings.length === 0}>
+                        <Download className="h-3 w-3" /> PDF
+                      </Button>
+                    </div>
+                  </div>
+                  <CardDescription className="text-xs md:text-sm mt-1">Lihat semua pemesanan, baik belum bayar, sudah bayar, maupun dibatalkan.</CardDescription>
                 </div>
                 <div className="relative w-full lg:w-64">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />

@@ -52,6 +52,8 @@
     "firebase": "^9.23.0",
     "genkit": "^1.20.0",
     "jose": "^6.2.3",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.475.0",
     "mysql2": "^3.22.3",
     "next": "15.5.9",

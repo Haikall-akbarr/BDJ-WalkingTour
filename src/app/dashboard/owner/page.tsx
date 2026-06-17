@@ -51,6 +51,8 @@ import { PlaceHolderImages } from "@/lib/placeholder-images"
 import { Footer } from "@/components/public/Footer"
 import { Label } from "@/components/ui/label"
 import * as XLSX from "xlsx"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 
 const STATS = [
   { label: "Peserta Terdaftar", value: "20K+", trend: "+12%" },
@@ -218,40 +220,79 @@ export default function OwnerDashboard() {
   }, []);
 
   const bookingsToDisplay = useMemo(() => {
-    return dbBookings || [];
-  }, [dbBookings]);
+    if (!dbBookings || dbBookings.length === 0) return [];
+    
+    const groups: Record<string, any> = {};
+    const toursDateMap: Record<string, string> = {};
+    for (const t of tours) {
+      toursDateMap[t.id] = t.date;
+    }
+
+    for (const booking of dbBookings) {
+      const tId = booking.tourId;
+      if (!groups[tId]) {
+        const matchedTour = tours.find((t: any) => t.id === tId);
+        const cleanName = matchedTour?.name || booking.tourName?.replace(/\s*\(Paket\s*(Hemat|Reguler)\)/gi, "");
+        
+        groups[tId] = {
+          id: tId,
+          tourId: tId,
+          tourName: cleanName,
+          tourDate: toursDateMap[tId] || (booking.createdAt ? new Date(booking.createdAt).toLocaleDateString("id-ID") : "-"),
+          bookings: [],
+          totalPax: 0,
+          participants: [],
+        };
+      }
+      groups[tId].bookings.push(booking);
+      groups[tId].totalPax += Number(booking.pax || 0);
+      if (booking.participantNames) {
+         groups[tId].participants.push(`${booking.userName} (${booking.participantNames})`);
+      } else {
+         groups[tId].participants.push(`${booking.userName}`);
+      }
+    }
+    
+    return Object.values(groups);
+  }, [dbBookings, tours]);
 
   // tourShowcaseImages memo removed - layout swapped to user page
 
-  const handleAssignGuide = async (bookingId: string) => {
-    const guideId = selectedGuides[bookingId];
+  const handleAssignGuide = async (slotId: string) => {
+    const guideId = selectedGuides[slotId];
     if (!guideId) return;
 
     const guideName = guides.find(g => g.id === guideId)?.name;
+    const slot = bookingsToDisplay.find((s: any) => s.id === slotId);
+    if (!slot || slot.bookings.length === 0) return;
 
     try {
-      const response = await fetch(`/api/bookings/${bookingId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          guideId,
-          guideName,
-          status: "assigned",
-        }),
-      });
-
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result?.error || "Gagal menugaskan pemandu.");
-      }
+      await Promise.all(slot.bookings.map((booking: any) => 
+        fetch(`/api/bookings/${booking.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            guideId,
+            guideName,
+            status: "assigned",
+          }),
+        }).then(async (resp) => {
+          const result = await resp.json();
+          if (!resp.ok) {
+            throw new Error(result?.error || "Gagal menugaskan pemandu.");
+          }
+          return result;
+        })
+      ));
 
       await loadUnassignedBookings();
       toast({
         title: "Penugasan Berhasil",
-        description: `Pemandu ${guideName} telah ditugaskan.`,
+        description: `Pemandu ${guideName} telah ditugaskan untuk tur ${slot.tourName}.`,
       });
+      setSelectedGuides(prev => ({ ...prev, [slotId]: "" }));
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -329,6 +370,34 @@ export default function OwnerDashboard() {
     toast({
       title: "File diunduh",
       description: `Data booking bulan ${selectedMonthName} berhasil diekspor ke Excel.`,
+    });
+  };
+
+  const handleExportPDF = () => {
+    if (!selectedMonthBookings || selectedMonthBookings.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Tidak ada data",
+        description: "Belum ada booking untuk diekspor.",
+      });
+      return;
+    }
+    const doc = new jsPDF();
+    doc.text(`Laporan Pemesanan Tur - ${selectedMonthName}`, 14, 15);
+    const tableColumn = ["No", "Pelanggan", "Tur", "Pax", "Total (Rp)", "Tanggal"];
+    const tableRows = selectedMonthBookings.map((b: any, idx: number) => [
+      idx + 1,
+      b.userName || "-",
+      b.tourName || "-",
+      b.pax || 0,
+      (b.grossAmount || 0).toLocaleString("id-ID"),
+      b.paidAt ? new Date(b.paidAt).toLocaleDateString("id-ID") : "-",
+    ]);
+    autoTable(doc, { head: [tableColumn], body: tableRows, startY: 20 });
+    doc.save(`booking-${selectedMonthName}-${new Date().getFullYear()}.pdf`);
+    toast({
+      title: "File diunduh",
+      description: `Data booking bulan ${selectedMonthName} berhasil diekspor ke PDF.`,
     });
   };
 
@@ -564,32 +633,31 @@ export default function OwnerDashboard() {
                   <p className="text-xs text-muted-foreground mt-2">Memuat data...</p>
                 </div>
               ) : bookingsToDisplay.length > 0 ? (
-                bookingsToDisplay.map((booking: any) => (
-                  <div key={booking.id} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
+                bookingsToDisplay.map((slot: any) => (
+                  <div key={slot.id} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
                     <div className="space-y-1">
-                      <p className="truncate text-sm font-bold">{booking.tourName}</p>
+                      <p className="truncate text-sm font-bold">{slot.tourName}</p>
                       <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-500">
-                        <span className="font-semibold text-zinc-800">{booking.userName}</span>
+                        <span>{slot.tourDate}</span>
                         <span>•</span>
-                        <span>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString("id-ID") : "-"}</span>
                         <Badge variant="outline" className="h-5 rounded-full px-2 text-[10px]">
-                          {booking.pax} Pax {booking.tourName?.toLowerCase().includes("hemat") ? "(Hemat)" : booking.tourName?.toLowerCase().includes("reguler") ? "(Reguler)" : ""}
+                          {slot.totalPax} Pax
                         </Badge>
-                        <Badge variant="secondary" className="h-5 rounded-full px-2 text-[10px]">
-                          {(booking.paymentStatus || booking.status || "pending_payment").toString()}
+                        <Badge variant="secondary" className="h-5 rounded-full px-2 text-[10px] bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">
+                          Butuh Pemandu
                         </Badge>
                       </div>
-                      {booking.participantNames && (
-                        <p className="text-[10px] text-zinc-500 mt-1 max-w-[300px] truncate animate-in fade-in duration-200" title={booking.participantNames}>
-                          <strong>Peserta:</strong> {booking.participantNames}
+                      {slot.participants.length > 0 && (
+                        <p className="text-[10px] text-zinc-500 mt-1 max-w-[300px] truncate animate-in fade-in duration-200" title={slot.participants.join(", ")}>
+                          <strong>Peserta:</strong> {slot.participants.join(", ")}
                         </p>
                       )}
                     </div>
 
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <Select
-                        value={selectedGuides[booking.id] || ""}
-                        onValueChange={(val) => setSelectedGuides({ ...selectedGuides, [booking.id]: val })}
+                        value={selectedGuides[slot.id] || ""}
+                        onValueChange={(val) => setSelectedGuides({ ...selectedGuides, [slot.id]: val })}
                       >
                         <SelectTrigger className="h-9 w-full bg-white text-xs sm:w-[175px]">
                           <SelectValue placeholder="Pilih Pemandu" />
@@ -604,8 +672,8 @@ export default function OwnerDashboard() {
                       <Button
                         size="sm"
                         className="h-9 w-full rounded-full bg-zinc-900 text-xs text-white hover:bg-zinc-800 sm:w-auto"
-                        disabled={!selectedGuides[booking.id]}
-                        onClick={() => handleAssignGuide(booking.id)}
+                        disabled={!selectedGuides[slot.id]}
+                        onClick={() => handleAssignGuide(slot.id)}
                       >
                         <UserPlus className="mr-1 h-3 w-3" /> Tugaskan
                       </Button>
@@ -792,16 +860,24 @@ export default function OwnerDashboard() {
               <p className="text-center text-sm text-zinc-500 py-8">Tidak ada data booking.</p>
             )}
           </div>
-          <div className="border-t px-6 py-4 flex items-center justify-between gap-3 bg-zinc-50">
+          <div className="border-t px-6 py-4 flex items-center justify-between gap-3 bg-zinc-50 flex-wrap">
             <p className="text-sm font-bold text-zinc-900">
               Total: Rp {(selectedMonthBookings || []).reduce((s: number, b: any) => s + Number(b.grossAmount || 0), 0).toLocaleString("id-ID")}
             </p>
-            <Button
-              onClick={handleExportExcel}
-              className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700 gap-2"
-            >
-              <Download className="h-4 w-4" /> Ekspor ke Excel
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleExportExcel}
+                className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700 gap-2"
+              >
+                <Download className="h-4 w-4" /> Excel
+              </Button>
+              <Button
+                onClick={handleExportPDF}
+                className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700 gap-2"
+              >
+                <Download className="h-4 w-4" /> PDF
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
