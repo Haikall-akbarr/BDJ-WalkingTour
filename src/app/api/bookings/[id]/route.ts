@@ -4,6 +4,7 @@ import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { logAuditEvent } from '@/lib/audit-log';
 import { getCurrentSessionUser } from '@/lib/server-auth';
 import { sendEmail } from '@/lib/email';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 
@@ -122,6 +123,31 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           paymentStatus: body?.paymentStatus || null,
         },
       });
+
+      try {
+        const admin = getSupabaseAdmin();
+        const { data: guideData } = await admin.from('guides').select('id').eq('user_id', body.guideId).maybeSingle();
+        const actualGuideId = guideData?.id || body.guideId;
+
+        await admin.from('guide_tour_assignments').upsert({
+          booking_id: id,
+          guide_id: actualGuideId,
+          tour_date: booking.createdAt,
+          pax_count: booking.pax || 1,
+          status: 'assigned'
+        }, { onConflict: 'booking_id' });
+
+        await admin.from('notifications').insert({
+          recipient_id: body.guideId,
+          type: 'guide_assignment',
+          title: 'Penugasan Tur Baru',
+          message: `Anda telah ditugaskan untuk memandu tur ${booking.tourName}.`,
+          related_id: id,
+          action_url: '/dashboard/guide'
+        });
+      } catch (err) {
+        console.error("Failed to insert assignment or notification:", err);
+      }
     }
 
     return NextResponse.json({ booking });

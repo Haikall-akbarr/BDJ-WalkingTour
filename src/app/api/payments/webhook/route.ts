@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { getBookingById, updateBooking } from '@/lib/data-store';
 import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail, verifyMidtransSignature } from '@/lib/payment-helpers';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 
@@ -86,6 +87,23 @@ export async function POST(request: NextRequest) {
           await updateBooking(orderId, {
             barcodeSentAt: new Date().toISOString(),
           });
+          
+          try {
+            const admin = getSupabaseAdmin();
+            const { data: userData } = await admin.from('users').select('id').eq('email', bookingData.userEmail).maybeSingle();
+            if (userData?.id) {
+              await admin.from('notifications').insert({
+                recipient_id: userData.id,
+                type: 'payment_success',
+                title: 'Pembayaran Berhasil',
+                message: `Pembayaran untuk tur ${bookingData.tourName} berhasil. Barcode absensi Anda sudah siap.`,
+                related_id: orderId,
+                action_url: '/dashboard/user'
+              });
+            }
+          } catch (notifErr) {
+            console.error('[payments/webhook] Failed to insert notification:', notifErr);
+          }
         } catch (emailError) {
           console.error('[payments/webhook] Failed to send email:', emailError);
         }

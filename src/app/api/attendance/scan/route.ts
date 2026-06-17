@@ -3,6 +3,7 @@ import { findDummyBookingByAttendanceCode, updateDummyBooking, initializeDummyBo
 import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { getBookingByAttendanceCode, updateBooking } from '@/lib/data-store';
 import { logAuditEvent } from '@/lib/audit-log';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 
@@ -67,6 +68,19 @@ export async function POST(request: NextRequest) {
         attendanceScannedBy: scannedBy,
         attendanceStatus: 'present',
       });
+
+      try {
+        const admin = getSupabaseAdmin();
+        await admin.from('barcode_scans').insert({
+          booking_id: bookingId,
+          guide_id: scannedBy,
+          attendance_code: attendanceCode,
+          location: body?.location || null,
+          notes: body?.notes || null
+        });
+      } catch (err) {
+        console.error('Failed to insert into barcode_scans:', err);
+      }
     } else {
       // Update local dummy booking
       const updated = updateDummyBooking(bookingId!, {
