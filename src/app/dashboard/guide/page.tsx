@@ -66,6 +66,7 @@ export default function GuideDashboard() {
   const historyStorageKey = `guide-scan-history-${currentGuideId}`;
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
   const [apiTours, setApiTours] = useState<any[]>([]);
+  const [toursList, setToursList] = useState<any[]>([]);
   const [apiLoading, setApiLoading] = useState(true);
   const [myRevenue, setMyRevenue] = useState<number>(0);
 
@@ -111,19 +112,69 @@ export default function GuideDashboard() {
       } catch {}
     };
 
+    const loadTours = async () => {
+      try {
+        const response = await fetch("/api/tours", { cache: "no-store" });
+        const result = await response.json();
+        if (response.ok && mounted && Array.isArray(result?.tours)) {
+          setToursList(result.tours);
+        }
+      } catch (err) {
+        console.error("Gagal memuat tur:", err);
+      }
+    };
+
     loadGuideTours();
     loadMyRevenue();
+    loadTours();
 
     return () => {
       mounted = false;
     };
   }, [currentGuideId]);
 
-  const selectedTour = useMemo(() => {
-    if (!apiTours || apiTours.length === 0) return null;
-    if (selectedTourId) return apiTours.find((t: any) => t.id === selectedTourId) || apiTours[0];
-    return apiTours[0];
-  }, [apiTours, selectedTourId]);
+  const toursDateMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const t of toursList) {
+      map[t.id] = t.date;
+    }
+    return map;
+  }, [toursList]);
+
+  const groupedTourGroups = useMemo(() => {
+    if (!apiTours || apiTours.length === 0) return [];
+    
+    const groups: Record<string, any> = {};
+    
+    for (const booking of apiTours) {
+      const tId = booking.tourId;
+      if (!groups[tId]) {
+        // Look up clean name from toursList if available
+        const matchedTour = toursList.find((t: any) => t.id === tId);
+        const cleanName = matchedTour?.name || booking.tourName.replace(/\s*\(Paket\s*(Hemat|Reguler)\)/gi, "");
+        
+        groups[tId] = {
+          id: tId,
+          tourId: tId,
+          tourName: cleanName,
+          tourDate: toursDateMap[tId] || (booking.createdAt ? new Date(booking.createdAt).toLocaleDateString("id-ID") : "-"),
+          bookings: [],
+          isDemo: booking.id.startsWith("mock") || booking.id.startsWith("local-"),
+        };
+      }
+      groups[tId].bookings.push(booking);
+    }
+    
+    return Object.values(groups);
+  }, [apiTours, toursList, toursDateMap]);
+
+  const selectedGroup = useMemo(() => {
+    if (groupedTourGroups.length === 0) return null;
+    if (selectedTourId) {
+      return groupedTourGroups.find((g: any) => g.id === selectedTourId) || groupedTourGroups[0];
+    }
+    return groupedTourGroups[0];
+  }, [groupedTourGroups, selectedTourId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -497,7 +548,7 @@ export default function GuideDashboard() {
               <p className="text-muted-foreground">Memuat jadwal guide...</p>
             </div>
           </Card>
-        ) : apiTours && apiTours.length > 0 ? (
+        ) : groupedTourGroups && groupedTourGroups.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Card className="rounded-[28px] border-none bg-white shadow-md lg:col-span-1">
               <CardHeader>
@@ -507,23 +558,23 @@ export default function GuideDashboard() {
                 <CardDescription>Pilih jadwal untuk melihat detail peserta.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {apiTours.map((tour: any) => (
+                {groupedTourGroups.map((group: any) => (
                   <button
-                    key={tour.id}
-                    className={`w-full rounded-2xl border p-4 text-left transition-all ${selectedTour?.id === tour.id ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"}`}
-                    onClick={() => setSelectedTourId(tour.id)}
+                    key={group.id}
+                    className={`w-full rounded-2xl border p-4 text-left transition-all ${selectedGroup?.id === group.id ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"}`}
+                    onClick={() => setSelectedTourId(group.id)}
                     type="button"
                   >
-                    <p className="truncate text-sm font-bold md:text-base">{tour.tourName}</p>
+                    <p className="truncate text-sm font-bold md:text-base">{group.tourName}</p>
                     <div className="mt-2 flex items-end justify-between">
-                      <p className={`text-[10px] md:text-xs ${selectedTour?.id === tour.id ? "text-zinc-300" : "text-zinc-500"}`}>
-                        {tour.createdAt ? new Date(tour.createdAt).toLocaleDateString("id-ID") : "-"}
+                      <p className={`text-[10px] md:text-xs ${selectedGroup?.id === group.id ? "text-zinc-300" : "text-zinc-500"}`}>
+                        {group.tourDate}
                       </p>
                       <Badge
                         variant="outline"
-                        className={`text-[9px] md:text-[10px] px-1.5 rounded-full ${selectedTour?.id === tour.id ? "border-white/40 bg-white/10 text-white" : "border-zinc-300"}`}
+                        className={`text-[9px] md:text-[10px] px-1.5 rounded-full ${selectedGroup?.id === group.id ? "border-white/40 bg-white/10 text-white" : "border-zinc-300"}`}
                       >
-                        {tour.id.startsWith("mock") ? "Demo" : "Aktif"}
+                        {group.isDemo ? "Demo" : "Aktif"}
                       </Badge>
                     </div>
                   </button>
@@ -539,9 +590,9 @@ export default function GuideDashboard() {
                   </div>
                   <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <CardTitle className="truncate text-xl font-bold md:text-2xl">{selectedTour?.tourName}</CardTitle>
+                      <CardTitle className="truncate text-xl font-bold md:text-2xl">{selectedGroup?.tourName}</CardTitle>
                       <CardDescription className="mt-1 flex items-center gap-1 text-xs text-zinc-300">
-                        <MapPin className="h-3 w-3" /> Lokasi Tur • {selectedTour?.createdAt ? new Date(selectedTour.createdAt).toLocaleDateString("id-ID") : "-"}
+                        <MapPin className="h-3 w-3" /> Lokasi Tur • {selectedGroup?.tourDate}
                       </CardDescription>
                     </div>
                     <Button size="sm" variant="outline" className="h-8 gap-1 rounded-full border-white/50 bg-white/10 text-[10px] text-white hover:bg-white/20 hover:text-white md:text-xs">
@@ -551,27 +602,56 @@ export default function GuideDashboard() {
                 </CardHeader>
 
                 <CardContent className="space-y-4 p-4 md:p-6">
-                  <h3 className="flex items-center gap-2 border-b pb-2 text-sm font-bold md:text-base">
-                    <Users className="h-4 w-4" /> Detail Peserta
-                  </h3>
-                  <div className="rounded-2xl bg-zinc-100 p-4 text-sm">
-                    <p className="text-xl font-bold ">{selectedTour?.userName}</p>
-                    <p className="mt-1 text-zinc-600">{selectedTour?.userWhatsApp}</p>
-                    <p className="text-xs text-zinc-500">{selectedTour?.userEmail}</p>
-                    {selectedTour?.participantNames && (
-                      <div className="mt-2 text-xs text-zinc-700 bg-white p-2 rounded-lg border border-black/5 animate-in fade-in duration-200">
-                        <strong className="block text-zinc-800 mb-0.5">Peserta Tambahan:</strong>
-                        {selectedTour.participantNames}
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <h3 className="flex items-center gap-2 text-sm font-bold md:text-base">
+                      <Users className="h-4 w-4" /> Detail Peserta ({selectedGroup?.bookings.reduce((sum: number, b: any) => sum + (Number(b.pax) || 0), 0)} Orang)
+                    </h3>
+                    <Badge variant="outline" className="rounded-full bg-zinc-50 font-semibold text-zinc-700">
+                      {selectedGroup?.bookings.length} Pemesanan
+                    </Badge>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {selectedGroup?.bookings.map((booking: any) => (
+                      <div key={booking.id} className="rounded-2xl bg-zinc-50 border border-zinc-200/60 p-4 text-sm space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-base font-bold text-zinc-950">{booking.userName}</p>
+                          <Badge variant="secondary" className="rounded-full bg-zinc-200/50 text-[10px] text-zinc-600">
+                            Booking: {booking.id.startsWith("local-") ? booking.id.slice(0, 12) : booking.id.slice(0, 8)}
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-1 text-xs text-zinc-600">
+                          <p>WhatsApp: <span className="font-semibold text-zinc-800">{booking.userWhatsApp}</span></p>
+                          <p>Email: <span className="text-zinc-800">{booking.userEmail}</span></p>
+                        </div>
+                        
+                        {booking.participantNames && (
+                          <div className="text-xs text-zinc-700 bg-white p-2.5 rounded-lg border border-black/5">
+                            <strong className="block text-zinc-800 mb-0.5">Peserta Tambahan:</strong>
+                            {booking.participantNames}
+                          </div>
+                        )}
+                        
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <Badge variant="outline" className="rounded-full bg-white text-[11px] text-zinc-700">
+                            Domisili: {booking.domicile} {booking.customDomicile ? `(${booking.customDomicile})` : ""}
+                          </Badge>
+                          <Badge variant="outline" className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-bold text-zinc-800">
+                            {booking.pax} Pax
+                          </Badge>
+                          {booking.tourName?.toLowerCase().includes("hemat") ? (
+                            <Badge className="bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-full text-[10px]">
+                              Paket Hemat
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-50 rounded-full text-[10px]">
+                              Paket Reguler
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                    )}
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <Badge variant="secondary" className="rounded-full bg-white">
-                        Domisili: {selectedTour?.domicile} {selectedTour?.customDomicile ? `(${selectedTour.customDomicile})` : ""}
-                      </Badge>
-                      <Badge variant="outline" className="rounded-full bg-white px-3 py-1 text-sm font-bold">
-                        {selectedTour?.pax} Pax {selectedTour?.tourName?.toLowerCase().includes("hemat") ? "(Hemat)" : selectedTour?.tourName?.toLowerCase().includes("reguler") ? "(Reguler)" : ""}
-                      </Badge>
-                    </div>
+                    ))}
                   </div>
                 </CardContent>
 
