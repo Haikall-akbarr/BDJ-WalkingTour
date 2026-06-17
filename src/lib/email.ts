@@ -25,6 +25,13 @@ export async function sendEmail(to: string, subject: string, html: string, text?
     auth: { user: cfg.user, pass: cfg.pass },
   });
 
-  const info = await transporter.sendMail({ from: cfg.fromEmail, to, subject, html, text });
+  const fromName = process.env.SMTP_FROM_NAME || 'BDJ Walking Tour';
+  const info = await transporter.sendMail({
+    from: `"${fromName}" <${cfg.fromEmail}>`,
+    to,
+    subject,
+    html,
+    text,
+  });
   return { messageId: info.messageId };
 }

@@ -163,8 +163,9 @@ async function sendAttendanceEmailViaSmtp(params: {
     },
   });
 
+  const fromName = process.env.SMTP_FROM_NAME || 'BDJ Walking Tour';
   const info = await transporter.sendMail({
-    from: smtpConfig.fromEmail,
+    from: `"${fromName}" <${smtpConfig.fromEmail}>`,
     to: params.to,
     subject: 'Pembayaran Berhasil - BDJ WalkingTour',
     html: buildAttendanceEmailHtml({
@@ -173,12 +174,6 @@ async function sendAttendanceEmailViaSmtp(params: {
       qrSrc: 'cid:attendance-qr',
     }),
     attachments: [qrAttachment],
-    headers: {
-      'List-Unsubscribe': '<mailto:support@bdj-walking-tour.local?subject=unsubscribe>',
-      'X-Mailer': 'BDJ-WalkingTour/1.0',
-      'X-Priority': '3',
-      'Importance': 'normal',
-    },
   });
 
   return {
@@ -207,6 +202,7 @@ async function sendAttendanceEmailViaResend(params: {
   // Fetch QR as base64 for inline embedding (Resend doesn't support CID well)
   const qrBase64 = await fetchQrImageAsBase64(params.qrImageUrl);
 
+  const fromName = process.env.SMTP_FROM_NAME || 'BDJ Walking Tour';
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -214,7 +210,7 @@ async function sendAttendanceEmailViaResend(params: {
       Authorization: `Bearer ${resendKey}`,
     },
     body: JSON.stringify({
-      from: fromEmail,
+      from: `"${fromName}" <${fromEmail}>`,
       to: [params.to],
       subject: 'Pembayaran Berhasil - BDJ WalkingTour',
       html: buildAttendanceEmailHtml({
@@ -222,11 +218,6 @@ async function sendAttendanceEmailViaResend(params: {
         appBaseUrl,
         qrSrc: qrBase64,
       }),
-      headers: {
-        'List-Unsubscribe': '<mailto:support@bdj-walking-tour.local?subject=unsubscribe>',
-        'X-Mailer': 'BDJ-WalkingTour/1.0',
-        'X-Priority': '3',
-      },
     }),
   });
 

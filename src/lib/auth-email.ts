@@ -54,8 +54,9 @@ async function sendViaSmtp(params: { to: string; subject: string; html: string; 
     },
   });
 
+  const fromName = process.env.SMTP_FROM_NAME || 'BDJ Walking Tour';
   const info = await transporter.sendMail({
-    from: smtpConfig.fromEmail,
+    from: `"${fromName}" <${smtpConfig.fromEmail}>`,
     to: params.to,
     subject: params.subject,
     html: params.html,
@@ -76,6 +77,7 @@ async function sendViaResend(params: { to: string; subject: string; html: string
     return { skipped: true, provider: 'resend' as const };
   }
 
+  const fromName = process.env.SMTP_FROM_NAME || 'BDJ Walking Tour';
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -83,7 +85,7 @@ async function sendViaResend(params: { to: string; subject: string; html: string
       Authorization: `Bearer ${resendKey}`,
     },
     body: JSON.stringify({
-      from: fromEmail,
+      from: `"${fromName}" <${fromEmail}>`,
       to: [params.to],
       subject: params.subject,
       html: params.html,
