@@ -109,47 +109,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         emailHtml
       ).catch(err => console.error("Gagal mengirim email laporan ke user:", err));
 
-      // Insert notification: report submitted (notify owner/admin)
-      try {
-        const admin = getSupabaseAdmin();
-        const { data: adminUsers } = await admin.from('users').select('id').in('role', ['owner', 'admin']);
-        if (adminUsers && adminUsers.length > 0) {
-          const notifs = adminUsers.map((u: any) => ({
-            id: randomUUID(),
-            recipient_id: u.id,
-            type: 'report_submitted',
-            title: 'Laporan Tur Baru',
-            message: `${booking.userName} mengirim laporan untuk tur ${booking.tourName}.`,
-            related_id: id,
-            action_url: '/dashboard/owner',
-          }));
-          await admin.from('notifications').insert(notifs);
-        }
-      } catch (notifErr) {
-        console.error('[booking PATCH] Failed to insert report notification:', notifErr);
-      }
+      // NOTE: notifications otomatis di-sync oleh syncBookingToTables() dari updateBooking()
     }
 
-    // Insert notification: report reply from owner (notify user)
-    if (isNewReply && booking.userEmail) {
-      try {
-        const admin = getSupabaseAdmin();
-        const { data: userData } = await admin.from('users').select('id').eq('email', booking.userEmail).maybeSingle();
-        if (userData?.id) {
-          await admin.from('notifications').insert({
-            id: randomUUID(),
-            recipient_id: userData.id,
-            type: 'report_reply',
-            title: 'Balasan Laporan Tur',
-            message: `Laporan Anda untuk ${booking.tourName} telah dibalas oleh Owner: "${booking.reportReply}"`,
-            related_id: id,
-            action_url: `/payments/success/${id}`,
-          });
-        }
-      } catch (notifErr) {
-        console.error('[booking PATCH] Failed to insert reply notification:', notifErr);
-      }
-    }
+    // NOTE: notifications untuk report reply juga otomatis di-sync oleh syncBookingToTables()
 
     if (user?.role !== 'user' && (body?.guideId || body?.guideName)) {
       await logAuditEvent({
@@ -167,75 +130,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         },
       });
 
-      try {
-        const admin = getSupabaseAdmin();
-        const { data: guideData } = await admin.from('guides').select('id').eq('user_id', body.guideId).maybeSingle();
-        const actualGuideId = guideData?.id || body.guideId;
-
-        // Get the actual tour date from the tours table
-        let tourDate = booking.createdAt;
-        if (booking.tourId) {
-          const { data: tourData } = await admin.from('tours').select('date').eq('id', booking.tourId).maybeSingle();
-          if (tourData?.date) {
-            // Parse Indonesian date format like "17 Januari 2026"
-            const monthsId: Record<string, number> = {
-              januari: 0, februari: 1, maret: 2, april: 3, mei: 4, juni: 5,
-              juli: 6, agustus: 7, september: 8, oktober: 9, november: 10, desember: 11,
-            };
-            const parsed = new Date(tourData.date);
-            if (!isNaN(parsed.getTime())) {
-              tourDate = parsed.toISOString();
-            } else {
-              const parts = tourData.date.toLowerCase().replace(/,/g, '').trim().split(/\s+/)
-                .filter((p: string) => !['senin','selasa','rabu','kamis','jumat','sabtu','minggu'].includes(p));
-              if (parts.length >= 3) {
-                const day = parseInt(parts[0]);
-                const month = monthsId[parts[1]];
-                const year = parseInt(parts[2]);
-                if (!isNaN(day) && month !== undefined && !isNaN(year)) {
-                  tourDate = new Date(year, month, day, 8, 0, 0).toISOString();
-                }
-              }
-            }
-          }
-        }
-
-        const assignmentNow = new Date().toISOString();
-
-        // Upsert guide_tour_assignments with generated UUID id
-        const { error: assignError } = await admin.from('guide_tour_assignments').upsert({
-          id: randomUUID(),
-          booking_id: id,
-          guide_id: actualGuideId,
-          tour_date: tourDate,
-          pax_count: booking.pax || 1,
-          status: 'assigned',
-          notes: `Ditugaskan untuk tur ${booking.tourName} (${booking.pax || 1} pax)`,
-          assigned_at: assignmentNow,
-          accepted_at: assignmentNow,
-        }, { onConflict: 'booking_id' });
-
-        if (assignError) {
-          console.error('[guide_tour_assignments] Upsert error:', assignError);
-        }
-
-        // Insert notification for guide assignment
-        const { error: notifError } = await admin.from('notifications').insert({
-          id: randomUUID(),
-          recipient_id: body.guideId,
-          type: 'guide_assignment',
-          title: 'Penugasan Tur Baru',
-          message: `Anda telah ditugaskan untuk memandu tur ${booking.tourName} (${booking.pax || 1} pax).`,
-          related_id: id,
-          action_url: '/dashboard/guide'
-        });
-
-        if (notifError) {
-          console.error('[notifications] Guide assignment notification error:', notifError);
-        }
-      } catch (err) {
-        console.error("Failed to insert assignment or notification:", err);
-      }
+      // NOTE: guide_tour_assignments dan notifications otomatis di-sync oleh
+      // syncBookingToTables() yang dipanggil dari updateBooking() di atas
     }
 
     return NextResponse.json({ booking });

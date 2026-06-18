@@ -72,69 +72,8 @@ export async function POST(request: NextRequest) {
         attendanceStatus: 'present',
       });
 
-      try {
-        const admin = getSupabaseAdmin();
-
-        // Resolve actual guide_id from guides table using scannedBy (user_id)
-        let actualGuideId = scannedBy;
-        const { data: guideData } = await admin.from('guides').select('id').eq('user_id', scannedBy).maybeSingle();
-        if (guideData?.id) {
-          actualGuideId = guideData.id;
-        }
-
-        // Insert into barcode_scans with generated UUID
-        const scanId = randomUUID();
-        const { error: scanError } = await admin.from('barcode_scans').insert({
-          id: scanId,
-          booking_id: bookingId,
-          guide_id: actualGuideId,
-          attendance_code: attendanceCode,
-          scanned_at: scannedAt,
-          location: body?.location || null,
-          notes: `Scan absensi: ${booking?.userName || '-'} - ${booking?.tourName || '-'}${body?.notes ? '. ' + body.notes : ''}`
-        });
-
-        if (scanError) {
-          console.error('[barcode_scans] Insert error:', scanError);
-        }
-
-        // Insert notification for attendance scan (notify owner/admin)
-        try {
-          // Notify the booking owner (user who booked)
-          const { data: userData } = await admin.from('users').select('id').eq('email', booking.userEmail).maybeSingle();
-          if (userData?.id) {
-            await admin.from('notifications').insert({
-              id: randomUUID(),
-              recipient_id: userData.id,
-              type: 'attendance_scanned',
-              title: 'Absensi Berhasil',
-              message: `Peserta ${booking.userName} telah berhasil di-scan untuk tur ${booking.tourName}.`,
-              related_id: bookingId,
-              action_url: `/payments/success/${bookingId}`,
-            });
-          }
-
-          // Notify owner/admin users about the scan
-          const { data: adminUsers } = await admin.from('users').select('id').in('role', ['owner', 'admin']);
-          if (adminUsers && adminUsers.length > 0) {
-            const adminNotifs = adminUsers.map((u: any) => ({
-              id: randomUUID(),
-              recipient_id: u.id,
-              type: 'attendance_scanned',
-              title: 'Peserta Sudah Absen',
-              message: `Peserta ${booking.userName} sudah discan oleh guide untuk tur ${booking.tourName}.`,
-              related_id: bookingId,
-              action_url: `/dashboard/owner`,
-            }));
-            await admin.from('notifications').insert(adminNotifs);
-          }
-        } catch (notifErr) {
-          console.error('[attendance/scan] Failed to insert notifications:', notifErr);
-        }
-
-      } catch (err) {
-        console.error('Failed to insert into barcode_scans:', err);
-      }
+      // NOTE: barcode_scans dan notifications otomatis di-sync oleh
+      // syncBookingToTables() yang dipanggil dari updateBooking() di atas
     } else {
       // Update local dummy booking
       const updated = updateDummyBooking(bookingId!, {
