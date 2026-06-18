@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { getBookingById, updateBooking } from '@/lib/data-store';
 import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail, verifyMidtransSignature } from '@/lib/payment-helpers';
@@ -92,14 +93,42 @@ export async function POST(request: NextRequest) {
             const admin = getSupabaseAdmin();
             const { data: userData } = await admin.from('users').select('id').eq('email', bookingData.userEmail).maybeSingle();
             if (userData?.id) {
+              // Notification: payment success
               await admin.from('notifications').insert({
+                id: randomUUID(),
                 recipient_id: userData.id,
                 type: 'payment_success',
                 title: 'Pembayaran Berhasil',
                 message: `Pembayaran untuk tur ${bookingData.tourName} berhasil. Barcode absensi Anda sudah siap.`,
                 related_id: orderId,
-                action_url: '/dashboard/user'
+                action_url: `/payments/success/${orderId}`
               });
+
+              // Notification: barcode ready
+              await admin.from('notifications').insert({
+                id: randomUUID(),
+                recipient_id: userData.id,
+                type: 'barcode_ready',
+                title: 'Barcode Tersedia',
+                message: `Barcode untuk tur ${bookingData.tourName} siap dipakai saat check-in.`,
+                related_id: orderId,
+                action_url: `/payments/success/${orderId}`
+              });
+            }
+
+            // Notify owner/admin about payment
+            const { data: adminUsers } = await admin.from('users').select('id').in('role', ['owner', 'admin']);
+            if (adminUsers && adminUsers.length > 0) {
+              const adminNotifs = adminUsers.map((u: any) => ({
+                id: randomUUID(),
+                recipient_id: u.id,
+                type: 'payment_received',
+                title: 'Pembayaran Diterima',
+                message: `${bookingData.userName} telah membayar tur ${bookingData.tourName} (Rp ${Number(grossAmount).toLocaleString('id-ID')}).`,
+                related_id: orderId,
+                action_url: '/dashboard/owner',
+              }));
+              await admin.from('notifications').insert(adminNotifs);
             }
           } catch (notifErr) {
             console.error('[payments/webhook] Failed to insert notification:', notifErr);
@@ -109,10 +138,38 @@ export async function POST(request: NextRequest) {
         }
       }
     } else if (['deny', 'cancel', 'expire'].includes(transactionStatus)) {
+      const bookingData = await getBookingById(orderId);
+
       await updateBooking(orderId, {
         paymentStatus: transactionStatus,
         status: transactionStatus,
       });
+
+      // Notify user about failed/cancelled/expired payment
+      if (bookingData?.userEmail) {
+        try {
+          const admin = getSupabaseAdmin();
+          const { data: userData } = await admin.from('users').select('id').eq('email', bookingData.userEmail).maybeSingle();
+          if (userData?.id) {
+            const statusLabels: Record<string, string> = {
+              deny: 'ditolak',
+              cancel: 'dibatalkan',
+              expire: 'kedaluwarsa',
+            };
+            await admin.from('notifications').insert({
+              id: randomUUID(),
+              recipient_id: userData.id,
+              type: 'payment_failed',
+              title: `Pembayaran ${statusLabels[transactionStatus] || transactionStatus}`,
+              message: `Pembayaran untuk tur ${bookingData.tourName} telah ${statusLabels[transactionStatus] || transactionStatus}. Silakan coba lagi.`,
+              related_id: orderId,
+              action_url: `/payments/success/${orderId}`
+            });
+          }
+        } catch (notifErr) {
+          console.error('[payments/webhook] Failed to insert failure notification:', notifErr);
+        }
+      }
     }
 
     return NextResponse.json({ ok: true });

@@ -75,13 +75,20 @@ export function NotificationBell() {
   }, [])
 
   const visibleNotifications = notifications.filter(n => !deletedIds.includes(n.id))
-  const unreadCount = visibleNotifications.filter(n => !readIds.includes(n.id)).length
+  const unreadCount = visibleNotifications.filter(n => !n.isRead && !readIds.includes(n.id)).length
 
   const handleNotificationClick = (item: NotificationItem) => {
-    if (!readIds.includes(item.id)) {
+    if (!readIds.includes(item.id) && !item.isRead) {
       const updated = [...readIds, item.id]
       setReadIds(updated)
       localStorage.setItem("read_notification_ids", JSON.stringify(updated))
+
+      // Sync with API
+      fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id }),
+      }).catch(() => {})
     }
 
     if (item.type === 'attendance_scanned') {
@@ -119,6 +126,11 @@ export function NotificationBell() {
     const updated = [...deletedIds, itemId]
     setDeletedIds(updated)
     localStorage.setItem("deleted_notification_ids", JSON.stringify(updated))
+
+    // Sync with API
+    fetch(`/api/notifications?id=${encodeURIComponent(itemId)}`, {
+      method: "DELETE",
+    }).catch(() => {})
   }
 
   return (
@@ -155,7 +167,7 @@ export function NotificationBell() {
               <div className="px-3 py-6 text-sm text-white/70">Belum ada progres pembayaran atau absensi terbaru.</div>
             ) : (
               visibleNotifications.map((item) => {
-                const isItemRead = readIds.includes(item.id)
+                const isItemRead = item.isRead || readIds.includes(item.id)
                 return (
                   <div key={item.id} className="p-1">
                     <div 

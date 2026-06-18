@@ -251,7 +251,7 @@ export default function GuideDashboard() {
       const response = await fetch("/api/attendance/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attendanceCode: code.trim(), scannedBy: "guide" }),
+        body: JSON.stringify({ attendanceCode: code.trim(), scannedBy: currentGuideId || 'guide' }),
       });
 
       const result = await response.json();

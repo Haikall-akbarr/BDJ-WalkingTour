@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { getCurrentSessionUser } from '@/lib/server-auth';
 import { listBookings } from '@/lib/data-store';
 import { getSessionCookieName, hashSessionToken } from '@/lib/auth-session';
 import { getSessionByTokenHash, getUserById } from '@/lib/auth-store';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 
@@ -17,6 +19,7 @@ type NotificationItem = {
   isRead: boolean;
 };
 
+// Fallback: generate notifications from bookings if DB table is empty
 function buildNotificationsFromBookings(bookings: Awaited<ReturnType<typeof listBookings>>): NotificationItem[] {
   const items: NotificationItem[] = [];
 
@@ -114,37 +117,92 @@ function buildNotificationsFromBookings(bookings: Awaited<ReturnType<typeof list
   });
 }
 
+async function resolveUser(request: NextRequest) {
+  let user = await getCurrentSessionUser();
+
+  if (!user) {
+    const token = request.cookies.get(getSessionCookieName())?.value;
+    if (token) {
+      const tokenHash = hashSessionToken(token);
+      const session = await getSessionByTokenHash(tokenHash);
+      if (session && (!session.expiresAt || new Date(session.expiresAt).getTime() > Date.now())) {
+        user = await getUserById(session.userId);
+      }
+    }
+  }
+
+  return user;
+}
+
 export async function GET(request: NextRequest) {
   try {
     if (!isDatabaseProviderEnabled()) {
-      console.log('[notifications API] DB not enabled');
       return NextResponse.json({ notifications: [] });
     }
 
-    let user = await getCurrentSessionUser();
-    console.log('[notifications API] initial user session:', user);
+    const user = await resolveUser(request);
 
     if (!user) {
-      const token = request.cookies.get(getSessionCookieName())?.value;
-      console.log('[notifications API] read token from request cookies:', token ? 'exists' : 'empty');
-      if (token) {
-        const tokenHash = hashSessionToken(token);
-        const session = await getSessionByTokenHash(tokenHash);
-        console.log('[notifications API] session found:', session ? 'yes' : 'no');
-        if (session && (!session.expiresAt || new Date(session.expiresAt).getTime() > Date.now())) {
-          user = await getUserById(session.userId);
-          console.log('[notifications API] user found by session:', user ? 'yes' : 'no');
+      return NextResponse.json({ notifications: [] });
+    }
+
+    // Try reading from the notifications table first
+    let dbNotifications: NotificationItem[] = [];
+    try {
+      const admin = getSupabaseAdmin();
+      const { data, error } = await admin
+        .from('notifications')
+        .select('*')
+        .eq('recipient_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      if (!error && data && data.length > 0) {
+        dbNotifications = data.map((row: any) => ({
+          id: row.id,
+          title: row.title,
+          message: row.message,
+          type: row.type,
+          createdAt: row.created_at || null,
+          actionUrl: row.action_url || null,
+          isRead: Boolean(row.is_read),
+        }));
+      }
+    } catch (dbErr) {
+      console.error('[notifications API] DB query failed, falling back to bookings:', dbErr);
+    }
+
+    // If we got notifications from DB, use them
+    if (dbNotifications.length > 0) {
+      // Add welcome notification for user role
+      if (user.role === 'user') {
+        const hasWelcome = dbNotifications.some(n => n.type === 'welcome');
+        if (!hasWelcome) {
+          dbNotifications.push({
+            id: `${user.id}-welcome`,
+            title: 'Selamat Bergabung!',
+            message: `Selamat bergabung dengan BDJ Walking Tour, ${user.name || 'Peserta'}! Siapkan cerita lokal terbaik Anda dan jelajahi keindahan Banjarmasin bersama kami.`,
+            type: 'welcome',
+            createdAt: (user as any).createdAt || new Date().toISOString(),
+            actionUrl: '/dashboard/user',
+            isRead: false,
+          });
         }
       }
+
+      const sliced = dbNotifications.slice(0, 20);
+      const unreadCount = sliced.filter(n => !n.isRead).length;
+
+      return NextResponse.json({
+        notifications: sliced,
+        unreadCount,
+        source: 'database',
+      });
     }
 
-    if (!user) {
-      return NextResponse.json({ notifications: [] });
-    }
-
+    // Fallback: generate notifications from bookings (backward-compatible)
     const isStaff = ['admin', 'owner', 'guide'].includes(user.role);
     const bookings = await listBookings();
-    console.log('[notifications API] total bookings found:', bookings.length);
     const visibleBookings = isStaff ? bookings : bookings.filter((booking) => booking.userEmail?.toLowerCase() === user.email.toLowerCase());
     const notifications = buildNotificationsFromBookings(visibleBookings);
 
@@ -161,14 +219,98 @@ export async function GET(request: NextRequest) {
     }
 
     const slicedNotifications = notifications.slice(0, 12);
-    console.log('[notifications API] returning notifications count:', slicedNotifications.length);
 
     return NextResponse.json({
       notifications: slicedNotifications,
       unreadCount: slicedNotifications.length,
+      source: 'bookings_fallback',
     });
   } catch (error: any) {
     console.error('[notifications API] ERROR:', error);
     return NextResponse.json({ error: error?.message || 'Gagal mengambil notifikasi.' }, { status: 500 });
+  }
+}
+
+// PATCH: Mark notification(s) as read
+export async function PATCH(request: NextRequest) {
+  try {
+    if (!isDatabaseProviderEnabled()) {
+      return NextResponse.json({ ok: true });
+    }
+
+    const user = await resolveUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const notificationId = body?.id;
+    const notificationIds = body?.ids;
+
+    const admin = getSupabaseAdmin();
+
+    if (notificationId) {
+      // Mark single notification as read
+      const { error } = await admin
+        .from('notifications')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq('id', notificationId)
+        .eq('recipient_id', user.id);
+
+      if (error) {
+        console.error('[notifications PATCH] Error:', error);
+      }
+    } else if (Array.isArray(notificationIds) && notificationIds.length > 0) {
+      // Mark multiple notifications as read
+      const { error } = await admin
+        .from('notifications')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .in('id', notificationIds)
+        .eq('recipient_id', user.id);
+
+      if (error) {
+        console.error('[notifications PATCH] Error:', error);
+      }
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || 'Gagal memperbarui notifikasi.' }, { status: 500 });
+  }
+}
+
+// DELETE: Remove notification
+export async function DELETE(request: NextRequest) {
+  try {
+    if (!isDatabaseProviderEnabled()) {
+      return NextResponse.json({ ok: true });
+    }
+
+    const user = await resolveUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const notificationId = searchParams.get('id');
+
+    if (!notificationId) {
+      return NextResponse.json({ error: 'id wajib diisi.' }, { status: 400 });
+    }
+
+    const admin = getSupabaseAdmin();
+    const { error } = await admin
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId)
+      .eq('recipient_id', user.id);
+
+    if (error) {
+      console.error('[notifications DELETE] Error:', error);
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || 'Gagal menghapus notifikasi.' }, { status: 500 });
   }
 }

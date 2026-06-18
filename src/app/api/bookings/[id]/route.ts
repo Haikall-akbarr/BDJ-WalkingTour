@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { getBookingById, updateBooking } from '@/lib/data-store';
 import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { logAuditEvent } from '@/lib/audit-log';
@@ -81,6 +82,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     const isNewReport = body?.report && body.report !== existingBooking.report;
+    const isNewReply = body?.reportReply && body.reportReply !== existingBooking.reportReply;
 
     const booking = await updateBooking(id, patch);
     if (!booking) {
@@ -106,6 +108,47 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         `[BDJ Walking Tour] Laporan Tur Anda Telah Diterima`,
         emailHtml
       ).catch(err => console.error("Gagal mengirim email laporan ke user:", err));
+
+      // Insert notification: report submitted (notify owner/admin)
+      try {
+        const admin = getSupabaseAdmin();
+        const { data: adminUsers } = await admin.from('users').select('id').in('role', ['owner', 'admin']);
+        if (adminUsers && adminUsers.length > 0) {
+          const notifs = adminUsers.map((u: any) => ({
+            id: randomUUID(),
+            recipient_id: u.id,
+            type: 'report_submitted',
+            title: 'Laporan Tur Baru',
+            message: `${booking.userName} mengirim laporan untuk tur ${booking.tourName}.`,
+            related_id: id,
+            action_url: '/dashboard/owner',
+          }));
+          await admin.from('notifications').insert(notifs);
+        }
+      } catch (notifErr) {
+        console.error('[booking PATCH] Failed to insert report notification:', notifErr);
+      }
+    }
+
+    // Insert notification: report reply from owner (notify user)
+    if (isNewReply && booking.userEmail) {
+      try {
+        const admin = getSupabaseAdmin();
+        const { data: userData } = await admin.from('users').select('id').eq('email', booking.userEmail).maybeSingle();
+        if (userData?.id) {
+          await admin.from('notifications').insert({
+            id: randomUUID(),
+            recipient_id: userData.id,
+            type: 'report_reply',
+            title: 'Balasan Laporan Tur',
+            message: `Laporan Anda untuk ${booking.tourName} telah dibalas oleh Owner: "${booking.reportReply}"`,
+            related_id: id,
+            action_url: `/payments/success/${id}`,
+          });
+        }
+      } catch (notifErr) {
+        console.error('[booking PATCH] Failed to insert reply notification:', notifErr);
+      }
     }
 
     if (user?.role !== 'user' && (body?.guideId || body?.guideName)) {
@@ -129,22 +172,48 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         const { data: guideData } = await admin.from('guides').select('id').eq('user_id', body.guideId).maybeSingle();
         const actualGuideId = guideData?.id || body.guideId;
 
-        await admin.from('guide_tour_assignments').upsert({
+        // Get the actual tour date from the tours table
+        let tourDate = booking.createdAt;
+        if (booking.tourId) {
+          const { data: tourData } = await admin.from('tours').select('date').eq('id', booking.tourId).maybeSingle();
+          if (tourData?.date) {
+            tourDate = tourData.date;
+          }
+        }
+
+        const assignmentNow = new Date().toISOString();
+
+        // Upsert guide_tour_assignments with generated UUID id
+        const { error: assignError } = await admin.from('guide_tour_assignments').upsert({
+          id: randomUUID(),
           booking_id: id,
           guide_id: actualGuideId,
-          tour_date: booking.createdAt,
+          tour_date: tourDate,
           pax_count: booking.pax || 1,
-          status: 'assigned'
+          status: 'assigned',
+          notes: `Ditugaskan untuk tur ${booking.tourName} (${booking.pax || 1} pax)`,
+          assigned_at: assignmentNow,
+          accepted_at: assignmentNow,
         }, { onConflict: 'booking_id' });
 
-        await admin.from('notifications').insert({
+        if (assignError) {
+          console.error('[guide_tour_assignments] Upsert error:', assignError);
+        }
+
+        // Insert notification for guide assignment
+        const { error: notifError } = await admin.from('notifications').insert({
+          id: randomUUID(),
           recipient_id: body.guideId,
           type: 'guide_assignment',
           title: 'Penugasan Tur Baru',
-          message: `Anda telah ditugaskan untuk memandu tur ${booking.tourName}.`,
+          message: `Anda telah ditugaskan untuk memandu tur ${booking.tourName} (${booking.pax || 1} pax).`,
           related_id: id,
           action_url: '/dashboard/guide'
         });
+
+        if (notifError) {
+          console.error('[notifications] Guide assignment notification error:', notifError);
+        }
       } catch (err) {
         console.error("Failed to insert assignment or notification:", err);
       }
