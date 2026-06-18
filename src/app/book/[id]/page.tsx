@@ -308,11 +308,17 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                       <Input 
                         id="whatsapp" 
                         type="tel" 
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         placeholder="0812..." 
                         required 
                         value={formData.whatsapp}
-                        onChange={(e) => setFormData({...formData, whatsapp: e.target.value})}
+                        onChange={(e) => {
+                          const numbersOnly = e.target.value.replace(/[^0-9]/g, '');
+                          setFormData({...formData, whatsapp: numbersOnly});
+                        }}
                       />
+                      <p className="text-xs text-slate-500">Hanya angka yang diperbolehkan</p>
                     </div>
                   </div>
 
@@ -365,8 +371,12 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           placeholder="Nama Kota atau Kabupaten" 
                           required 
                           value={customDomicile}
-                          onChange={(e) => setCustomDomicile(e.target.value)}
+                          onChange={(e) => {
+                            const lettersOnly = e.target.value.replace(/[0-9]/g, '');
+                            setCustomDomicile(lettersOnly);
+                          }}
                         />
+                        <p className="text-xs text-slate-500">Hanya huruf yang diperbolehkan (tanpa angka)</p>
                       </div>
                     )}
                   </div>
@@ -438,6 +448,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                         id="pax" 
                         type="number" 
                         min="1" 
+                        max="50"
                         value={formData.pax}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -446,18 +457,20 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             return;
                           }
                           const cleanVal = val.replace(/^0+(?=[1-9])/, '');
-                          setFormData({...formData, pax: cleanVal ? Number(cleanVal) : 1});
+                          const numVal = cleanVal ? Number(cleanVal) : 1;
+                          setFormData({...formData, pax: numVal > 50 ? 50 : numVal});
                         }}
                         onBlur={(e) => {
                           const val = Number(e.target.value);
                           if (isNaN(val) || val < 1) {
                             setFormData({...formData, pax: 1});
                           } else {
-                            setFormData({...formData, pax: Math.floor(val)});
+                            setFormData({...formData, pax: Math.min(50, Math.floor(val))});
                           }
                         }}
                         required 
                       />
+                      <p className="text-xs text-slate-500">Maksimal 50 peserta</p>
                     </div>
                   </div>
 

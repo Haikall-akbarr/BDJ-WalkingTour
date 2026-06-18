@@ -68,6 +68,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payload booking tidak lengkap.' }, { status: 400 });
     }
 
+    // Validasi server-side
+    const cleanWhatsapp = String(body.whatsapp).replace(/[^0-9]/g, '');
+    if (!cleanWhatsapp || cleanWhatsapp.length < 8) {
+      return NextResponse.json({ error: 'Nomor WhatsApp harus berupa angka dan minimal 8 digit.' }, { status: 400 });
+    }
+    body.whatsapp = cleanWhatsapp;
+
+    const paxNum = Number(body.pax);
+    if (paxNum < 1 || paxNum > 50) {
+      return NextResponse.json({ error: 'Jumlah peserta harus antara 1 - 50.' }, { status: 400 });
+    }
+    body.pax = paxNum;
+
+    if (body.customDomicile) {
+      body.customDomicile = String(body.customDomicile).replace(/[0-9]/g, '').trim();
+    }
+
     const paymentMode = getResolvedPaymentMode();
     const serverKey = process.env.MIDTRANS_SERVER_KEY;
     const useDummyMode = paymentMode === 'dummy';
