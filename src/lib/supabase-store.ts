@@ -448,6 +448,10 @@ export async function createBooking(input: {
 
   const { data, error } = await admin.from('bookings').insert(row).select('*').single();
   if (error) throw error;
+
+  // Auto-sync ke 3 tabel
+  syncBookingToTables(data).catch(err => console.error('[syncBookingToTables] Error:', err));
+
   return mapBooking(data);
 }
 
@@ -464,5 +468,338 @@ export async function updateBooking(id: string, patch: Record<string, unknown>) 
   const { data, error } = await admin.from('bookings').update(rowPatch).eq('id', id).select('*').maybeSingle();
   if (error) throw error;
   if (!data) return null;
+
+  // Auto-sync ke 3 tabel setelah setiap update booking
+  syncBookingToTables(data).catch(err => console.error('[syncBookingToTables] Error:', err));
+
   return mapBooking(data);
 }
+
+// ============================================================
+// AUTO-SYNC: barcode_scans, guide_tour_assignments, notifications
+// Dipanggil otomatis setiap kali booking di-update
+// ============================================================
+
+const MONTHS_ID: Record<string, number> = {
+  januari: 0, februari: 1, maret: 2, april: 3, mei: 4, juni: 5,
+  juli: 6, agustus: 7, september: 8, oktober: 9, november: 10, desember: 11,
+};
+
+function parseDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return new Date().toISOString();
+  const d = new Date(dateStr);
+  if (!isNaN(d.getTime())) return d.toISOString();
+  // Parse Indonesian format like "17 Januari 2026"
+  const parts = dateStr.toLowerCase().replace(/,/g, '').trim().split(/\s+/)
+    .filter(p => !['senin','selasa','rabu','kamis','jumat','sabtu','minggu'].includes(p));
+  if (parts.length >= 3) {
+    const day = parseInt(parts[0]);
+    const month = MONTHS_ID[parts[1]];
+    const year = parseInt(parts[2]);
+    if (!isNaN(day) && month !== undefined && !isNaN(year)) {
+      return new Date(year, month, day, 8, 0, 0).toISOString();
+    }
+  }
+  return new Date().toISOString();
+}
+
+async function resolveGuideId(admin: any, guideUserId: string | null): Promise<string | null> {
+  if (!guideUserId) return null;
+  // Cari di guides table by user_id
+  const { data } = await admin.from('guides').select('id').eq('user_id', guideUserId).maybeSingle();
+  if (data?.id) return data.id;
+  // Cari langsung by id (mungkin sudah UUID)
+  const { data: d2 } = await admin.from('guides').select('id').eq('id', guideUserId).maybeSingle();
+  if (d2?.id) return d2.id;
+  // Auto-create guide entry jika belum ada
+  const { data: userData } = await admin.from('users').select('id, name, email').eq('id', guideUserId).maybeSingle();
+  if (userData) {
+    const newGuideId = randomUUID();
+    await admin.from('guides').insert({
+      id: newGuideId,
+      user_id: userData.id,
+      name: userData.name || 'Guide',
+      email: userData.email || '',
+      is_active: true,
+    });
+    return newGuideId;
+  }
+  return null;
+}
+
+async function findRecipientId(admin: any, email: string | null): Promise<string | null> {
+  if (!email) return null;
+  const { data } = await admin.from('users').select('id').eq('email', email).maybeSingle();
+  return data?.id || null;
+}
+
+export async function syncBookingToTables(bookingRow: AnyRow) {
+  try {
+    const admin = getSupabaseAdmin();
+    const bookingId = bookingRow.id;
+
+    // --- 1. SYNC barcode_scans ---
+    if (bookingRow.attendance_scanned_at && bookingRow.attendance_code) {
+      const { data: existingScan } = await admin
+        .from('barcode_scans')
+        .select('id')
+        .eq('booking_id', bookingId)
+        .maybeSingle();
+
+      if (!existingScan) {
+        const guideId = await resolveGuideId(admin, bookingRow.guide_id || bookingRow.attendance_scanned_by);
+        if (guideId) {
+          const { error } = await admin.from('barcode_scans').insert({
+            id: randomUUID(),
+            booking_id: bookingId,
+            guide_id: guideId,
+            attendance_code: bookingRow.attendance_code,
+            scanned_at: bookingRow.attendance_scanned_at,
+            location: 'Banjarmasin',
+            notes: `Scan absensi: ${bookingRow.user_name || '-'} - ${bookingRow.tour_name || '-'}`,
+          });
+          if (error) console.error('[sync barcode_scans]', error.message);
+          else console.log(`[sync barcode_scans] ✅ ${bookingId}`);
+        }
+      }
+    }
+
+    // --- 2. SYNC guide_tour_assignments ---
+    if (bookingRow.guide_id) {
+      const guideId = await resolveGuideId(admin, bookingRow.guide_id);
+      if (guideId) {
+        const { data: existingAssign } = await admin
+          .from('guide_tour_assignments')
+          .select('id')
+          .eq('booking_id', bookingId)
+          .maybeSingle();
+
+        // Get tour date
+        let tourDate = bookingRow.created_at;
+        if (bookingRow.tour_id) {
+          const { data: tourData } = await admin.from('tours').select('date').eq('id', bookingRow.tour_id).maybeSingle();
+          if (tourData?.date) tourDate = parseDate(tourData.date);
+        }
+
+        if (!existingAssign) {
+          const { error } = await admin.from('guide_tour_assignments').insert({
+            id: randomUUID(),
+            booking_id: bookingId,
+            guide_id: guideId,
+            tour_date: tourDate,
+            pax_count: bookingRow.pax || 1,
+            status: 'assigned',
+            notes: `Ditugaskan untuk tur ${bookingRow.tour_name} (${bookingRow.pax || 1} pax)`,
+            assigned_at: new Date().toISOString(),
+            accepted_at: new Date().toISOString(),
+          });
+          if (error) console.error('[sync guide_tour_assignments]', error.message);
+          else console.log(`[sync guide_tour_assignments] ✅ ${bookingId}`);
+        } else {
+          // Update existing assignment
+          await admin.from('guide_tour_assignments').update({
+            guide_id: guideId,
+            tour_date: tourDate,
+            pax_count: bookingRow.pax || 1,
+            status: 'assigned',
+          }).eq('booking_id', bookingId);
+        }
+      }
+    }
+
+    // --- 3. SYNC notifications ---
+    const recipientId = await findRecipientId(admin, bookingRow.user_email);
+    const { data: adminUsers } = await admin.from('users').select('id').in('role', ['owner', 'admin']);
+    const ownerIds = (adminUsers || []).map((u: any) => u.id);
+
+    // Payment success notification
+    if ((bookingRow.payment_status === 'paid' || bookingRow.status === 'paid') && recipientId) {
+      const { data: existingNotif } = await admin
+        .from('notifications')
+        .select('id')
+        .eq('related_id', bookingId)
+        .eq('recipient_id', recipientId)
+        .eq('type', 'payment_success')
+        .maybeSingle();
+
+      if (!existingNotif) {
+        await admin.from('notifications').insert({
+          id: randomUUID(),
+          recipient_id: recipientId,
+          type: 'payment_success',
+          title: 'Pembayaran Berhasil',
+          message: `Pembayaran untuk tur ${bookingRow.tour_name} berhasil. Barcode absensi Anda sudah siap.`,
+          related_id: bookingId,
+          action_url: `/payments/success/${bookingId}`,
+          created_at: bookingRow.paid_at || bookingRow.updated_at || new Date().toISOString(),
+        });
+      }
+    }
+
+    // Barcode ready notification
+    if ((bookingRow.barcode_sent_at || bookingRow.attendance_code) && recipientId) {
+      const { data: existingNotif } = await admin
+        .from('notifications')
+        .select('id')
+        .eq('related_id', bookingId)
+        .eq('recipient_id', recipientId)
+        .eq('type', 'barcode_ready')
+        .maybeSingle();
+
+      if (!existingNotif) {
+        await admin.from('notifications').insert({
+          id: randomUUID(),
+          recipient_id: recipientId,
+          type: 'barcode_ready',
+          title: 'Barcode Tersedia',
+          message: `Barcode untuk ${bookingRow.tour_name} siap dipakai saat check-in.`,
+          related_id: bookingId,
+          action_url: `/payments/success/${bookingId}`,
+          created_at: bookingRow.barcode_sent_at || bookingRow.paid_at || new Date().toISOString(),
+        });
+      }
+    }
+
+    // Attendance scanned notification
+    if (bookingRow.attendance_scanned_at && recipientId) {
+      const { data: existingNotif } = await admin
+        .from('notifications')
+        .select('id')
+        .eq('related_id', bookingId)
+        .eq('recipient_id', recipientId)
+        .eq('type', 'attendance_scanned')
+        .maybeSingle();
+
+      if (!existingNotif) {
+        await admin.from('notifications').insert({
+          id: randomUUID(),
+          recipient_id: recipientId,
+          type: 'attendance_scanned',
+          title: 'Absensi Berhasil',
+          message: `Peserta ${bookingRow.user_name} telah berhasil di-scan untuk tur ${bookingRow.tour_name}.`,
+          related_id: bookingId,
+          action_url: `/payments/success/${bookingId}`,
+          created_at: bookingRow.attendance_scanned_at,
+        });
+
+        // Notify owner/admin
+        for (const ownerId of ownerIds) {
+          await admin.from('notifications').insert({
+            id: randomUUID(),
+            recipient_id: ownerId,
+            type: 'attendance_scanned',
+            title: 'Peserta Sudah Absen',
+            message: `Peserta ${bookingRow.user_name} sudah discan untuk tur ${bookingRow.tour_name}.`,
+            related_id: bookingId,
+            action_url: '/dashboard/owner',
+            created_at: bookingRow.attendance_scanned_at,
+          });
+        }
+      }
+    }
+
+    // Guide assigned notification
+    if (bookingRow.guide_id) {
+      const { data: existingNotif } = await admin
+        .from('notifications')
+        .select('id')
+        .eq('related_id', bookingId)
+        .eq('recipient_id', bookingRow.guide_id)
+        .eq('type', 'guide_assignment')
+        .maybeSingle();
+
+      if (!existingNotif) {
+        await admin.from('notifications').insert({
+          id: randomUUID(),
+          recipient_id: bookingRow.guide_id,
+          type: 'guide_assignment',
+          title: 'Penugasan Tur Baru',
+          message: `Anda telah ditugaskan untuk memandu tur ${bookingRow.tour_name} (${bookingRow.pax || 1} pax).`,
+          related_id: bookingId,
+          action_url: '/dashboard/guide',
+          created_at: bookingRow.updated_at || new Date().toISOString(),
+        });
+      }
+
+      // Payment received notification for owner
+      if (bookingRow.payment_status === 'paid' || bookingRow.status === 'paid') {
+        for (const ownerId of ownerIds) {
+          const { data: existingNotif } = await admin
+            .from('notifications')
+            .select('id')
+            .eq('related_id', bookingId)
+            .eq('recipient_id', ownerId)
+            .eq('type', 'payment_received')
+            .maybeSingle();
+
+          if (!existingNotif) {
+            await admin.from('notifications').insert({
+              id: randomUUID(),
+              recipient_id: ownerId,
+              type: 'payment_received',
+              title: 'Pembayaran Diterima',
+              message: `${bookingRow.user_name} telah membayar tur ${bookingRow.tour_name}.`,
+              related_id: bookingId,
+              action_url: '/dashboard/owner',
+              created_at: bookingRow.paid_at || bookingRow.updated_at || new Date().toISOString(),
+            });
+          }
+        }
+      }
+    }
+
+    // Report submitted notification
+    if (bookingRow.report) {
+      for (const ownerId of ownerIds) {
+        const { data: existingNotif } = await admin
+          .from('notifications')
+          .select('id')
+          .eq('related_id', bookingId)
+          .eq('recipient_id', ownerId)
+          .eq('type', 'report_submitted')
+          .maybeSingle();
+
+        if (!existingNotif) {
+          await admin.from('notifications').insert({
+            id: randomUUID(),
+            recipient_id: ownerId,
+            type: 'report_submitted',
+            title: 'Laporan Tur Baru',
+            message: `${bookingRow.user_name} mengirim laporan untuk tur ${bookingRow.tour_name}.`,
+            related_id: bookingId,
+            action_url: '/dashboard/owner',
+            created_at: bookingRow.report_submitted_at || bookingRow.updated_at || new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    // Report reply notification
+    if (bookingRow.report_reply && recipientId) {
+      const { data: existingNotif } = await admin
+        .from('notifications')
+        .select('id')
+        .eq('related_id', bookingId)
+        .eq('recipient_id', recipientId)
+        .eq('type', 'report_reply')
+        .maybeSingle();
+
+      if (!existingNotif) {
+        await admin.from('notifications').insert({
+          id: randomUUID(),
+          recipient_id: recipientId,
+          type: 'report_reply',
+          title: 'Balasan Laporan Tur',
+          message: `Laporan Anda untuk ${bookingRow.tour_name} telah dibalas oleh Owner: "${bookingRow.report_reply}"`,
+          related_id: bookingId,
+          action_url: `/payments/success/${bookingId}`,
+          created_at: bookingRow.report_reply_submitted_at || bookingRow.updated_at || new Date().toISOString(),
+        });
+      }
+    }
+
+  } catch (err) {
+    console.error('[syncBookingToTables] Fatal error:', err);
+  }
+}
+
