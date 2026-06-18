@@ -177,7 +177,26 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         if (booking.tourId) {
           const { data: tourData } = await admin.from('tours').select('date').eq('id', booking.tourId).maybeSingle();
           if (tourData?.date) {
-            tourDate = tourData.date;
+            // Parse Indonesian date format like "17 Januari 2026"
+            const monthsId: Record<string, number> = {
+              januari: 0, februari: 1, maret: 2, april: 3, mei: 4, juni: 5,
+              juli: 6, agustus: 7, september: 8, oktober: 9, november: 10, desember: 11,
+            };
+            const parsed = new Date(tourData.date);
+            if (!isNaN(parsed.getTime())) {
+              tourDate = parsed.toISOString();
+            } else {
+              const parts = tourData.date.toLowerCase().replace(/,/g, '').trim().split(/\s+/)
+                .filter((p: string) => !['senin','selasa','rabu','kamis','jumat','sabtu','minggu'].includes(p));
+              if (parts.length >= 3) {
+                const day = parseInt(parts[0]);
+                const month = monthsId[parts[1]];
+                const year = parseInt(parts[2]);
+                if (!isNaN(day) && month !== undefined && !isNaN(year)) {
+                  tourDate = new Date(year, month, day, 8, 0, 0).toISOString();
+                }
+              }
+            }
           }
         }
 
