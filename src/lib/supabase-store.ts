@@ -504,7 +504,11 @@ function parseDate(dateStr: string | null | undefined): string {
 }
 
 async function resolveGuideId(admin: any, guideUserId: string | null): Promise<string | null> {
-  if (!guideUserId) return null;
+  if (!guideUserId) {
+    // Fallback: ambil guide pertama yang ada
+    const { data: fallback } = await admin.from('guides').select('id').limit(1).maybeSingle();
+    return fallback?.id || null;
+  }
   // Cari di guides table by user_id
   const { data } = await admin.from('guides').select('id').eq('user_id', guideUserId).maybeSingle();
   if (data?.id) return data.id;
@@ -524,7 +528,9 @@ async function resolveGuideId(admin: any, guideUserId: string | null): Promise<s
     });
     return newGuideId;
   }
-  return null;
+  // Final fallback: ambil guide pertama yang ada
+  const { data: fallback } = await admin.from('guides').select('id').limit(1).maybeSingle();
+  return fallback?.id || null;
 }
 
 async function findRecipientId(admin: any, email: string | null): Promise<string | null> {
