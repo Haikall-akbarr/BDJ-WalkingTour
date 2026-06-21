@@ -110,6 +110,10 @@ export default function AdminDashboard() {
   const [toursLoading, setToursLoading] = useState(true);
   const [auditLoading, setAuditLoading] = useState(true);
   const [bookingStatusFilter, setBookingStatusFilter] = useState<'all' | 'pending' | 'paid' | 'cancelled'>('all');
+  const [tourPage, setTourPage] = useState(1);
+  const TOURS_PER_PAGE = 9;
+  const [userPage, setUserPage] = useState(1);
+  const USERS_PER_PAGE = 15;
 
   const fetchTours = async () => {
     setToursLoading(true);
@@ -676,7 +680,7 @@ export default function AdminDashboard() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full rounded-[30px] bg-white p-4 shadow-md md:p-6">
         <div className="overflow-x-auto pb-2 scrollbar-hide">
           <TabsList className="h-auto w-max justify-start rounded-full border bg-zinc-50 p-1 sm:w-full mb-4">
-            <TabsTrigger value="bookings" className="rounded-full px-4 py-2 text-xs md:px-6 md:text-sm data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Pemesanan Pending</TabsTrigger>
+            <TabsTrigger value="bookings" className="rounded-full px-4 py-2 text-xs md:px-6 md:text-sm data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Pemesanan</TabsTrigger>
             <TabsTrigger value="tours" className="rounded-full px-4 py-2 text-xs md:px-6 md:text-sm data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Kelola Tur</TabsTrigger>
             <TabsTrigger value="users" className="rounded-full px-4 py-2 text-xs md:px-6 md:text-sm data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Kelola Pengguna</TabsTrigger>
             <TabsTrigger value="audit" className="rounded-full px-4 py-2 text-xs md:px-6 md:text-sm data-[state=active]:bg-zinc-900 data-[state=active]:text-white">Log Aktivitas</TabsTrigger>
@@ -689,7 +693,7 @@ export default function AdminDashboard() {
               <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-4 flex-wrap">
-                    <CardTitle className="text-lg md:text-xl">Permintaan Pemesanan Baru</CardTitle>
+                    <CardTitle className="text-lg md:text-xl">Data Pesanan Tur</CardTitle>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" className="h-8 gap-2 text-xs" onClick={handleExportExcel} disabled={!filteredBookings || filteredBookings.length === 0}>
                         <Download className="h-3 w-3" /> Excel
@@ -719,7 +723,7 @@ export default function AdminDashboard() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              <div className="max-h-[500px] overflow-y-auto overflow-x-auto">
                 <table className="w-full text-xs md:text-sm">
                   <thead className="bg-muted/50 border-b">
                     <tr>
@@ -787,78 +791,112 @@ export default function AdminDashboard() {
               <Plus className="h-4 w-4" /> Paket Tur Baru
             </Button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {toursLoading ? (
-              <div className="col-span-full p-12 text-center">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                <p className="mt-2 text-muted-foreground">Memuat paket tur...</p>
-              </div>
-            ) : tours && tours.length > 0 ? (
-              tours.map((tour: any, idx: number) => {
-                const tourImg = PlaceHolderImages[idx % PlaceHolderImages.length];
-                return (
-                  <Card key={`${tour.id}-${idx}`} className="overflow-hidden border border-zinc-200 shadow-none group rounded-2xl">
-                    <div className="h-32 md:h-40 relative bg-slate-100">
-                      {isSupabaseStorageUrl(tour.imageUrl) ? (
-                        <img
-                          src={tour.imageUrl}
-                          alt={tour.name}
-                          className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
-                        />
-                      ) : (
-                        <Image
-                          src={tour.imageUrl || tourImg.imageUrl}
-                          alt={tour.name}
-                          fill
-                          className="object-cover transition-transform group-hover:scale-105"
-                          data-ai-hint={tour.imageHint || tourImg.imageHint}
-                        />
-                      )}
-                      <div className="absolute top-2 right-2 flex gap-1 z-10">
-                        <Button 
-                          size="icon" 
-                          variant="secondary" 
-                          className="h-8 w-8 rounded-full bg-white/80 backdrop-blur-sm"
-                          onClick={() => handleOpenEditTour(tour)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button size="icon" variant="destructive" className="h-8 w-8 rounded-full shadow-sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Hapus paket tur?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tindakan ini tidak dapat dibatalkan. Paket tur "{tour.name}" akan dihapus permanen.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteTour(tour.id)} className="bg-red-500 hover:bg-red-600">Hapus</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+          {(() => {
+            const totalTourPages = Math.ceil((tours?.length || 0) / TOURS_PER_PAGE);
+            const paginatedTours = tours?.slice((tourPage - 1) * TOURS_PER_PAGE, tourPage * TOURS_PER_PAGE) || [];
+            return (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                  {toursLoading ? (
+                    <div className="col-span-full p-12 text-center">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                      <p className="mt-2 text-muted-foreground">Memuat paket tur...</p>
                     </div>
-                    <CardHeader className="p-4">
-                      <CardTitle className="text-base md:text-lg">{tour.name}</CardTitle>
-                      <CardDescription className="text-xs md:text-sm">
-                        Rp {tour.price?.toLocaleString('id-ID')} • {tour.distance} • {tour.duration}
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
-                )
-              })
-            ) : (
-              <div className="col-span-full p-12 text-center text-muted-foreground border-2 border-dashed rounded-xl">
-                Belum ada paket tur yang dibuat. Klik "Paket Tur Baru" untuk memulai.
-              </div>
-            )}
-          </div>
+                  ) : paginatedTours.length > 0 ? (
+                    paginatedTours.map((tour: any, idx: number) => {
+                      const realIdx = (tourPage - 1) * TOURS_PER_PAGE + idx;
+                      const tourImg = PlaceHolderImages[realIdx % PlaceHolderImages.length];
+                      return (
+                        <Card key={`${tour.id}-${realIdx}`} className="overflow-hidden border border-zinc-200 shadow-none group rounded-2xl">
+                          <div className="h-32 md:h-40 relative bg-slate-100">
+                            {isSupabaseStorageUrl(tour.imageUrl) ? (
+                              <img
+                                src={tour.imageUrl}
+                                alt={tour.name}
+                                className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
+                              />
+                            ) : (
+                              <Image
+                                src={tour.imageUrl || tourImg.imageUrl}
+                                alt={tour.name}
+                                fill
+                                className="object-cover transition-transform group-hover:scale-105"
+                                data-ai-hint={tour.imageHint || tourImg.imageHint}
+                              />
+                            )}
+                            <div className="absolute top-2 right-2 flex gap-1 z-10">
+                              <Button 
+                                size="icon" 
+                                variant="secondary" 
+                                className="h-8 w-8 rounded-full bg-white/80 backdrop-blur-sm"
+                                onClick={() => handleOpenEditTour(tour)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="icon" variant="destructive" className="h-8 w-8 rounded-full shadow-sm">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Hapus paket tur?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tindakan ini tidak dapat dibatalkan. Paket tur "{tour.name}" akan dihapus permanen.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteTour(tour.id)} className="bg-red-500 hover:bg-red-600">Hapus</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                          <CardHeader className="p-4">
+                            <CardTitle className="text-base md:text-lg">{tour.name}</CardTitle>
+                            <CardDescription className="text-xs md:text-sm">
+                              Rp {tour.price?.toLocaleString('id-ID')} • {tour.distance} • {tour.duration}
+                            </CardDescription>
+                          </CardHeader>
+                        </Card>
+                      )
+                    })
+                  ) : (
+                    <div className="col-span-full p-12 text-center text-muted-foreground border-2 border-dashed rounded-xl">
+                      Belum ada paket tur yang dibuat. Klik "Paket Tur Baru" untuk memulai.
+                    </div>
+                  )}
+                </div>
+                {totalTourPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 pt-4">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-full text-xs"
+                      disabled={tourPage <= 1}
+                      onClick={() => setTourPage((p) => Math.max(1, p - 1))}
+                    >
+                      Sebelumnya
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      Halaman {tourPage} dari {totalTourPages}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-full text-xs"
+                      disabled={tourPage >= totalTourPages}
+                      onClick={() => setTourPage((p) => Math.min(totalTourPages, p + 1))}
+                    >
+                      Selanjutnya
+                    </Button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="users" className="space-y-4 outline-none">
@@ -885,13 +923,20 @@ export default function AdminDashboard() {
                     user: 'Pengguna / User'
                   };
 
+                  // Pagination hanya untuk role 'user'
+                  const isUserRole = roleKey === 'user';
+                  const totalUserPages = isUserRole ? Math.ceil(filtered.length / USERS_PER_PAGE) : 1;
+                  const displayedUsers = isUserRole
+                    ? filtered.slice((userPage - 1) * USERS_PER_PAGE, userPage * USERS_PER_PAGE)
+                    : filtered;
+
                   return (
                     <div key={roleKey} className="space-y-3 pt-4 border-t border-zinc-100 first:border-none">
                       <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest px-1">
                         {roleLabels[roleKey]} ({filtered.length})
                       </h3>
                       <div className="space-y-2">
-                        {filtered.map((u) => (
+                        {displayedUsers.map((u) => (
                           <div key={u.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-colors gap-3 sm:gap-2">
                             <div className="flex items-center gap-3 w-full sm:w-auto">
                               <div className="h-8 w-8 md:h-10 md:w-10 bg-zinc-100 rounded-full flex items-center justify-center shrink-0">
@@ -931,6 +976,31 @@ export default function AdminDashboard() {
                           </div>
                         ))}
                       </div>
+                      {isUserRole && totalUserPages > 1 && (
+                        <div className="flex items-center justify-center gap-2 pt-2 pb-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-full text-xs"
+                            disabled={userPage <= 1}
+                            onClick={() => setUserPage((p) => Math.max(1, p - 1))}
+                          >
+                            Sebelumnya
+                          </Button>
+                          <span className="text-xs text-muted-foreground">
+                            Halaman {userPage} dari {totalUserPages}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-full text-xs"
+                            disabled={userPage >= totalUserPages}
+                            onClick={() => setUserPage((p) => Math.min(totalUserPages, p + 1))}
+                          >
+                            Selanjutnya
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   );
                 })
@@ -963,7 +1033,7 @@ export default function AdminDashboard() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              <div className="max-h-[500px] overflow-y-auto overflow-x-auto">
                 <table className="w-full text-xs md:text-sm">
                   <thead className="border-b bg-zinc-50">
                     <tr>

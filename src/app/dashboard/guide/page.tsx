@@ -520,7 +520,7 @@ export default function GuideDashboard() {
             {scanHistory.length === 0 ? (
               <p className="rounded-2xl border border-dashed p-4 text-sm text-zinc-500">Belum ada riwayat scan tersimpan.</p>
             ) : (
-              <div className="space-y-2">
+              <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
                 {scanHistory.slice(0, 8).map((item) => (
                   <div key={item.id} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -557,7 +557,7 @@ export default function GuideDashboard() {
                 </CardTitle>
                 <CardDescription>Pilih jadwal untuk melihat detail peserta.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="max-h-[400px] overflow-y-auto space-y-3 pr-1">
                 {groupedTourGroups.map((group: any) => (
                   <button
                     key={group.id}
@@ -611,7 +611,7 @@ export default function GuideDashboard() {
                     </Badge>
                   </div>
                   
-                  <div className="space-y-3">
+                  <div className="max-h-[500px] overflow-y-auto space-y-3 pr-1">
                     {selectedGroup?.bookings.map((booking: any) => (
                       <div key={booking.id} className="rounded-2xl bg-zinc-50 border border-zinc-200/60 p-4 text-sm space-y-2">
                         <div className="flex items-center justify-between">

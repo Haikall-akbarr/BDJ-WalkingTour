@@ -164,25 +164,40 @@ export default function PaymentSuccessPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-                    <p className="font-semibold">Barcode sudah aktif</p>
-                    <p>Tunjukkan barcode ini ke guide saat check-in. Barcode juga dikirim ke email pembeli.</p>
-                    {booking?.attendanceCode && (
-                      <p>Kode Absensi: <span className="font-mono font-semibold">{booking.attendanceCode}</span></p>
-                    )}
-                    {booking?.attendanceScannedAt && (
-                      <p>Status guide: sudah dipindai oleh {booking.attendanceScannedBy || 'guide'}.</p>
-                    )}
-                  </div>
-                  <div className="mx-auto h-56 w-56 overflow-hidden rounded-2xl border bg-white p-3">
-                    <Image
-                      src={booking.attendanceQrImageUrl!}
-                      alt="Barcode Absensi"
-                      width={224}
-                      height={224}
-                      className="h-full w-full object-contain"
-                    />
-                  </div>
+                  {booking?.attendanceScannedAt ? (
+                    <>
+                      <div className="space-y-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                        <p className="font-semibold">Barcode sudah di-scan</p>
+                        <p>Barcode ini sudah digunakan dan telah di-scan oleh guide pada saat check-in.</p>
+                        {booking?.attendanceCode && (
+                          <p>Kode Absensi: <span className="font-mono font-semibold">{booking.attendanceCode}</span></p>
+                        )}
+                        <p>Waktu scan: <span className="font-semibold">{new Date(booking.attendanceScannedAt).toLocaleString('id-ID')}</span></p>
+                        {booking?.attendanceScannedBy && (
+                          <p>Dipindai oleh: <span className="font-semibold">{booking.attendanceScannedBy}</span></p>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                        <p className="font-semibold">Barcode sudah aktif</p>
+                        <p>Tunjukkan barcode ini ke guide saat check-in. Barcode juga dikirim ke email pembeli.</p>
+                        {booking?.attendanceCode && (
+                          <p>Kode Absensi: <span className="font-mono font-semibold">{booking.attendanceCode}</span></p>
+                        )}
+                      </div>
+                      <div className="mx-auto h-56 w-56 overflow-hidden rounded-2xl border bg-white p-3">
+                        <Image
+                          src={booking.attendanceQrImageUrl!}
+                          alt="Barcode Absensi"
+                          width={224}
+                          height={224}
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               )
             ) : error ? (
