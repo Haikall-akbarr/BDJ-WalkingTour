@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Map, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,16 @@ export function FloatingNavbar() {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
   const [faqOpen, setFaqOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 80)
+    }
+    handleScroll()
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
 
   const handleLogout = async () => {
     try {
@@ -30,8 +40,8 @@ export function FloatingNavbar() {
 
   return (
     <>
-      <div className="absolute top-6 left-0 right-0 z-50 mx-auto w-full max-w-7xl px-4 md:px-8">
-        <div className="flex w-full flex-row items-center justify-between rounded-full border border-white/15 bg-black/20 px-4 py-2.5 backdrop-blur-md lg:px-5 lg:py-3">
+      <div className={`${scrolled ? "fixed top-0 left-0 right-0 animate-in slide-in-from-top-4 fade-in duration-300" : "absolute top-6 left-0 right-0"} z-50 mx-auto w-full max-w-7xl px-4 md:px-8 transition-all ${scrolled ? "py-2" : ""}`}>
+        <div className={`flex w-full flex-row items-center justify-between rounded-full border px-4 py-2.5 backdrop-blur-md lg:px-5 lg:py-3 transition-all duration-300 ${scrolled ? "border-black/10 bg-[#10221f]/90 shadow-lg shadow-black/10" : "border-white/15 bg-black/20"}`}>
           <Link href="/" className="flex items-center gap-2 text-white shrink-0">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#98DDCA] text-[#16302c] shadow-sm shrink-0">
               <Map className="h-5 w-5" />
