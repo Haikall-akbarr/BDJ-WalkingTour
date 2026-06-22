@@ -5,14 +5,15 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Compass, MapPin, Ticket, Mail, UserRound, Loader2, Home, MessageSquareText } from "lucide-react"
+import { Compass, MapPin, Ticket, Mail, UserRound, Loader2, Home, MessageSquareText, Phone, MapPinned } from "lucide-react"
 import { useSessionUser } from "@/hooks/use-session-user"
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog"
 import { NotificationBell } from "@/components/NotificationBell"
+import { EditProfileDialog } from "@/components/EditProfileDialog"
 import { Footer } from "@/components/public/Footer"
 
 export default function UserDashboardPage() {
-  const { user, loading } = useSessionUser()
+  const { user, loading, refresh } = useSessionUser()
   const [bookings, setBookings] = useState<any[]>([])
   const [bookingsLoading, setBookingsLoading] = useState(true)
 
@@ -82,7 +83,10 @@ export default function UserDashboardPage() {
         <section className="grid gap-5 lg:grid-cols-[1.35fr,0.9fr]">
           <Card className="rounded-[24px] border-none bg-white shadow-md">
             <CardHeader>
-              <Badge className="w-fit rounded-full bg-[#98DDCA] text-[#16302c] hover:bg-[#98DDCA]">Profil Aktif</Badge>
+              <div className="flex items-center justify-between">
+                <Badge className="w-fit rounded-full bg-[#98DDCA] text-[#16302c] hover:bg-[#98DDCA]">Profil Aktif</Badge>
+                <EditProfileDialog user={user} onSuccess={refresh} />
+              </div>
               <CardTitle className="text-2xl font-bold ">Akun yang sedang login</CardTitle>
               <CardDescription>Informasi di bawah mengikuti akun yang sedang Anda gunakan saat login.</CardDescription>
             </CardHeader>
@@ -94,6 +98,20 @@ export default function UserDashboardPage() {
               <div className="rounded-2xl border border-black/5 bg-zinc-50 p-4">
                 <p className="text-xs tracking-[0.2em] text-zinc-500">Email</p>
                 <p className="mt-2 text-lg font-bold text-zinc-900 break-words">{user?.email || "Belum tersedia"}</p>
+              </div>
+              <div className="rounded-2xl border border-black/5 bg-zinc-50 p-4">
+                <p className="text-xs tracking-[0.2em] text-zinc-500">Telepon</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-zinc-400" />
+                  <p className="text-lg font-bold text-zinc-900">{user?.phone || <span className="text-zinc-400 font-normal text-sm">Belum diisi</span>}</p>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-black/5 bg-zinc-50 p-4">
+                <p className="text-xs tracking-[0.2em] text-zinc-500">Alamat</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <MapPinned className="h-4 w-4 text-zinc-400" />
+                  <p className="text-lg font-bold text-zinc-900">{user?.address || <span className="text-zinc-400 font-normal text-sm">Belum diisi</span>}</p>
+                </div>
               </div>
               <div className="rounded-2xl border border-black/5 bg-zinc-50 p-4 sm:col-span-2">
                 <p className="text-xs tracking-[0.2em] text-zinc-500">Role</p>

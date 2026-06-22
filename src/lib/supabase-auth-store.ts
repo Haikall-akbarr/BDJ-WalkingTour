@@ -15,6 +15,8 @@ function mapUser(row: AnyRow) {
     email: row.email,
     name: row.name,
     role: row.role,
+    phone: row.phone || null,
+    address: row.address || null,
     passwordHash: row.password_hash,
     isActive: Boolean(row.is_active),
     createdAt: toIso(row.created_at),
@@ -81,6 +83,18 @@ export async function upsertUser(input: {
 
   if (result.error) throw result.error;
   return result.data ? mapUser(result.data) : null;
+}
+
+export async function updateUserProfile(userId: string, data: { name?: string; phone?: string; address?: string }) {
+  const admin = getSupabaseAdmin();
+  const updateData: Record<string, any> = { updated_at: new Date().toISOString() };
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.phone !== undefined) updateData.phone = data.phone;
+  if (data.address !== undefined) updateData.address = data.address;
+
+  const { data: updated, error } = await admin.from('users').update(updateData).eq('id', userId).select('*').maybeSingle();
+  if (error) throw error;
+  return updated ? mapUser(updated) : null;
 }
 
 export async function updateUserPasswordHash(userId: string, passwordHash: string) {

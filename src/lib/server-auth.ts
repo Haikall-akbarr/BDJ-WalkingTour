@@ -33,6 +33,8 @@ export async function getCurrentSessionUser() {
     email: user.email,
     name: user.name,
     role: user.role,
+    phone: user.phone || '',
+    address: user.address || '',
     createdAt: user.createdAt,
   };
 }

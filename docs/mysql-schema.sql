@@ -82,12 +82,18 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(191) NOT NULL UNIQUE,
   name VARCHAR(191) NOT NULL,
   role VARCHAR(32) NOT NULL,
+  phone VARCHAR(20) NULL,
+  address VARCHAR(255) NULL,
   password_hash VARCHAR(128) NOT NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_users_role (role)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Migration: Add phone and address columns to existing users table
+-- ALTER TABLE users ADD COLUMN phone VARCHAR(20) NULL AFTER role;
+-- ALTER TABLE users ADD COLUMN address VARCHAR(255) NULL AFTER phone;
 
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
   id VARCHAR(64) PRIMARY KEY,

@@ -1,4 +1,4 @@
-﻿import { randomUUID } from 'crypto';
+import { randomUUID } from 'crypto';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { getMySqlPool } from '@/lib/mysql';
 
@@ -7,6 +7,8 @@ type DbUserRow = RowDataPacket & {
   email: string;
   name: string;
   role: string;
+  phone: string | null;
+  address: string | null;
   password_hash: string;
   is_active: number;
   created_at: Date | string;
@@ -43,6 +45,8 @@ function mapUser(row: DbUserRow) {
     email: row.email,
     name: row.name,
     role: row.role,
+    phone: row.phone || null,
+    address: row.address || null,
     passwordHash: row.password_hash,
     isActive: Boolean(row.is_active),
     createdAt: toIso(row.created_at),
@@ -100,6 +104,18 @@ export async function upsertUser(input: {
   );
 
   return getUserByEmail(input.email);
+}
+
+export async function updateUserProfile(userId: string, data: { name?: string; phone?: string; address?: string }) {
+  const pool = getMySqlPool();
+  const sets: string[] = ['updated_at = NOW()'];
+  const values: any[] = [];
+  if (data.name !== undefined) { sets.push('name = ?'); values.push(data.name); }
+  if (data.phone !== undefined) { sets.push('phone = ?'); values.push(data.phone); }
+  if (data.address !== undefined) { sets.push('address = ?'); values.push(data.address); }
+  values.push(userId);
+  await pool.execute(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`, values);
+  return getUserById(userId);
 }
 
 export async function updateUserPasswordHash(userId: string, passwordHash: string) {

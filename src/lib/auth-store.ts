@@ -30,6 +30,10 @@ export function updateUserPasswordHash(...args: Parameters<typeof mysqlAuthStore
 	return getStore().updateUserPasswordHash(...args);
 }
 
+export function updateUserProfile(...args: Parameters<typeof mysqlAuthStore.updateUserProfile>) {
+	return getStore().updateUserProfile(...args);
+}
+
 export function createSession(...args: Parameters<typeof mysqlAuthStore.createSession>) {
 	return getStore().createSession(...args);
 }
