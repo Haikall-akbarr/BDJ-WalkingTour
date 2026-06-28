@@ -27,6 +27,7 @@ import {
   generateResetToken,
   generateSessionToken,
   hashPassword,
+  verifyPassword,
   hashResetToken,
   hashSessionToken,
 } from "./src/lib/auth-session";
@@ -1014,13 +1015,22 @@ app.post(
     }
 
     const user = await getUserByEmail(email);
-    if (
-      !user ||
-      !user.isActive ||
-      user.passwordHash !== hashPassword(password)
-    ) {
+    if (!user || !user.isActive) {
       res.status(401).json({ error: "Email atau password salah." });
       return;
+    }
+
+    const { valid, needsRehash } = await verifyPassword(password, user.passwordHash);
+    if (!valid) {
+      res.status(401).json({ error: "Email atau password salah." });
+      return;
+    }
+
+    if (needsRehash) {
+      try {
+        const newHash = await hashPassword(password);
+        await updateUserPasswordHash(user.id, newHash);
+      } catch (e) {}
     }
 
     const token = generateSessionToken();
@@ -1100,7 +1110,7 @@ app.post(
       email,
       name,
       role: "user",
-      passwordHash: hashPassword(password),
+      passwordHash: await hashPassword(password),
       isActive: true,
     });
 
@@ -1348,7 +1358,7 @@ app.post(
         email: item.email,
         name: item.name,
         role: item.role,
-        passwordHash: hashPassword(item.password),
+        passwordHash: await hashPassword(item.password),
         isActive: true,
       });
     }
@@ -1401,7 +1411,7 @@ app.post(
       email,
       name,
       role,
-      passwordHash: hashPassword(password),
+      passwordHash: await hashPassword(password),
     });
 
     try {
@@ -1881,7 +1891,7 @@ app.post(
       email,
       name,
       role,
-      passwordHash: hashPassword(password),
+      passwordHash: await hashPassword(password),
     });
 
     try {
@@ -1941,7 +1951,7 @@ app.post(
     if (
       !user ||
       !user.isActive ||
-      user.passwordHash !== hashPassword(password)
+      !(await verifyPassword(password, user.passwordHash)).valid
     ) {
       res.status(401).json({ error: "Email atau password salah." });
       return;
@@ -2010,7 +2020,7 @@ app.post(
       email,
       name,
       role: "user",
-      passwordHash: hashPassword(password),
+      passwordHash: await hashPassword(password),
       isActive: true,
     });
 
@@ -2237,7 +2247,7 @@ app.post(
         email: item.email,
         name: item.name,
         role: item.role,
-        passwordHash: hashPassword(item.password),
+        passwordHash: await hashPassword(item.password),
         isActive: true,
       });
     }

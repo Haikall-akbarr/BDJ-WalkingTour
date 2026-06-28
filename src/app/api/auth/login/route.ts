@@ -70,13 +70,13 @@ export async function POST(request: NextRequest) {
 
     const user = await getUserByEmail(email);
     if (!user || !user.isActive) {
-      return NextResponse.json({ error: 'Email atau password salah.' }, { status: 401 });
+      return NextResponse.json({ error: 'Email atau password salah.', debug: !user ? 'User not found in DB' : 'User is inactive' }, { status: 401 });
     }
 
     // ── Verify password (supports bcrypt and legacy SHA-256) ──
     const { valid, needsRehash } = await verifyPassword(password, user.passwordHash);
     if (!valid) {
-      return NextResponse.json({ error: 'Email atau password salah.' }, { status: 401 });
+      return NextResponse.json({ error: 'Email atau password salah.', debug: 'Password hash mismatch' }, { status: 401 });
     }
 
     // ── Auto-upgrade legacy SHA-256 hash to bcrypt ──

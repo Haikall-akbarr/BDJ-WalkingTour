@@ -39,18 +39,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       <p>Halo ${user.name || user.email},</p>
       <p>Password akun BDJ WalkingTour Anda telah direset oleh administrator.</p>
       <p><strong>Email:</strong> ${user.email}</p>
+      <p><strong>Password Sementara:</strong> ${password}</p>
       <p>Silakan login dan segera ganti password Anda melalui halaman profil.</p>
       ${baseUrl ? `<p>Login di <a href="${baseUrl}">${baseUrl}</a></p>` : ''}
       <p style="font-size:12px;color:#999;">Jika Anda tidak meminta reset ini, segera hubungi administrator.</p>
     `
 
-    await sendEmail(user.email, 'Password akun BDJ WalkingTour direset', html)
+    let emailWarning = ''
+    try {
+      await sendEmail(user.email, 'Password akun BDJ WalkingTour direset', html)
+    } catch (emailErr: any) {
+      console.error('Failed to send credentials email:', emailErr)
+      emailWarning = ` Email gagal dikirim: ${emailErr.message}`
+    }
 
-    // Do NOT return password in response for security
     return NextResponse.json({
       ok: true,
       user: { id: user.id, email: user.email, name: user.name, role: user.role },
-      message: 'Password berhasil direset dan email notifikasi telah dikirim.',
+      password, // Frontend needs this to display in the Credentials Modal
+      message: 'Password berhasil direset.' + emailWarning,
     })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || String(err) }, { status: 500 })
