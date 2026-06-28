@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
           email,
           name: googleUser.name || googleUser.given_name || email.split('@')[0],
           role: 'user',
-          passwordHash: hashPassword(randomUUID()),
+          passwordHash: await hashPassword(randomUUID()),
           isActive: true,
         });
 

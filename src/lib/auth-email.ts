@@ -146,7 +146,7 @@ export async function sendAuthEmail(params: { to: string; subject: string; html:
   return { skipped: true, provider: providerOrder[0] };
 }
 
-export function buildWelcomeEmailHtml(params: { name: string; email: string; password?: string }) {
+export function buildWelcomeEmailHtml(params: { name: string; email: string }) {
   const appBaseUrl = getAppBaseUrl();
   return `
     <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10221f;max-width:600px;margin:0 auto;padding:20px;border:1px solid #eee;border-radius:8px;">
@@ -155,9 +155,9 @@ export function buildWelcomeEmailHtml(params: { name: string; email: string; pas
       <p>Akun peserta Anda telah sukses dibuat dan aktif. Selamat bergabung di komunitas petualang BDJ Walking Tour!</p>
       
       <div style="background-color:#f9f9f9;padding:15px;border-left:4px solid #98DDCA;border-radius:4px;margin:20px 0;">
-        <h3 style="margin-top:0;color:#333;font-size:15px;">Detail Login Akun Anda:</h3>
-        <p style="margin:5px 0;font-size:14px;color:#555;"><strong>Email/Username:</strong> ${params.email}</p>
-        ${params.password ? `<p style="margin:5px 0;font-size:14px;color:#555;"><strong>Password:</strong> ${params.password}</p>` : ''}
+        <h3 style="margin-top:0;color:#333;font-size:15px;">Detail Akun Anda:</h3>
+        <p style="margin:5px 0;font-size:14px;color:#555;"><strong>Email:</strong> ${params.email}</p>
+        <p style="margin:5px 0;font-size:12px;color:#999;">Demi keamanan, password tidak disertakan dalam email ini. Jika Anda lupa password, gunakan fitur "Lupa Password" di halaman login.</p>
       </div>
 
       <p>Silakan login melalui tautan di bawah ini untuk mulai memesan tur jalan kaki terbaik Anda:</p>

@@ -1,21 +1,60 @@
-﻿import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
+import bcrypt from 'bcryptjs';
 
 const SESSION_COOKIE_NAME = 'bdj_session';
+const BCRYPT_ROUNDS = 12;
 
 function getSessionSecret() {
-  return process.env.AUTH_SESSION_SECRET || 'dev-session-secret-change-me';
+  const secret = process.env.AUTH_SESSION_SECRET;
+  if (!secret) {
+    throw new Error(
+      'AUTH_SESSION_SECRET environment variable belum di-set. ' +
+      'Tambahkan AUTH_SESSION_SECRET di .env.local (development) atau di environment variables hosting Anda (production).'
+    );
+  }
+  return secret;
 }
 
 function getPasswordSalt() {
-  return process.env.AUTH_PASSWORD_SALT || 'dev-password-salt-change-me';
+  const salt = process.env.AUTH_PASSWORD_SALT;
+  if (!salt) {
+    throw new Error(
+      'AUTH_PASSWORD_SALT environment variable belum di-set. ' +
+      'Tambahkan AUTH_PASSWORD_SALT di .env.local (development) atau di environment variables hosting Anda (production).'
+    );
+  }
+  return salt;
 }
 
 export function getSessionCookieName() {
   return SESSION_COOKIE_NAME;
 }
 
-export function hashPassword(rawPassword: string) {
-  return createHash('sha256').update(`${getPasswordSalt()}:${rawPassword}`).digest('hex');
+/**
+ * Hash a password using bcrypt. This is the primary hashing method.
+ * Returns a bcrypt hash string starting with "$2a$" or "$2b$".
+ */
+export async function hashPassword(rawPassword: string): Promise<string> {
+  return bcrypt.hash(rawPassword, BCRYPT_ROUNDS);
+}
+
+/**
+ * Verify a password against a stored hash.
+ * Supports both bcrypt hashes (new) and legacy SHA-256 hashes (old) for backward compatibility.
+ * If a legacy hash matches, the caller should re-hash and update the stored hash to bcrypt.
+ */
+export async function verifyPassword(rawPassword: string, storedHash: string): Promise<{ valid: boolean; needsRehash: boolean }> {
+  // Detect bcrypt hash (starts with $2a$ or $2b$)
+  if (storedHash.startsWith('$2a$') || storedHash.startsWith('$2b$')) {
+    const valid = await bcrypt.compare(rawPassword, storedHash);
+    return { valid, needsRehash: false };
+  }
+
+  // Legacy SHA-256 check for backward compatibility
+  const legacySalt = getPasswordSalt();
+  const legacyHash = createHash('sha256').update(`${legacySalt}:${rawPassword}`).digest('hex');
+  const valid = legacyHash === storedHash;
+  return { valid, needsRehash: valid }; // If valid legacy hash, mark for rehash to bcrypt
 }
 
 export function generateSessionToken() {

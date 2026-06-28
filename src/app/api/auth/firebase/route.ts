@@ -111,13 +111,7 @@ async function verifyFirebaseIdToken(idToken: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('[Firebase Auth] POST request received');
-    console.log('[Firebase Auth] DB_PROVIDER:', process.env.DB_PROVIDER);
-    console.log('[Firebase Auth] MYSQL_HOST:', process.env.MYSQL_HOST ? `${process.env.MYSQL_HOST.substring(0, 20)}...` : 'NOT SET');
-    console.log('[Firebase Auth] isDatabaseProviderEnabled:', isDatabaseProviderEnabled());
-
     if (!isDatabaseProviderEnabled()) {
-      console.error('[Firebase Auth] Database provider not enabled');
       return NextResponse.json({ error: 'DB_PROVIDER belum di-set ke backend database yang valid.' }, { status: 400 });
     }
 
@@ -125,14 +119,10 @@ export async function POST(request: NextRequest) {
     const idToken = String(body?.idToken || '').trim();
 
     if (!idToken) {
-      console.error('[Firebase Auth] No idToken provided');
       return NextResponse.json({ error: 'Firebase ID token wajib diisi.' }, { status: 400 });
     }
 
-    console.log('[Firebase Auth] Verifying Firebase token...');
     const firebaseUser = await verifyFirebaseIdToken(idToken);
-    console.log('[Firebase Auth] Token verified for email:', firebaseUser.email);
-    console.log('[Firebase Auth] Token verified for email:', firebaseUser.email);
     const email = firebaseUser.email!.toLowerCase();
     const existing = await getUserByEmail(email);
 
@@ -153,7 +143,7 @@ export async function POST(request: NextRequest) {
           email,
           name: firebaseUser.name || email.split('@')[0],
           role: 'user',
-          passwordHash: hashPassword(idToken),
+          passwordHash: await hashPassword(idToken),
           isActive: true,
         });
 
@@ -206,15 +196,11 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error: any) {
-    console.error('[Firebase Auth] Error:', error?.message);
-    console.error('[Firebase Auth] Error code:', error?.code);
-    console.error('[Firebase Auth] Stack:', error?.stack?.substring(0, 500));
-    
     // Provide helpful error message based on error type
     let userMessage = error?.message || 'Login Firebase gagal.';
     
     if (error?.code === 'ECONNREFUSED') {
-      userMessage = `Gagal koneksi ke database. MYSQL_HOST: ${process.env.MYSQL_HOST || 'NOT SET'}. Pastikan environment variables di Vercel sudah di-set dengan benar (terutama MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD).`;
+      userMessage = `Gagal koneksi ke database. Pastikan environment variables sudah di-set dengan benar.`;
     }
     
     return NextResponse.json({ error: userMessage }, { status: 500 });

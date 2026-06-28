@@ -5,7 +5,37 @@ import { verifyJwt, JWT_COOKIE_NAME } from '@/lib/jwt';
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
-  // Protect /dashboard routes
+  // ── Protect /api/admin/* API routes ──
+  if (path.startsWith('/api/admin')) {
+    const token = request.cookies.get(JWT_COOKIE_NAME)?.value;
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Autentikasi diperlukan. Silakan login.' },
+        { status: 401 }
+      );
+    }
+
+    const payload = await verifyJwt(token);
+
+    if (!payload) {
+      return NextResponse.json(
+        { error: 'Token tidak valid atau sudah kedaluwarsa. Silakan login ulang.' },
+        { status: 401 }
+      );
+    }
+
+    if (payload.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Anda tidak memiliki izin untuk mengakses resource ini.' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.next();
+  }
+
+  // ── Protect /dashboard routes ──
   if (path.startsWith('/dashboard')) {
     const token = request.cookies.get(JWT_COOKIE_NAME)?.value;
 
@@ -52,5 +82,5 @@ export async function middleware(request: NextRequest) {
 
 // Specify the paths that middleware should run on
 export const config = {
-  matcher: ['/dashboard/:path*'],
+  matcher: ['/dashboard/:path*', '/api/admin/:path*'],
 };

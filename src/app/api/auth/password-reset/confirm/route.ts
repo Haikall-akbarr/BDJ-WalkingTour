@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Token reset sudah kedaluwarsa.' }, { status: 400 });
     }
 
-    await updateUserPasswordHash(user.id, hashPassword(password));
+    await updateUserPasswordHash(user.id, await hashPassword(password));
     await markPasswordResetTokenUsed(tokenRecord.id);
     await deleteSessionsByUserId(user.id);
 

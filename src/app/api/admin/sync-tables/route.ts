@@ -70,6 +70,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Database belum aktif.' }, { status: 400 });
     }
 
+    const user = await getCurrentSessionUser();
+    if (!user || !['admin', 'owner'].includes(user.role)) {
+      return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
+    }
+
     const admin = getSupabaseAdmin();
 
     const { count: bookingCount } = await admin.from('bookings').select('*', { count: 'exact', head: true });

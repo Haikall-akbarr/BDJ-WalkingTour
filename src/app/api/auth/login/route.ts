@@ -1,15 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionCookieName, generateSessionToken, getSessionExpiryDate, hashPassword, hashSessionToken } from '@/lib/auth-session';
+import { getSessionCookieName, generateSessionToken, getSessionExpiryDate, verifyPassword, hashPassword, hashSessionToken } from '@/lib/auth-session';
 import { signJwt, JWT_COOKIE_NAME } from '@/lib/jwt';
 import { createSession, getUserByEmail } from '@/lib/auth-store';
+import { updateUserPasswordHash } from '@/lib/auth-store';
 import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 
 export const runtime = 'nodejs';
+
+// ── In-memory rate limiter ──
+const LOGIN_ATTEMPTS = new Map<string, { count: number; resetAt: number }>();
+const MAX_ATTEMPTS = 5;
+const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
+function getRateLimitKey(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for');
+  const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
+  return ip;
+}
+
+function isRateLimited(key: string): boolean {
+  const now = Date.now();
+  const entry = LOGIN_ATTEMPTS.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    LOGIN_ATTEMPTS.set(key, { count: 1, resetAt: now + WINDOW_MS });
+    return false;
+  }
+
+  entry.count++;
+  if (entry.count > MAX_ATTEMPTS) {
+    return true;
+  }
+
+  return false;
+}
+
+// Clean up old entries every 30 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of LOGIN_ATTEMPTS.entries()) {
+    if (now > entry.resetAt) {
+      LOGIN_ATTEMPTS.delete(key);
+    }
+  }
+}, 30 * 60 * 1000);
 
 export async function POST(request: NextRequest) {
   try {
     if (!isDatabaseProviderEnabled()) {
       return NextResponse.json({ error: 'Backend database belum aktif.' }, { status: 400 });
+    }
+
+    // ── Rate limiting ──
+    const rateLimitKey = getRateLimitKey(request);
+    if (isRateLimited(rateLimitKey)) {
+      return NextResponse.json(
+        { error: 'Terlalu banyak percobaan login. Silakan coba lagi dalam 15 menit.' },
+        { status: 429 }
+      );
     }
 
     const body = await request.json();
@@ -25,8 +73,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email atau password salah.' }, { status: 401 });
     }
 
-    if (user.passwordHash !== hashPassword(password)) {
+    // ── Verify password (supports bcrypt and legacy SHA-256) ──
+    const { valid, needsRehash } = await verifyPassword(password, user.passwordHash);
+    if (!valid) {
       return NextResponse.json({ error: 'Email atau password salah.' }, { status: 401 });
+    }
+
+    // ── Auto-upgrade legacy SHA-256 hash to bcrypt ──
+    if (needsRehash) {
+      try {
+        const newHash = await hashPassword(password);
+        await updateUserPasswordHash(user.id, newHash);
+      } catch {
+        // Non-blocking: if rehash fails, user can still login
+      }
     }
 
     const token = generateSessionToken();
@@ -76,14 +136,8 @@ export async function POST(request: NextRequest) {
       expires: expiresAt,
     });
 
-    // explicitly append just to be 100% sure the header gets written correctly in Next.js 15 Edge
-    const secureFlag = process.env.NODE_ENV === 'production' ? 'Secure;' : '';
-    response.headers.append('Set-Cookie', `${JWT_COOKIE_NAME}=${jwtToken}; Path=/; Expires=${expiresAt.toUTCString()}; HttpOnly; SameSite=Lax; ${secureFlag}`);
-    
     return response;
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Login gagal.' }, { status: 500 });
   }
 }
-
-
