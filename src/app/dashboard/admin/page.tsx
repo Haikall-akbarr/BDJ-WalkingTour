@@ -1112,7 +1112,7 @@ export default function AdminDashboard() {
 
         {/* Create User Dialog */}
         <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
-          <DialogContent className="sm:max-w-[450px]">
+          <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Tambah Pengguna</DialogTitle>
               <DialogDescription>Buat akun baru dan kirim kredensial via email.</DialogDescription>
@@ -1261,7 +1261,7 @@ export default function AdminDashboard() {
 
       {/* Add/Edit Tour Dialog */}
       <Dialog open={isTourDialogOpen} onOpenChange={setIsTourDialogOpen}>
-        <DialogContent className="sm:max-w-[650px]">
+        <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingTour ? "Edit Paket Tur" : "Tambah Paket Tur Baru"}</DialogTitle>
             <DialogDescription>
