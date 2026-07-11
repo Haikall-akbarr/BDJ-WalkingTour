@@ -30,7 +30,8 @@ import {
   Calendar as CalendarIcon,
   Clock,
   Map as MapIcon,
-  Download
+  Download,
+  CopyPlus
 } from "lucide-react"
 import {
   AlertDialog,
@@ -386,6 +387,51 @@ export default function AdminDashboard() {
       priceRegulerDesc: tour.priceRegulerDesc || "",
       priceHematDesc: tour.priceHematDesc || "",
       date: tour.date || "",
+      description: tour.description || "",
+      distance: tour.distance || "3 KM",
+      duration: tour.duration || "2 Jam",
+      descriptionFull: tour.descriptionFull || "",
+      historyCulture: tour.historyCulture || "",
+      highlight1Title: highlights[0]?.title || "",
+      highlight1Desc: highlights[0]?.desc || "",
+      highlight2Title: highlights[1]?.title || "",
+      highlight2Desc: highlights[1]?.desc || "",
+      highlight3Title: highlights[2]?.title || "",
+      highlight3Desc: highlights[2]?.desc || "",
+      highlight4Title: highlights[3]?.title || "",
+      highlight4Desc: highlights[3]?.desc || "",
+      routeMapUrl: tour.routeMapUrl || "",
+      pois: pois.length > 0 ? pois : ["", "", "", "", ""]
+    });
+    setTourFiles([]);
+    setRouteMapFile(null);
+    setIsTourDialogOpen(true);
+  };
+
+  const handleDuplicateTour = (tour: any) => {
+    // Fill the form with the old tour's data, but don't set editingTour so it saves as a new one
+    setEditingTour(null);
+    let highlights = [];
+    try {
+      highlights = JSON.parse(tour.historyHighlights || "[]");
+    } catch {
+      highlights = [];
+    }
+
+    let pois = [];
+    try {
+      pois = JSON.parse(tour.poiList || "[]");
+    } catch {
+      pois = [];
+    }
+
+    setTourFormData({
+      name: `${tour.name || ""} (Salinan)`,
+      price: tour.price?.toString() || "",
+      priceHemat: tour.priceHemat?.toString() || "",
+      priceRegulerDesc: tour.priceRegulerDesc || "",
+      priceHematDesc: tour.priceHematDesc || "",
+      date: "", // Leave date empty for the new schedule
       description: tour.description || "",
       distance: tour.distance || "3 KM",
       duration: tour.duration || "2 Jam",
@@ -828,10 +874,20 @@ export default function AdminDashboard() {
                               <Button 
                                 size="icon" 
                                 variant="secondary" 
+                                title="Edit Tur"
                                 className="h-8 w-8 rounded-full bg-white/80 backdrop-blur-sm"
                                 onClick={() => handleOpenEditTour(tour)}
                               >
                                 <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="icon" 
+                                variant="secondary" 
+                                title="Duplikat Tur"
+                                className="h-8 w-8 rounded-full bg-white/80 backdrop-blur-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => handleDuplicateTour(tour)}
+                              >
+                                <CopyPlus className="h-4 w-4" />
                               </Button>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
