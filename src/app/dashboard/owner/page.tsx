@@ -114,7 +114,7 @@ export default function OwnerDashboard() {
   const loadUnassignedBookings = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/bookings?paymentStatus=paid&unassigned=true", { cache: "no-store" });
+      const response = await fetch("/api/bookings?paymentStatus=paid", { cache: "no-store" });
       const result = await response.json();
 
       if (!response.ok) {
@@ -242,8 +242,16 @@ export default function OwnerDashboard() {
           bookings: [],
           totalPax: 0,
           participants: [],
+          guideId: null,
+          guideName: null,
         };
       }
+      
+      if (booking.guideId && !groups[tId].guideId) {
+        groups[tId].guideId = booking.guideId;
+        groups[tId].guideName = booking.guideName;
+      }
+
       groups[tId].bookings.push(booking);
       groups[tId].totalPax += Number(booking.pax || 0);
       if (booking.participantNames) {
@@ -643,9 +651,15 @@ export default function OwnerDashboard() {
                         <Badge variant="outline" className="h-5 rounded-full px-2 text-[10px]">
                           {slot.totalPax} Pax
                         </Badge>
-                        <Badge variant="secondary" className="h-5 rounded-full px-2 text-[10px] bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">
-                          Butuh Pemandu
-                        </Badge>
+                        {slot.guideId ? (
+                          <Badge variant="secondary" className="h-5 rounded-full px-2 text-[10px] bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none">
+                            Pemandu: {slot.guideName}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="h-5 rounded-full px-2 text-[10px] bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">
+                            Butuh Pemandu
+                          </Badge>
+                        )}
                       </div>
                       {slot.participants.length > 0 && (
                         <p className="text-[10px] text-zinc-500 mt-1 max-w-[300px] truncate animate-in fade-in duration-200" title={slot.participants.join(", ")}>
@@ -656,7 +670,7 @@ export default function OwnerDashboard() {
 
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <Select
-                        value={selectedGuides[slot.id] || ""}
+                        value={selectedGuides[slot.id] !== undefined ? selectedGuides[slot.id] : (slot.guideId || "")}
                         onValueChange={(val) => setSelectedGuides({ ...selectedGuides, [slot.id]: val })}
                       >
                         <SelectTrigger className="h-9 w-full bg-white text-xs sm:w-[175px]">
