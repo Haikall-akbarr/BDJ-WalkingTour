@@ -7,6 +7,15 @@ import { ArrowRight, CalendarDays, Clock3, Loader2, MapPin, Sparkles, Users, Che
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
 import { FloatingNavbar } from "@/components/public/FloatingNavbar"
 import { Footer } from "@/components/public/Footer"
@@ -23,6 +32,7 @@ type TourItem = {
   imageUrl?: string
   descriptionFull?: string
   priceHemat?: number
+  availablePax?: number
   images?: { id: string; url: string; filename: string; isCover: boolean }[]
 }
 
@@ -37,6 +47,7 @@ export default function ToursPage() {
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [fullTourAlertOpen, setFullTourAlertOpen] = useState(false)
   const itemsPerPage = 8
 
   const isSupabaseStorageUrl = (value?: string) =>
@@ -267,16 +278,32 @@ export default function ToursPage() {
                   <div className="grid grid-cols-2 gap-2 text-sm text-zinc-600 md:grid-cols-3">
                     <span className="inline-flex items-center gap-2 rounded-2xl bg-zinc-50 px-3 py-2"><CalendarDays className="h-4 w-4 text-[#16302c]" /> {tour.date || "Jadwal Fleksibel"}</span>
                     <span className="inline-flex items-center gap-2 rounded-2xl bg-zinc-50 px-3 py-2"><Clock3 className="h-4 w-4 text-[#16302c]" /> {tour.duration || "2 Jam"}</span>
-                    <span className="inline-flex items-center gap-2 rounded-2xl bg-zinc-50 px-3 py-2"><Users className="h-4 w-4 text-[#16302c]" /> Grup Kecil</span>
+                    {tour.availablePax !== undefined && tour.availablePax <= 0 ? (
+                      <span className="inline-flex items-center gap-2 rounded-2xl bg-red-50 px-3 py-2 text-red-700 font-medium"><Users className="h-4 w-4 text-red-700" /> Pax Full</span>
+                    ) : (
+                      <span className="inline-flex items-center gap-2 rounded-2xl bg-zinc-50 px-3 py-2"><Users className="h-4 w-4 text-[#16302c]" /> {tour.availablePax !== undefined ? `Sisa ${tour.availablePax} pax` : "Grup Kecil"}</span>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <p className="text-xs tracking-[0.25em] text-zinc-500">Rute Populer</p>
-                    <Link href={`/book/${tour.id}`}>
-                      <Button className="rounded-full bg-[#10221f] text-white hover:bg-[#0b1715]">
+                    {tour.availablePax !== undefined && tour.availablePax <= 0 ? (
+                      <Button 
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setFullTourAlertOpen(true)
+                        }}
+                        className="rounded-full bg-red-600 text-white hover:bg-red-700"
+                      >
                         Pesan Sekarang
                       </Button>
-                    </Link>
+                    ) : (
+                      <Link href={`/book/${tour.id}`}>
+                        <Button className="rounded-full bg-[#10221f] text-white hover:bg-[#0b1715]">
+                          Pesan Sekarang
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -333,6 +360,26 @@ export default function ToursPage() {
         )}
       </section>
       <Footer />
+
+      <AlertDialog open={fullTourAlertOpen} onOpenChange={setFullTourAlertOpen}>
+        <AlertDialogContent className="rounded-[24px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl">Tur Sudah Penuh</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-600">
+              Mohon Maaf, kuota maksimal (35 peserta) untuk paket tur ini telah terpenuhi. Silakan pilih rute atau jadwal tur yang lain.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction 
+              onClick={() => setFullTourAlertOpen(false)}
+              className="rounded-full bg-[#16302c] hover:bg-[#0b1715] text-white"
+            >
+              Oke
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   )
 }

@@ -316,7 +316,11 @@ export default function LandingPage() {
                         <span className="inline-flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {tour.date || "Jadwal Fleksibel"}</span>
                         <span className="inline-flex items-center gap-1"><Map className="h-3.5 w-3.5" /> {tour.distance}</span>
                         <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {tour.duration}</span>
-                        <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> Grup Kecil</span>
+                        {tour.availablePax !== undefined && tour.availablePax <= 0 ? (
+                          <span className="inline-flex items-center gap-1 text-red-400 font-medium"><Users className="h-3.5 w-3.5" /> Pax Full</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {tour.availablePax !== undefined ? `Sisa ${tour.availablePax} pax` : "Grup Kecil"}</span>
+                        )}
                       </div>
                       <p className="mt-3 text-sm leading-6 text-zinc-300">
                         {tour.description || "Deskripsi singkat tur ini akan membantu peserta memilih rute yang paling sesuai."}

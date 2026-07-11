@@ -8,6 +8,7 @@ type SessionUser = {
   name: string;
   role: string;
   phone: string;
+  emergencyContact: string;
   address: string;
 };
 

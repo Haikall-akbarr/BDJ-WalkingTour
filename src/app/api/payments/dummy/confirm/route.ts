@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDummyBooking, updateDummyBooking } from '@/lib/dummy-booking-store';
 import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { getBookingById, updateBooking } from '@/lib/data-store';
-import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail } from '@/lib/payment-helpers';
+import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail, sendWhatsAppConfirmation } from '@/lib/payment-helpers';
 
 export const runtime = 'nodejs';
 
@@ -63,6 +63,17 @@ export async function POST(request: NextRequest) {
           emailDeliveryDetail = (emailError as any)?.message || 'Gagal mengirim email barcode.';
           console.error('[payments/dummy/confirm] Failed to send email:', emailError);
         }
+      }
+
+      if (bookingData.userWhatsApp) {
+        await sendWhatsAppConfirmation({
+          whatsapp: bookingData.userWhatsApp,
+          name: bookingData.userName,
+          tourName: bookingData.tourName,
+          orderId: bookingId,
+          totalAmount: Number(bookingData.grossAmount || 0),
+          qrImageUrl,
+        });
       }
 
       return NextResponse.json({

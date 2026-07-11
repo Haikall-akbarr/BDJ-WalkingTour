@@ -2,6 +2,7 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
+import { ForceProfileComplete } from "@/components/ForceProfileComplete";
 
 export const metadata: Metadata = {
   title: 'BDJ WalkingTour | Jelajahi Banjarmasin',
@@ -29,6 +30,7 @@ export default function RootLayout({
       <body className="font-body antialiased min-h-screen bg-background">
         {children}
         <Toaster />
+        <ForceProfileComplete />
       </body>
     </html>
   );

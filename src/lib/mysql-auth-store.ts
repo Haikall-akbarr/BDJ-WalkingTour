@@ -8,6 +8,7 @@ type DbUserRow = RowDataPacket & {
   name: string;
   role: string;
   phone: string | null;
+  emergency_contact: string | null;
   address: string | null;
   password_hash: string;
   is_active: number;
@@ -46,6 +47,7 @@ function mapUser(row: DbUserRow) {
     name: row.name,
     role: row.role,
     phone: row.phone || null,
+    emergencyContact: row.emergency_contact || null,
     address: row.address || null,
     passwordHash: row.password_hash,
     isActive: Boolean(row.is_active),
@@ -106,12 +108,13 @@ export async function upsertUser(input: {
   return getUserByEmail(input.email);
 }
 
-export async function updateUserProfile(userId: string, data: { name?: string; phone?: string; address?: string }) {
+export async function updateUserProfile(userId: string, data: { name?: string; phone?: string; emergencyContact?: string; address?: string }) {
   const pool = getMySqlPool();
   const sets: string[] = ['updated_at = NOW()'];
   const values: any[] = [];
   if (data.name !== undefined) { sets.push('name = ?'); values.push(data.name); }
   if (data.phone !== undefined) { sets.push('phone = ?'); values.push(data.phone); }
+  if (data.emergencyContact !== undefined) { sets.push('emergency_contact = ?'); values.push(data.emergencyContact); }
   if (data.address !== undefined) { sets.push('address = ?'); values.push(data.address); }
   values.push(userId);
   await pool.execute(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`, values);

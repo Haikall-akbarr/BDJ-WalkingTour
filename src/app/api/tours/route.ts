@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createTour, listTours } from '@/lib/data-store';
+import { createTour, listTours, listBookings } from '@/lib/data-store';
 import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { resolveGoogleMapsUrl } from '@/lib/maps';
 
@@ -17,7 +17,28 @@ export async function GET() {
   try {
     assertMySql();
     const tours = await listTours();
-    return NextResponse.json({ tours });
+    const bookings = await listBookings();
+    
+    // Group pax by tour (excluding cancelled or failed bookings)
+    const paxByTour: Record<string, number> = {};
+    for (const b of bookings) {
+      if (!b || b.status === 'cancelled' || b.paymentStatus === 'failed') continue;
+      paxByTour[b.tourId] = (paxByTour[b.tourId] || 0) + (Number(b.pax) || 1);
+    }
+    
+    const enrichedTours = tours.map(t => {
+      const bookedPax = paxByTour[t.id] || 0;
+      const maxPax = 35;
+      const availablePax = Math.max(0, maxPax - bookedPax);
+      return {
+        ...t,
+        bookedPax,
+        maxPax,
+        availablePax
+      };
+    });
+    console.log("First enriched tour:", enrichedTours[0]);
+    return NextResponse.json({ tours: enrichedTours });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Gagal mengambil data tur.' }, { status: 500 });
   }

@@ -5,17 +5,42 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Compass, MapPin, Ticket, Mail, UserRound, Loader2, Home, MessageSquareText, Phone, MapPinned } from "lucide-react"
+import { Compass, MapPin, Ticket, Mail, UserRound, Loader2, Home, MessageSquareText, PhoneCall, MapPinned, AlertCircle } from "lucide-react"
 import { useSessionUser } from "@/hooks/use-session-user"
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog"
 import { NotificationBell } from "@/components/NotificationBell"
 import { EditProfileDialog } from "@/components/EditProfileDialog"
 import { Footer } from "@/components/public/Footer"
 
+function getStoredEmergencyData(userId: string | undefined) {
+  if (!userId || typeof window === 'undefined') return { emergencyContact: '', address: '' }
+  try {
+    const ecDone = localStorage.getItem(`bdj_ec_done_${userId}`)
+    if (ecDone === 'true') {
+      // Data was saved via popup, read from localStorage
+      const ec = localStorage.getItem(`bdj_ec_value_${userId}`) || ''
+      const addr = localStorage.getItem(`bdj_addr_value_${userId}`) || ''
+      return { emergencyContact: ec, address: addr }
+    }
+  } catch {}
+  return { emergencyContact: '', address: '' }
+}
+
 export default function UserDashboardPage() {
   const { user, loading, refresh } = useSessionUser()
   const [bookings, setBookings] = useState<any[]>([])
   const [bookingsLoading, setBookingsLoading] = useState(true)
+  const [localEmergency, setLocalEmergency] = useState('')
+  const [localAddress, setLocalAddress] = useState('')
+
+  // Load emergency data from localStorage as fallback
+  useEffect(() => {
+    if (user?.id) {
+      const stored = getStoredEmergencyData(user.id)
+      setLocalEmergency(stored.emergencyContact)
+      setLocalAddress(stored.address)
+    }
+  }, [user?.id])
 
   const userInitial = (user?.name || user?.email || "U").trim().charAt(0).toUpperCase()
 
@@ -100,17 +125,17 @@ export default function UserDashboardPage() {
                 <p className="mt-2 text-lg font-bold text-zinc-900 break-words">{user?.email || "Belum tersedia"}</p>
               </div>
               <div className="rounded-2xl border border-black/5 bg-zinc-50 p-4">
-                <p className="text-xs tracking-[0.2em] text-zinc-500">Telepon</p>
+                <p className="text-xs tracking-[0.2em] text-zinc-500">Kontak Darurat</p>
                 <div className="mt-2 flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-zinc-400" />
-                  <p className="text-lg font-bold text-zinc-900">{user?.phone || <span className="text-zinc-400 font-normal text-sm">Belum diisi</span>}</p>
+                  <PhoneCall className="h-4 w-4 text-zinc-400" />
+                  <p className="text-lg font-bold text-zinc-900">{user?.emergencyContact || localEmergency || <span className="text-zinc-400 font-normal text-sm">Belum diisi</span>}</p>
                 </div>
               </div>
               <div className="rounded-2xl border border-black/5 bg-zinc-50 p-4">
                 <p className="text-xs tracking-[0.2em] text-zinc-500">Alamat</p>
                 <div className="mt-2 flex items-center gap-2">
                   <MapPinned className="h-4 w-4 text-zinc-400" />
-                  <p className="text-lg font-bold text-zinc-900">{user?.address || <span className="text-zinc-400 font-normal text-sm">Belum diisi</span>}</p>
+                  <p className="text-lg font-bold text-zinc-900">{user?.address || localAddress || <span className="text-zinc-400 font-normal text-sm">Belum diisi</span>}</p>
                 </div>
               </div>
               <div className="rounded-2xl border border-black/5 bg-zinc-50 p-4 sm:col-span-2">

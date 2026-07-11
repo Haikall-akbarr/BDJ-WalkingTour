@@ -20,7 +20,7 @@ export function generateAttendanceCode(orderId: string) {
 }
 
 export function buildAttendanceQrUrl(attendanceCode: string) {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(attendanceCode)}`;
+  return `https://quickchart.io/qr?size=320&text=${encodeURIComponent(attendanceCode)}`;
 }
 
 export function verifyMidtransSignature(input: {
@@ -289,4 +289,49 @@ export async function sendAttendanceEmail(params: {
 
   console.warn('[sendAttendanceEmail] No email provider configured. Skipping email send.');
   return { skipped: true };
+}
+
+export async function sendWhatsAppConfirmation(params: {
+  whatsapp: string;
+  name: string;
+  tourName: string;
+  orderId: string;
+  totalAmount: number;
+  qrImageUrl: string;
+}) {
+  const token = 'YXAefASCYfDftvarX6Mj'; // Fonnte API Token
+  if (!params.whatsapp) return { skipped: true, reason: 'No WhatsApp number' };
+
+  let target = params.whatsapp;
+  // Ensure the target is formatted (remove leading 0 or +62, fonnte accepts many formats but standard is good)
+  if (target.startsWith('0')) target = '62' + target.slice(1);
+  if (target.startsWith('+')) target = target.slice(1);
+
+  const message = `Halo ${params.name},\n\nPembayaran untuk *${params.tourName}* telah kami terima.\n\n*Order ID:* ${params.orderId}\n*Total:* Rp ${params.totalAmount.toLocaleString('id-ID')}\n\nBerikut adalah link QR Code kehadiran Anda:\n${params.qrImageUrl}\n\nHarap tunjukkan pesan ini beserta QR Code kepada pemandu tur saat acara berlangsung.\n\nTerima kasih telah memilih BDJ WalkingTour!`;
+
+  const formData = new FormData();
+  formData.append('target', target);
+  formData.append('message', message);
+  formData.append('delay', '2');
+
+  try {
+    const res = await fetch('https://api.fonnte.com/send', {
+      method: 'POST',
+      headers: {
+        Authorization: token,
+      },
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.status) {
+      console.error('[sendWhatsAppConfirmation] Fonnte API Error:', data);
+    } else {
+      console.log('[sendWhatsAppConfirmation] WA terkirim ke', target);
+    }
+    return data;
+  } catch (error) {
+    console.error('[sendWhatsAppConfirmation] Request failed:', error);
+    return null;
+  }
 }

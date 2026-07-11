@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { getBookingById, updateBooking } from '@/lib/data-store';
-import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail, verifyMidtransSignature } from '@/lib/payment-helpers';
+import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail, sendWhatsAppConfirmation, verifyMidtransSignature } from '@/lib/payment-helpers';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
@@ -93,6 +93,17 @@ export async function POST(request: NextRequest) {
         } catch (emailError) {
           console.error('[payments/webhook] Failed to send email:', emailError);
         }
+      }
+
+      if (bookingData.userWhatsApp) {
+        await sendWhatsAppConfirmation({
+          whatsapp: bookingData.userWhatsApp,
+          name: bookingData.userName,
+          tourName: bookingData.tourName,
+          orderId,
+          totalAmount: Number(grossAmount),
+          qrImageUrl,
+        });
       }
     } else if (['deny', 'cancel', 'expire'].includes(transactionStatus)) {
       await updateBooking(orderId, {

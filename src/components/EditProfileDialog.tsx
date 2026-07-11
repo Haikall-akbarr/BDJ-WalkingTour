@@ -13,14 +13,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Pencil, Loader2, CheckCircle2, AlertCircle, User, Phone, MapPin } from "lucide-react"
+import { Pencil, Loader2, CheckCircle2, AlertCircle, User, PhoneCall, MapPin } from "lucide-react"
 
 interface EditProfileDialogProps {
   user: {
     name: string
     email: string
     phone?: string
+    emergencyContact?: string
     address?: string
+    id?: string
   } | null
   onSuccess?: () => void
   children?: React.ReactNode
@@ -29,7 +31,7 @@ interface EditProfileDialogProps {
 export function EditProfileDialog({ user, onSuccess, children }: EditProfileDialogProps) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
-  const [phone, setPhone] = useState("")
+  const [emergencyContact, setEmergencyContact] = useState("")
   const [address, setAddress] = useState("")
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null)
@@ -37,8 +39,12 @@ export function EditProfileDialog({ user, onSuccess, children }: EditProfileDial
   useEffect(() => {
     if (open && user) {
       setName(user.name || "")
-      setPhone(user.phone || "")
-      setAddress(user.address || "")
+      // Read from localStorage as fallback for emergency contact and address
+      const uid = (user as any).id || ''
+      const localEc = uid ? localStorage.getItem(`bdj_ec_value_${uid}`) : null
+      const localAddr = uid ? localStorage.getItem(`bdj_addr_value_${uid}`) : null
+      setEmergencyContact(user.emergencyContact || localEc || "")
+      setAddress(user.address || localAddr || "")
       setFeedback(null)
     }
   }, [open, user])
@@ -58,7 +64,7 @@ export function EditProfileDialog({ user, onSuccess, children }: EditProfileDial
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
-          phone: phone.trim(),
+          emergencyContact: emergencyContact.trim(),
           address: address.trim(),
         }),
       })
@@ -71,6 +77,14 @@ export function EditProfileDialog({ user, onSuccess, children }: EditProfileDial
       }
 
       setFeedback({ type: "success", message: "Profil berhasil diperbarui!" })
+
+      // Update localStorage with new values
+      const uid = (user as any)?.id || ''
+      if (uid) {
+        localStorage.setItem(`bdj_ec_done_${uid}`, 'true')
+        localStorage.setItem(`bdj_ec_value_${uid}`, emergencyContact.trim())
+        localStorage.setItem(`bdj_addr_value_${uid}`, address.trim())
+      }
 
       setTimeout(() => {
         setOpen(false)
@@ -85,7 +99,7 @@ export function EditProfileDialog({ user, onSuccess, children }: EditProfileDial
 
   const hasChanges =
     name.trim() !== (user?.name || "") ||
-    phone.trim() !== (user?.phone || "") ||
+    emergencyContact.trim() !== (user?.emergencyContact || "") ||
     address.trim() !== (user?.address || "")
 
   return (
@@ -161,22 +175,24 @@ export function EditProfileDialog({ user, onSuccess, children }: EditProfileDial
             </div>
           </div>
 
-          {/* Phone */}
+          {/* Emergency Contact */}
           <div className="space-y-2">
-            <Label htmlFor="edit-phone" className="text-xs tracking-[0.15em] text-zinc-500 uppercase">
-              Nomor Telepon
+            <Label htmlFor="edit-emergency-contact" className="text-xs tracking-[0.15em] text-zinc-500 uppercase">
+              Kontak Darurat
             </Label>
             <div className="relative">
               <Input
-                id="edit-phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Contoh: 08123456789"
+                id="edit-emergency-contact"
+                type="tel"
+                inputMode="numeric"
+                value={emergencyContact}
+                onChange={(e) => setEmergencyContact(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="Contoh: 081234567890"
                 disabled={saving}
                 className="rounded-xl border-zinc-200/60 focus:border-[#98DDCA] focus:ring-[#98DDCA]/30 h-11 pl-10 transition-all duration-200"
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                <Phone className="h-4 w-4 text-zinc-400" />
+                <PhoneCall className="h-4 w-4 text-zinc-400" />
               </div>
             </div>
           </div>

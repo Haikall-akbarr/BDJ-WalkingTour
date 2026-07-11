@@ -99,6 +99,7 @@ create table if not exists users (
   name VARCHAR(191) not null,
   role VARCHAR(32) not null,
   password_hash VARCHAR(128) not null,
+  emergency_contact VARCHAR(64) null,
   is_active BOOLEAN not null default true,
   created_at TIMESTAMPTZ not null default now(),
   updated_at TIMESTAMPTZ not null default now()

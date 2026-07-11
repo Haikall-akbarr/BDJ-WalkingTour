@@ -12,7 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
-import { CheckCircle2, ChevronLeft, ChevronRight, QrCode, Loader2, CreditCard } from "lucide-react"
+import { CheckCircle2, ChevronLeft, ChevronRight, QrCode, Loader2, CreditCard, AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useSessionUser } from "@/hooks/use-session-user"
 import { FloatingNavbar } from "@/components/public/FloatingNavbar"
@@ -398,11 +398,14 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                               <span className="text-sm">Memuat paket tur...</span>
                             </div>
                           ) : allTours && allTours.length > 0 ? (
-                            allTours.map((t: any) => (
-                              <SelectItem key={t.id} value={t.id}>
-                                {t.name}
-                              </SelectItem>
-                            ))
+                            allTours.map((t: any) => {
+                              const isFull = t.availablePax !== undefined && t.availablePax <= 0;
+                              return (
+                                <SelectItem key={t.id} value={t.id} disabled={isFull}>
+                                  {t.name} {t.date ? `- ${t.date}` : ''} {t.availablePax !== undefined ? (isFull ? '(Penuh)' : `- Sisa ${t.availablePax} pax`) : (isFull ? '(Penuh)' : `- Sisa 35 pax`)}
+                                </SelectItem>
+                              );
+                            })
                           ) : (
                             <div className="p-4 text-center text-sm text-muted-foreground">
                               Tidak ada paket tur tersedia.
@@ -410,7 +413,20 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           )}
                         </SelectContent>
                       </Select>
-                      {selectedTour && selectedTour.priceHemat != null && (
+                      
+                      {selectedTour && selectedTour.availablePax !== undefined && selectedTour.availablePax <= 0 && (
+                        <div className="mt-4 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 animate-in fade-in">
+                          <p className="font-semibold text-sm flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4" />
+                            Mohon Maaf, Tur Sudah Penuh
+                          </p>
+                          <p className="text-xs mt-1">
+                            Kuota maksimal (35 peserta) untuk paket tur ini telah terpenuhi. Silakan pilih paket tur atau tanggal lainnya.
+                          </p>
+                        </div>
+                      )}
+
+                      {selectedTour && (selectedTour.availablePax === undefined || selectedTour.availablePax > 0) && selectedTour.priceHemat != null && (
                         <div className="mt-4 space-y-3">
                           <Label>Pilihan Paket</Label>
                           <RadioGroup 
@@ -442,36 +458,39 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                         </div>
                       )}
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pax">Jumlah Peserta</Label>
-                      <Input 
-                        id="pax" 
-                        type="number" 
-                        min="1" 
-                        max="50"
-                        value={formData.pax}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === "") {
-                            setFormData({...formData, pax: "" as any});
-                            return;
-                          }
-                          const cleanVal = val.replace(/^0+(?=[1-9])/, '');
-                          const numVal = cleanVal ? Number(cleanVal) : 1;
-                          setFormData({...formData, pax: numVal > 50 ? 50 : numVal});
-                        }}
-                        onBlur={(e) => {
-                          const val = Number(e.target.value);
-                          if (isNaN(val) || val < 1) {
-                            setFormData({...formData, pax: 1});
-                          } else {
-                            setFormData({...formData, pax: Math.min(50, Math.floor(val))});
-                          }
-                        }}
-                        required 
-                      />
-                      <p className="text-xs text-slate-500">Maksimal 50 peserta</p>
-                    </div>
+                    {selectedTour && (selectedTour.availablePax === undefined || selectedTour.availablePax > 0) && (
+                      <div className="space-y-2">
+                        <Label htmlFor="pax">Jumlah Peserta</Label>
+                        <Input 
+                          id="pax" 
+                          type="number" 
+                          min="1" 
+                          max={selectedTour.availablePax !== undefined ? selectedTour.availablePax : 35}
+                          value={formData.pax}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "") {
+                              setFormData({...formData, pax: "" as any});
+                              return;
+                            }
+                            const max = selectedTour.availablePax !== undefined ? selectedTour.availablePax : 35;
+                            const cleanVal = val.replace(/^0+(?=[1-9])/, '');
+                            const numVal = cleanVal ? Number(cleanVal) : 1;
+                            setFormData({...formData, pax: numVal > max ? max : numVal});
+                          }}
+                          onBlur={(e) => {
+                            const val = Number(e.target.value);
+                            const max = selectedTour.availablePax !== undefined ? selectedTour.availablePax : 35;
+                            if (isNaN(val) || val < 1) {
+                              setFormData({...formData, pax: 1});
+                            } else {
+                              setFormData({...formData, pax: Math.min(max, Math.floor(val))});
+                            }
+                          }}
+                          required 
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {Number(formData.pax) > 1 && (
@@ -507,7 +526,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                   </div>
                 </CardContent>
                 <div className="flex p-6 pt-0">
-                  <Button type="submit" className="w-full bg-secondary hover:bg-secondary/90 text-white gap-2" disabled={toursLoading || !formData.tourId}>
+                  <Button type="submit" className="w-full bg-secondary hover:bg-secondary/90 text-white gap-2" disabled={toursLoading || !formData.tourId || (selectedTour && selectedTour.availablePax !== undefined && selectedTour.availablePax <= 0)}>
                     Lanjut ke Pembayaran <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>

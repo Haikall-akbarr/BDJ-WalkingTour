@@ -34,6 +34,7 @@ export async function getCurrentSessionUser() {
     name: user.name,
     role: user.role,
     phone: user.phone || '',
+    emergencyContact: user.emergencyContact || '',
     address: user.address || '',
     createdAt: user.createdAt,
   };

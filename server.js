@@ -59,6 +59,7 @@ import {
   buildAttendanceQrUrl,
   generateAttendanceCode,
   sendAttendanceEmail,
+  sendWhatsAppConfirmation,
 } from "./src/lib/payment-helpers";
 import { sendEmail } from "./src/lib/email";
 
@@ -604,7 +605,28 @@ app.get(
     }
 
     const tours = await listTours();
-    res.json({ tours });
+    const bookings = await listBookings();
+    
+    // Group pax by tour (excluding cancelled or failed bookings)
+    const paxByTour = {};
+    for (const b of bookings) {
+      if (!b || b.status === 'cancelled' || b.paymentStatus === 'failed') continue;
+      paxByTour[b.tourId] = (paxByTour[b.tourId] || 0) + (Number(b.pax) || 1);
+    }
+    
+    const enrichedTours = tours.map(t => {
+      const bookedPax = paxByTour[t.id] || 0;
+      const maxPax = 35;
+      const availablePax = Math.max(0, maxPax - bookedPax);
+      return {
+        ...t,
+        bookedPax,
+        maxPax,
+        availablePax
+      };
+    });
+    
+    res.json({ tours: enrichedTours });
   }),
 );
 
@@ -1595,6 +1617,17 @@ app.post(
         }
       }
 
+      if (bookingData.userWhatsApp) {
+        await sendWhatsAppConfirmation({
+          whatsapp: bookingData.userWhatsApp,
+          name: bookingData.userName,
+          tourName: bookingData.tourName,
+          orderId: bookingId,
+          totalAmount: Number(bookingData.grossAmount || 0),
+          qrImageUrl,
+        });
+      }
+
       res.json({
         ok: true,
         bookingId,
@@ -2350,6 +2383,17 @@ app.post(
           emailDeliveryDetail =
             emailError?.message || "Gagal mengirim email barcode.";
         }
+      }
+
+      if (bookingData.userWhatsApp) {
+        await sendWhatsAppConfirmation({
+          whatsapp: bookingData.userWhatsApp,
+          name: bookingData.userName,
+          tourName: bookingData.tourName,
+          orderId: bookingId,
+          totalAmount: Number(bookingData.grossAmount || 0),
+          qrImageUrl,
+        });
       }
 
       res.json({

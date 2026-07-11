@@ -16,6 +16,7 @@ function mapUser(row: AnyRow) {
     name: row.name,
     role: row.role,
     phone: row.phone || null,
+    emergencyContact: row.emergency_contact || null,
     address: row.address || null,
     passwordHash: row.password_hash,
     isActive: Boolean(row.is_active),
@@ -24,13 +25,36 @@ function mapUser(row: AnyRow) {
   };
 }
 
+// Fetch emergency_contact separately since PostgREST schema cache
+// may not know about this column if it was added via SQL Editor.
+async function fetchEmergencyContact(userId: string): Promise<string | null> {
+  try {
+    const admin = getSupabaseAdmin();
+    const { data, error } = await admin
+      .from('users')
+      .select('emergency_contact')
+      .eq('id', userId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data.emergency_contact || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getUserByEmail(email: string) {
   const admin = getSupabaseAdmin();
   const { data, error } = await admin.from('users').select('*').eq('email', email).maybeSingle();
 
   if (error) throw error;
   if (!data) return null;
-  return mapUser(data);
+  
+  const user = mapUser(data);
+  // If emergency_contact wasn't in select('*') due to schema cache, fetch it separately
+  if (!user.emergencyContact) {
+    user.emergencyContact = await fetchEmergencyContact(user.id);
+  }
+  return user;
 }
 
 export async function getUserById(id: string) {
@@ -39,7 +63,13 @@ export async function getUserById(id: string) {
 
   if (error) throw error;
   if (!data) return null;
-  return mapUser(data);
+  
+  const user = mapUser(data);
+  // If emergency_contact wasn't in select('*') due to schema cache, fetch it separately
+  if (!user.emergencyContact) {
+    user.emergencyContact = await fetchEmergencyContact(user.id);
+  }
+  return user;
 }
 
 export async function listUsers() {
@@ -85,16 +115,19 @@ export async function upsertUser(input: {
   return result.data ? mapUser(result.data) : null;
 }
 
-export async function updateUserProfile(userId: string, data: { name?: string; phone?: string; address?: string }) {
+export async function updateUserProfile(userId: string, data: { name?: string; phone?: string; emergencyContact?: string; address?: string }) {
   const admin = getSupabaseAdmin();
   const updateData: Record<string, any> = { updated_at: new Date().toISOString() };
   if (data.name !== undefined) updateData.name = data.name;
   if (data.phone !== undefined) updateData.phone = data.phone;
+  if (data.emergencyContact !== undefined) updateData.emergency_contact = data.emergencyContact;
   if (data.address !== undefined) updateData.address = data.address;
 
-  const { data: updated, error } = await admin.from('users').update(updateData).eq('id', userId).select('*').maybeSingle();
+  const { error } = await admin.from('users').update(updateData).eq('id', userId);
   if (error) throw error;
-  return updated ? mapUser(updated) : null;
+  
+  // Re-fetch the full user to return updated data
+  return getUserById(userId);
 }
 
 export async function updateUserPasswordHash(userId: string, passwordHash: string) {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDummyBooking } from '@/lib/dummy-booking-store';
 import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { getBookingById, updateBooking } from '@/lib/data-store';
-import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail } from '@/lib/payment-helpers';
+import { buildAttendanceQrUrl, generateAttendanceCode, sendAttendanceEmail, sendWhatsAppConfirmation } from '@/lib/payment-helpers';
 
 export const runtime = 'nodejs';
 
@@ -91,14 +91,29 @@ async function syncFromPakasir(params: {
     }
 
     if (params.booking?.userEmail) {
-      await sendAttendanceEmail({
-        to: params.booking.userEmail,
+      try {
+        await sendAttendanceEmail({
+          to: params.booking.userEmail,
+          name: params.booking.userName,
+          tourName: params.booking.tourName,
+          attendanceCode,
+          qrImageUrl,
+          orderId: params.bookingId,
+          totalAmount: amount,
+        });
+      } catch (emailError) {
+        console.error('[payments/status] Failed to send email:', emailError);
+      }
+    }
+
+    if (params.booking?.userWhatsApp) {
+      await sendWhatsAppConfirmation({
+        whatsapp: params.booking.userWhatsApp,
         name: params.booking.userName,
         tourName: params.booking.tourName,
-        attendanceCode,
-        qrImageUrl,
         orderId: params.bookingId,
         totalAmount: amount,
+        qrImageUrl,
       });
     }
 
