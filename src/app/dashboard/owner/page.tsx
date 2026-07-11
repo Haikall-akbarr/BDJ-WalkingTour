@@ -114,7 +114,7 @@ export default function OwnerDashboard() {
   const loadUnassignedBookings = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/bookings?paymentStatus=paid", { cache: "no-store" });
+      const response = await fetch("/api/bookings?paymentStatus=paid&unassigned=true", { cache: "no-store" });
       const result = await response.json();
 
       if (!response.ok) {
