@@ -25,11 +25,14 @@ export async function middleware(request: NextRequest) {
       );
     }
 
+    // Allow 'admin', but also allow 'owner' ONLY for the /api/admin/users endpoint
     if (payload.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Anda tidak memiliki izin untuk mengakses resource ini.' },
-        { status: 403 }
-      );
+      if (!(payload.role === 'owner' && path.startsWith('/api/admin/users'))) {
+        return NextResponse.json(
+          { error: 'Anda tidak memiliki izin untuk mengakses resource ini.' },
+          { status: 403 }
+        );
+      }
     }
 
     return NextResponse.next();
