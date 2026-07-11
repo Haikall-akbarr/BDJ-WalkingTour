@@ -29,7 +29,8 @@ export function verifyMidtransSignature(input: {
   grossAmount: string;
   signatureKey: string;
 }) {
-  const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
+  const isPakasir = process.env.PAYMENT_MODE === 'pakasir';
+  const serverKey = isPakasir ? (process.env.PAKASIR_API_KEY || '') : (process.env.MIDTRANS_SERVER_KEY || '');
   const raw = `${input.orderId}${input.statusCode}${input.grossAmount}${serverKey}`;
   const expected = crypto.createHash('sha512').update(raw).digest('hex');
   return expected === input.signatureKey;
