@@ -95,6 +95,7 @@ export default function AdminDashboard() {
     pois: ["", "", "", "", ""]
   });
   const [routeMapFile, setRouteMapFile] = useState<File | null>(null);
+  const [duplicateSourceTourId, setDuplicateSourceTourId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [auditSearchTerm, setAuditSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("bookings");
@@ -126,7 +127,8 @@ export default function AdminDashboard() {
         throw new Error(result?.error || "Gagal memuat tur.");
       }
 
-      setTours(Array.isArray(result?.tours) ? result.tours : []);
+      const toursList = Array.isArray(result?.tours) ? result.tours : [];
+      setTours(toursList);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -341,6 +343,7 @@ export default function AdminDashboard() {
 
   const handleOpenAddTour = () => {
     setEditingTour(null);
+    setDuplicateSourceTourId(null);
     setTourFormData({
       name: "",
       price: "",
@@ -371,6 +374,7 @@ export default function AdminDashboard() {
 
   const handleOpenEditTour = (tour: any) => {
     setEditingTour(tour);
+    setDuplicateSourceTourId(null);
     let highlights = [];
     try {
       highlights = JSON.parse(tour.historyHighlights || "[]");
@@ -416,6 +420,7 @@ export default function AdminDashboard() {
   const handleDuplicateTour = (tour: any) => {
     // Fill the form with the old tour's data, but don't set editingTour so it saves as a new one
     setEditingTour(null);
+    setDuplicateSourceTourId(tour.id);
     let highlights = [];
     try {
       highlights = JSON.parse(tour.historyHighlights || "[]");
@@ -559,6 +564,28 @@ export default function AdminDashboard() {
         } catch (err) {
           toast({ variant: 'destructive', title: 'Gagal upload gambar', description: 'Gambar galeri mungkin belum tersimpan.' })
         }
+      }
+
+      // Copy images from source tour if this is a duplication
+      if (tourId && duplicateSourceTourId && !editingTour) {
+        try {
+          console.log('[duplicate] Copying images from', duplicateSourceTourId, 'to', tourId);
+          const copyResp = await fetch('/api/tours/images/copy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sourceTourId: duplicateSourceTourId, targetTourId: tourId }),
+          });
+          const copyResult = await copyResp.json();
+          console.log('[duplicate] Copy result:', copyResult);
+          if (!copyResp.ok) {
+            toast({ variant: 'destructive', title: 'Gagal menyalin gambar', description: copyResult?.error || 'Gambar dari tur asli mungkin belum tersalin.' })
+          }
+        } catch (err) {
+          console.error('[duplicate] Copy images error:', err);
+          toast({ variant: 'destructive', title: 'Gagal menyalin gambar', description: 'Gambar dari tur asli mungkin belum tersalin.' })
+        }
+      } else {
+        console.log('[duplicate] Skipped image copy. tourId:', tourId, 'duplicateSourceTourId:', duplicateSourceTourId, 'editingTour:', !!editingTour);
       }
 
       setIsTourDialogOpen(false);
