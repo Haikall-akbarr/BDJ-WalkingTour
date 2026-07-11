@@ -28,7 +28,9 @@ import {
 import { PlaceHolderImages } from "@/lib/placeholder-images"
 import { useSessionUser } from "@/hooks/use-session-user"
 import { useToast } from "@/hooks/use-toast"
+import { ScannerLine } from "@/components/ui/scanner-line"
 import { Footer } from "@/components/public/Footer"
+import { GuideAnnouncementDialog } from "@/components/GuideAnnouncementDialog"
 
 type ScanHistoryItem = {
   id: string;
@@ -595,9 +597,16 @@ export default function GuideDashboard() {
                         <MapPin className="h-3 w-3" /> Lokasi Tur • {selectedGroup?.tourDate}
                       </CardDescription>
                     </div>
-                    <Button size="sm" variant="outline" className="h-8 gap-1 rounded-full border-white/50 bg-white/10 text-[10px] text-white hover:bg-white/20 hover:text-white md:text-xs">
-                      <CheckCircle2 className="h-3 w-3" /> Absensi
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <GuideAnnouncementDialog 
+                        tourId={selectedGroup?.tourId || ""}
+                        tourName={selectedGroup?.tourName || ""}
+                        tourDate={selectedGroup?.tourDate || ""}
+                      />
+                      <Button size="sm" variant="outline" className="h-8 gap-1 rounded-full border-white/50 bg-white/10 text-[10px] text-white hover:bg-white/20 hover:text-white md:text-xs">
+                        <CheckCircle2 className="h-3 w-3" /> Absensi
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
 

@@ -299,7 +299,7 @@ export async function sendWhatsAppConfirmation(params: {
   totalAmount: number;
   qrImageUrl: string;
 }) {
-  const token = 'YXAefASCYfDftvarX6Mj'; // Fonnte API Token
+  const token = process.env.FONNTE_TOKEN || 'YXAefASCYfDftvarX6Mj'; // Fallback to old token if env is missing
   if (!params.whatsapp) return { skipped: true, reason: 'No WhatsApp number' };
 
   let target = params.whatsapp;
@@ -332,6 +332,47 @@ export async function sendWhatsAppConfirmation(params: {
     return data;
   } catch (error) {
     console.error('[sendWhatsAppConfirmation] Request failed:', error);
+    return null;
+  }
+}
+
+export async function sendWhatsAppAnnouncement(params: {
+  whatsappList: string[];
+  message: string;
+}) {
+  const token = process.env.FONNTE_TOKEN || 'YXAefASCYfDftvarX6Mj'; // Fallback to old token if env is missing
+  if (!params.whatsappList || params.whatsappList.length === 0) return { skipped: true, reason: 'No targets' };
+
+  const targets = params.whatsappList.map(target => {
+    let t = target.trim();
+    if (t.startsWith('0')) t = '62' + t.slice(1);
+    if (t.startsWith('+')) t = t.slice(1);
+    return t;
+  }).join(',');
+
+  const formData = new FormData();
+  formData.append('target', targets);
+  formData.append('message', params.message);
+  formData.append('delay', '2');
+
+  try {
+    const res = await fetch('https://api.fonnte.com/send', {
+      method: 'POST',
+      headers: {
+        Authorization: token,
+      },
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.status) {
+      console.error('[sendWhatsAppAnnouncement] Fonnte API Error:', data);
+    } else {
+      console.log('[sendWhatsAppAnnouncement] WA blast terkirim ke', targets);
+    }
+    return data;
+  } catch (error) {
+    console.error('[sendWhatsAppAnnouncement] Request failed:', error);
     return null;
   }
 }

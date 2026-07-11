@@ -110,7 +110,7 @@ export default function AdminDashboard() {
   const [bookingsLoading, setBookingsLoading] = useState(true);
   const [toursLoading, setToursLoading] = useState(true);
   const [auditLoading, setAuditLoading] = useState(true);
-  const [bookingStatusFilter, setBookingStatusFilter] = useState<'all' | 'pending' | 'paid' | 'cancelled'>('all');
+  const [bookingStatusFilter, setBookingStatusFilter] = useState<'all' | 'pending' | 'paid' | 'cancelled' | 'refund'>('all');
   const [tourPage, setTourPage] = useState(1);
   const TOURS_PER_PAGE = 9;
   const [userPage, setUserPage] = useState(1);
@@ -277,6 +277,7 @@ export default function AdminDashboard() {
       if (bookingStatusFilter === 'all') return true;
       if (bookingStatusFilter === 'pending') return ['pending', 'pending_payment', 'awaiting_payment'].includes(status);
       if (bookingStatusFilter === 'paid') return ['paid', 'settlement', 'completed'].includes(status);
+      if (bookingStatusFilter === 'refund') return ['refund_requested', 'refunded'].includes(status);
       return ['cancelled', 'cancel', 'rejected', 'expire', 'expired', 'failed'].includes(status);
     };
 
@@ -287,10 +288,11 @@ export default function AdminDashboard() {
   }, [pendingBookings, searchTerm, bookingStatusFilter]);
 
   const bookingSummary = useMemo(() => {
-    const summary = { pending: 0, paid: 0, cancelled: 0 };
+    const summary = { pending: 0, paid: 0, refund: 0, cancelled: 0 };
     for (const booking of pendingBookings || []) {
       const status = String(booking.paymentStatus || booking.status || '').toLowerCase();
-      if (['paid', 'settlement', 'completed'].includes(status)) summary.paid += 1;
+      if (['refund_requested', 'refunded'].includes(status)) summary.refund += 1;
+      else if (['paid', 'settlement', 'completed'].includes(status)) summary.paid += 1;
       else if (['cancelled', 'cancel', 'rejected', 'expire', 'expired', 'failed'].includes(status)) summary.cancelled += 1;
       else summary.pending += 1;
     }
@@ -299,6 +301,9 @@ export default function AdminDashboard() {
 
   const getBookingStatusBadge = (booking: any) => {
     const status = String(booking.paymentStatus || booking.status || '').toLowerCase();
+    if (['refund_requested', 'refunded'].includes(status)) {
+      return { label: 'Pengembalian', className: 'text-amber-700 border-amber-200 bg-amber-50' };
+    }
     if (['paid', 'settlement', 'completed'].includes(status)) {
       return { label: 'Sudah Bayar', className: 'text-emerald-700 border-emerald-200 bg-emerald-50' };
     }
@@ -764,6 +769,7 @@ export default function AdminDashboard() {
               <div className="flex flex-wrap gap-2">
                 <Button type="button" size="sm" variant={bookingStatusFilter === 'all' ? 'default' : 'outline'} onClick={() => setBookingStatusFilter('all')}>Semua ({pendingBookings.length})</Button>
                 <Button type="button" size="sm" variant={bookingStatusFilter === 'pending' ? 'default' : 'outline'} onClick={() => setBookingStatusFilter('pending')}>Belum Bayar ({bookingSummary.pending})</Button>
+                <Button type="button" size="sm" variant={bookingStatusFilter === 'refund' ? 'default' : 'outline'} onClick={() => setBookingStatusFilter('refund')}>Pengembalian ({bookingSummary.refund})</Button>
                 <Button type="button" size="sm" variant={bookingStatusFilter === 'paid' ? 'default' : 'outline'} onClick={() => setBookingStatusFilter('paid')}>Sudah Bayar ({bookingSummary.paid})</Button>
                 <Button type="button" size="sm" variant={bookingStatusFilter === 'cancelled' ? 'default' : 'outline'} onClick={() => setBookingStatusFilter('cancelled')}>Dibatalkan ({bookingSummary.cancelled})</Button>
               </div>

@@ -23,7 +23,9 @@ import {
   Download,
   X,
   MessageSquareText,
-  Send
+  Send,
+  ArrowRight,
+  Banknote
 } from "lucide-react"
 import { 
   BarChart, 
@@ -84,6 +86,10 @@ export default function OwnerDashboard() {
   const [replyLoading, setReplyLoading] = useState<Record<string, boolean>>({});
   const [reportFilter, setReportFilter] = useState<'unreplied' | 'replied'>('unreplied');
   const [reportStartIndex, setReportStartIndex] = useState(0);
+  
+  // Refund state
+  const [refundRequests, setRefundRequests] = useState<any[]>([]);
+  const [processingRefund, setProcessingRefund] = useState<string | null>(null);
 
   const filteredReports = useMemo(() => {
     return reportedBookings.filter((b: any) => {
@@ -161,25 +167,43 @@ export default function OwnerDashboard() {
     }
   };
 
-  const loadReportedBookings = async () => {
+  const fetchReportedBookings = async () => {
     try {
-      const response = await fetch("/api/bookings", { cache: "no-store" });
+      const response = await fetch('/api/bookings?status=completed', { cache: 'no-store' });
       const result = await response.json();
+      
       if (response.ok && Array.isArray(result?.bookings)) {
-        const withReports = result.bookings.filter((b: any) => b.report);
-        setReportedBookings(withReports);
+        const withReports = result.bookings.filter((b: any) => b.report && b.report.trim() !== "");
+        setReportedBookings(withReports.sort((a: any, b: any) => 
+          new Date(b.reportSubmittedAt || 0).getTime() - new Date(a.reportSubmittedAt || 0).getTime()
+        ));
       }
     } catch {
       setReportedBookings([]);
     }
   };
 
+  const loadRefundRequests = async () => {
+    try {
+      const response = await fetch('/api/bookings?paymentStatus=refund_requested', { cache: 'no-store' });
+      const result = await response.json();
+      if (response.ok && Array.isArray(result?.bookings)) {
+        setRefundRequests(result.bookings);
+      }
+    } catch {
+      setRefundRequests([]);
+    }
+  };
+
   useEffect(() => {
     loadUnassignedBookings();
-    loadGuides();
     loadTours();
-    loadReportedBookings();
-    // load analytics
+    loadGuides();
+    fetchReportedBookings();
+    loadRefundRequests();
+  }, []);
+
+  // load analytics
     (async () => {
       try {
         const resp1 = await fetch('/api/analytics/bookings');
@@ -217,7 +241,6 @@ export default function OwnerDashboard() {
         setApiError(`Fetch error: ${err?.message || String(err)}`);
       }
     })();
-  }, []);
 
   const bookingsToDisplay = useMemo(() => {
     if (!dbBookings || dbBookings.length === 0) return [];
@@ -264,8 +287,6 @@ export default function OwnerDashboard() {
     return Object.values(groups);
   }, [dbBookings, tours]);
 
-  // tourShowcaseImages memo removed - layout swapped to user page
-
   const handleAssignGuide = async (slotId: string) => {
     const guideId = selectedGuides[slotId];
     if (!guideId) return;
@@ -307,6 +328,30 @@ export default function OwnerDashboard() {
         title: "Gagal menugaskan pemandu",
         description: error?.message || "Coba lagi beberapa saat.",
       });
+    }
+  };
+
+  const handleApproveRefund = async (bookingId: string) => {
+    setProcessingRefund(bookingId);
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/refund/approve`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Gagal menyetujui refund");
+      
+      toast({
+        title: "Refund Selesai",
+        description: "Status refund berhasil diperbarui.",
+      });
+      loadRefundRequests();
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal",
+        description: err.message || "Terjadi kesalahan",
+      });
+    } finally {
+      setProcessingRefund(null);
     }
   };
 
@@ -702,6 +747,60 @@ export default function OwnerDashboard() {
             </CardContent>
           </Card>
         </section>
+
+        {/* Permintaan Refund Section */}
+        {refundRequests.length > 0 && (
+          <section className="rounded-[34px] bg-white p-4 shadow-sm md:p-6 lg:p-8">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100 text-amber-600">
+                  <Banknote className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-xl md:text-2xl font-bold">Permintaan Refund</h2>
+                  <p className="text-sm text-zinc-500">Daftar pengguna yang meminta pengembalian dana.</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {refundRequests.map((b) => {
+                  let bankData: any = {};
+                  try { bankData = JSON.parse(b.paymentCheckoutUrl || '{}'); } catch {}
+                  return (
+                    <div key={b.id} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-bold text-sm text-zinc-900">{b.tourName}</p>
+                          <p className="text-xs text-zinc-500">{b.userName} • {b.pax} Pax (Rp {Number(b.grossAmount || 0).toLocaleString('id-ID')})</p>
+                        </div>
+                        <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">
+                          Menunggu
+                        </Badge>
+                      </div>
+                      
+                      <div className="rounded-xl bg-white p-3 border border-zinc-100 text-xs text-zinc-700 space-y-1">
+                        <p><strong>Bank:</strong> {bankData.bankName || '-'}</p>
+                        <p><strong>No. Rek:</strong> {bankData.accountNumber || '-'}</p>
+                        <p><strong>Atas Nama:</strong> {bankData.accountName || '-'}</p>
+                      </div>
+                      
+                      <Button 
+                        size="sm" 
+                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl"
+                        disabled={processingRefund === b.id}
+                        onClick={() => handleApproveRefund(b.id)}
+                      >
+                        {processingRefund === b.id ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
+                        ) : "Tandai Sudah Ditransfer"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Laporan Tur Masuk Section */}
         <section className="rounded-[34px] bg-white p-4 shadow-sm md:p-6 lg:p-8">

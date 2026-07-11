@@ -11,6 +11,7 @@ import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog"
 import { NotificationBell } from "@/components/NotificationBell"
 import { EditProfileDialog } from "@/components/EditProfileDialog"
 import { Footer } from "@/components/public/Footer"
+import { RequestRefundDialog } from "@/components/RequestRefundDialog"
 
 function getStoredEmergencyData(userId: string | undefined) {
   if (!userId || typeof window === 'undefined') return { emergencyContact: '', address: '' }
@@ -204,8 +205,10 @@ export default function UserDashboardPage() {
               ) : bookings.length > 0 ? (
                 <div className="space-y-3">
                   {bookings.map((b) => {
-                    const isPaid = b.paymentStatus === "paid" || b.status === "paid"
-                    const isCancelled = ["cancelled", "cancel", "rejected", "expire", "expired", "failed"].includes(String(b.paymentStatus || b.status || "").toLowerCase())
+                    const isPaid = b.paymentStatus === "paid" || b.status === "paid" || b.paymentStatus === "settlement"
+                    const isRefundRequested = b.paymentStatus === "refund_requested"
+                    const isCancelled = ["cancelled", "cancel", "rejected", "expire", "expired", "failed"].includes(String(b.paymentStatus || b.status || "").toLowerCase()) || isRefundRequested
+                    
                     return (
                       <div key={b.id} className="rounded-2xl border border-black/5 bg-zinc-50/50 p-4 text-left space-y-3">
                         <div className="flex items-start justify-between gap-3">
@@ -220,27 +223,33 @@ export default function UserDashboardPage() {
                             variant="outline" 
                             className={`text-[10px] rounded-full border-none shrink-0 text-white font-semibold ${
                               isPaid ? "bg-emerald-500 hover:bg-emerald-500" : 
+                              isRefundRequested ? "bg-amber-500 hover:bg-amber-500" :
                               isCancelled ? "bg-red-500 hover:bg-red-500" : 
                               "bg-orange-500 hover:bg-orange-500"
                             }`}
                           >
-                            {isPaid ? "Sudah Bayar" : isCancelled ? "Dibatalkan" : "Belum Bayar"}
+                            {isPaid ? "Sudah Bayar" : isRefundRequested ? "Menunggu" : isCancelled ? "Dibatalkan" : "Belum Bayar"}
                           </Badge>
                         </div>
 
-                        <div className="flex items-center gap-2 pt-1">
-                          <Link href={`/payments/success/${b.id}`} className="flex-1">
-                            <Button size="sm" variant="outline" className="w-full rounded-full text-xs h-8">
-                              Detail & Tiket
-                            </Button>
-                          </Link>
-                          {isPaid && (
-                            <Link href={`/dashboard/user/${b.id}/report`} className="flex-1">
-                              <Button size="sm" className="w-full rounded-full text-xs h-8 bg-[#10221f] hover:bg-[#1a3531] text-white gap-1">
-                                <MessageSquareText className="h-3 w-3" />
-                                {b.report ? "Edit Laporan" : "Laporan Tur"}
+                        <div className="flex flex-col gap-2 pt-1">
+                          <div className="flex items-center gap-2">
+                            <Link href={`/payments/success/${b.id}`} className="flex-1">
+                              <Button size="sm" variant="outline" className="w-full rounded-full text-xs h-8">
+                                Detail & Tiket
                               </Button>
                             </Link>
+                            {isPaid && (
+                              <Link href={`/dashboard/user/${b.id}/report`} className="flex-1">
+                                <Button size="sm" className="w-full rounded-full text-xs h-8 bg-[#10221f] hover:bg-[#1a3531] text-white gap-1">
+                                  <MessageSquareText className="h-3 w-3" />
+                                  {b.report ? "Edit Laporan" : "Laporan Tur"}
+                                </Button>
+                              </Link>
+                            )}
+                          </div>
+                          {isPaid && (
+                            <RequestRefundDialog bookingId={b.id} onSuccess={refresh} />
                           )}
                         </div>
                       </div>
