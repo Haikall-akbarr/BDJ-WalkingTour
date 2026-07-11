@@ -20,16 +20,32 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: 'Pesan pengumuman tidak boleh kosong.' }, { status: 400 });
     }
 
-    // Get all bookings for this tour
-    const allBookings = await listBookings({ tourId });
+    // Get all bookings (we will filter in memory)
+    const allBookings = await listBookings();
     
-    // Filter paid/settlement bookings
-    const validBookings = allBookings.filter(b => 
-      b.paymentStatus === 'paid' || 
-      b.paymentStatus === 'settlement' || 
-      b.status === 'paid' || 
-      b.status === 'completed'
-    );
+    // Filter paid/settlement bookings for THIS specific tour
+    const validBookings = allBookings.filter(b => {
+      const isPaid = b.paymentStatus === 'paid' || b.paymentStatus === 'settlement' || b.status === 'paid' || b.status === 'completed';
+      const matchesTour = b.tourId === tourId;
+      const matchesGuide = auth.user?.role === 'guide' ? b.guideId === auth.user.id : true;
+      
+      // If the frontend passed a tourDate, we should strictly match it to avoid broadcasting to past/future schedules
+      // Note: tourDate from frontend is usually formatted as DD/MM/YYYY or similar based on toLocaleDateString("id-ID")
+      let matchesDate = true;
+      if (tourDate && b.createdAt) {
+        const bDate = new Date(b.createdAt).toLocaleDateString("id-ID");
+        if (bDate !== tourDate && tourDate !== b.tourDate) {
+          // If neither creation date nor the tour's package date matches exactly, we exclude it
+          // Actually, BDJ WalkingTour groups by package date (tourDate from package) or creation date.
+          // In the frontend: group.tourDate = toursDateMap[tId] || new Date(booking.createdAt).toLocaleDateString("id-ID")
+          // Let's match against the exact string sent by the frontend
+          const frontendMappedDate = b.tourDate || new Date(b.createdAt).toLocaleDateString("id-ID");
+          matchesDate = frontendMappedDate === tourDate;
+        }
+      }
+
+      return isPaid && matchesTour && matchesGuide && matchesDate;
+    });
 
     // If a specific date is provided, filter by that date if possible
     // Note: in BDJ WalkingTour, tour date might be parsed differently, 
