@@ -29,22 +29,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       const matchesTour = b.tourId === tourId;
       const matchesGuide = auth.user?.role === 'guide' ? b.guideId === auth.user.id : true;
       
-      // If the frontend passed a tourDate, we should strictly match it to avoid broadcasting to past/future schedules
-      // Note: tourDate from frontend is usually formatted as DD/MM/YYYY or similar based on toLocaleDateString("id-ID")
-      let matchesDate = true;
-      if (tourDate && b.createdAt) {
-        const bDate = new Date(b.createdAt).toLocaleDateString("id-ID");
-        if (bDate !== tourDate && tourDate !== b.tourDate) {
-          // If neither creation date nor the tour's package date matches exactly, we exclude it
-          // Actually, BDJ WalkingTour groups by package date (tourDate from package) or creation date.
-          // In the frontend: group.tourDate = toursDateMap[tId] || new Date(booking.createdAt).toLocaleDateString("id-ID")
-          // Let's match against the exact string sent by the frontend
-          const frontendMappedDate = b.tourDate || new Date(b.createdAt).toLocaleDateString("id-ID");
-          matchesDate = frontendMappedDate === tourDate;
-        }
-      }
-
-      return isPaid && matchesTour && matchesGuide && matchesDate;
+      return isPaid && matchesTour && matchesGuide;
     });
 
     // If a specific date is provided, filter by that date if possible
