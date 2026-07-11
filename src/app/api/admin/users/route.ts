@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { listUsers, upsertUser } from '@/lib/auth-store'
 import { hashPassword } from '@/lib/auth-session'
-import { requireAdmin } from '@/lib/api-auth-guard'
+import { requireAdmin, requireRole } from '@/lib/api-auth-guard'
 import { randomUUID } from 'crypto'
 
 export const runtime = 'nodejs'
@@ -11,8 +11,8 @@ const ALLOWED_ROLES = ['user', 'guide', 'owner'];
 
 export async function GET(request: NextRequest) {
   try {
-    // ── Auth check: admin only ──
-    const auth = await requireAdmin();
+    // ── Auth check: admin or owner ──
+    const auth = await requireRole('admin', 'owner');
     if (!auth.authorized) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }

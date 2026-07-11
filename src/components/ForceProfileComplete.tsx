@@ -50,6 +50,12 @@ export function ForceProfileComplete() {
         return
       }
 
+      // Check 0: Only force completion for normal users
+      if (user.role && user.role !== "user") {
+        setOpen(false)
+        return
+      }
+
       setUserId(user.id)
 
       // Check 1: API says data already filled? => no popup
