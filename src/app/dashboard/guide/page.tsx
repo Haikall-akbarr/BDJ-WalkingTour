@@ -28,22 +28,9 @@ import {
 import { PlaceHolderImages } from "@/lib/placeholder-images"
 import { useSessionUser } from "@/hooks/use-session-user"
 import { useToast } from "@/hooks/use-toast"
-import { ScannerLine } from "@/components/ui/scanner-line"
 import { Footer } from "@/components/public/Footer"
 import { GuideAnnouncementDialog } from "@/components/GuideAnnouncementDialog"
-
-type ScanHistoryItem = {
-  id: string;
-  scannedAt: string;
-  attendanceCode: string;
-  bookingId: string;
-  userName: string;
-  userEmail: string;
-  tourName: string;
-  pax: number;
-  source: "manual" | "camera";
-  participantNames?: string;
-};
+import { GuideAttendanceDialog } from "@/components/GuideAttendanceDialog"
 
 export default function GuideDashboard() {
   const router = useRouter();
@@ -59,7 +46,6 @@ export default function GuideDashboard() {
   const [scanLoading, setScanLoading] = useState(false);
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
-  const [scanHistory, setScanHistory] = useState<ScanHistoryItem[]>([]);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerRef = useRef<BrowserMultiFormatReader | null>(null);
   const scannerControlsRef = useRef<IScannerControls | null>(null);
@@ -72,36 +58,30 @@ export default function GuideDashboard() {
   const [apiLoading, setApiLoading] = useState(true);
   const [myRevenue, setMyRevenue] = useState<number>(0);
 
+  const loadGuideTours = async () => {
+    if (!currentGuideId) return;
+    setApiLoading(true);
+
+    try {
+      const response = await fetch(`/api/bookings?guideId=${encodeURIComponent(currentGuideId)}`, {
+        cache: "no-store",
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal memuat jadwal guide.");
+      }
+
+      setApiTours(Array.isArray(result?.bookings) ? result.bookings : []);
+    } catch {
+      setApiTours([]);
+    } finally {
+      setApiLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
-
-    const loadGuideTours = async () => {
-      if (!currentGuideId) return;
-      setApiLoading(true);
-
-      try {
-        const response = await fetch(`/api/bookings?guideId=${encodeURIComponent(currentGuideId)}`, {
-          cache: "no-store",
-        });
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result?.error || "Gagal memuat jadwal guide.");
-        }
-
-        if (mounted) {
-          setApiTours(Array.isArray(result?.bookings) ? result.bookings : []);
-        }
-      } catch {
-        if (mounted) {
-          setApiTours([]);
-        }
-      } finally {
-        if (mounted) {
-          setApiLoading(false);
-        }
-      }
-    };
 
     const loadMyRevenue = async () => {
       if (!currentGuideId) return;
@@ -178,26 +158,6 @@ export default function GuideDashboard() {
     return groupedTourGroups[0];
   }, [groupedTourGroups, selectedTourId]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    try {
-      const raw = window.localStorage.getItem(historyStorageKey);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as ScanHistoryItem[];
-      if (Array.isArray(parsed)) {
-        setScanHistory(parsed);
-      }
-    } catch {
-      // Ignore corrupt local storage payload.
-    }
-  }, [historyStorageKey]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(historyStorageKey, JSON.stringify(scanHistory));
-  }, [historyStorageKey, scanHistory]);
-
   const stopCameraScanner = () => {
     scannerControlsRef.current?.stop();
     scannerControlsRef.current = null;
@@ -226,23 +186,6 @@ export default function GuideDashboard() {
     });
   };
 
-  const saveScanHistory = (attendanceCode: string, source: "manual" | "camera", payload: any) => {
-    const item: ScanHistoryItem = {
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      scannedAt: new Date().toISOString(),
-      attendanceCode,
-      bookingId: payload?.bookingId || "-",
-      userName: payload?.booking?.userName || "-",
-      userEmail: payload?.booking?.userEmail || "-",
-      tourName: payload?.booking?.tourName || "-",
-      pax: Number(payload?.booking?.pax || 0),
-      source,
-      participantNames: payload?.booking?.participantNames || "",
-    };
-
-    setScanHistory((prev) => [item, ...prev]);
-  };
-
   const verifyAttendanceCode = async (code: string, source: "manual" | "camera") => {
     if (!code.trim()) return;
 
@@ -253,7 +196,7 @@ export default function GuideDashboard() {
       const response = await fetch("/api/attendance/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attendanceCode: code.trim(), scannedBy: currentGuideId || 'guide' }),
+        body: JSON.stringify({ attendanceCode: code.trim(), scannedBy: currentGuideName || 'guide' }),
       });
 
       const result = await response.json();
@@ -262,12 +205,12 @@ export default function GuideDashboard() {
         throw new Error(result?.error || "Scan gagal.");
       }
 
-      saveScanHistory(code.trim(), source, result);
+      await loadGuideTours();
       setScanResult(`Terverifikasi: ${result.booking?.userName || result.bookingId}`);
       setScanCode("");
       toast({
         title: "Absensi berhasil",
-        description: "Data scan tersimpan di dashboard pemandu.",
+        description: "Data absensi berhasil disimpan ke database.",
       });
     } catch (error: any) {
       setScanResult(error?.message || "Scan gagal.");
@@ -341,44 +284,6 @@ export default function GuideDashboard() {
       scanGuardRef.current = false;
     };
   }, [cameraActive, toast]);
-
-  const handleDownloadExcel = () => {
-    if (scanHistory.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Belum ada data",
-        description: "Riwayat scan masih kosong, belum ada file yang bisa diunduh.",
-      });
-      return;
-    }
-
-    const rows = scanHistory.map((item, idx) => ({
-      No: idx + 1,
-      WaktuScan: new Date(item.scannedAt).toLocaleString("id-ID"),
-      BookingId: item.bookingId,
-      NamaPeserta: item.userName,
-      PesertaTambahan: item.participantNames || "-",
-      EmailPeserta: item.userEmail,
-      PaketTur: item.tourName,
-      Pax: item.pax,
-      AttendanceCode: item.attendanceCode,
-      SumberScan: item.source,
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "RiwayatScan");
-
-    const fileData = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    const blob = new Blob([fileData], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const filename = `guide-scan-${new Date().toISOString().slice(0, 10)}.xlsx`;
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
 
   return (
     <div className="min-h-screen bg-[#ecece7] text-zinc-900">
@@ -489,9 +394,6 @@ export default function GuideDashboard() {
                   Stop Kamera
                 </Button>
               )}
-              <Button type="button" variant="outline" onClick={handleDownloadExcel} className="rounded-full">
-                <Download className="mr-2 h-4 w-4" /> Download Excel
-              </Button>
             </div>
 
             {cameraActive && (
@@ -509,38 +411,6 @@ export default function GuideDashboard() {
               </div>
             </CardFooter>
           )}
-        </Card>
-
-        <Card className="rounded-[28px] border-none bg-white shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold md:text-2xl">Riwayat Scan Pemandu</CardTitle>
-            <CardDescription>
-              Setiap hasil scan berhasil akan tersimpan di dashboard ini dan bisa diunduh ke Excel.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {scanHistory.length === 0 ? (
-              <p className="rounded-2xl border border-dashed p-4 text-sm text-zinc-500">Belum ada riwayat scan tersimpan.</p>
-            ) : (
-              <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
-                {scanHistory.slice(0, 8).map((item) => (
-                  <div key={item.id} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="font-bold text-zinc-900">{item.userName}</p>
-                      <Badge variant="outline" className="rounded-full">{item.source === "camera" ? "Kamera" : "Manual"}</Badge>
-                    </div>
-                    <p className="mt-1 text-zinc-600">{item.tourName} • {item.pax} Pax {item.tourName?.toLowerCase().includes("hemat") ? "(Hemat)" : item.tourName?.toLowerCase().includes("reguler") ? "(Reguler)" : ""}</p>
-                    {item.participantNames && (
-                      <p className="mt-1 text-xs text-zinc-600 font-medium bg-zinc-100 p-1.5 rounded-lg animate-in fade-in duration-200">
-                        <strong>Peserta Tambahan:</strong> {item.participantNames}
-                      </p>
-                    )}
-                    <p className="text-xs text-zinc-500">{new Date(item.scannedAt).toLocaleString("id-ID")} • Booking: {item.bookingId}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
         </Card>
 
         {apiLoading ? (
@@ -603,9 +473,12 @@ export default function GuideDashboard() {
                         tourName={selectedGroup?.tourName || ""}
                         tourDate={selectedGroup?.tourDate || ""}
                       />
-                      <Button size="sm" variant="outline" className="h-8 gap-1 rounded-full border-white/50 bg-white/10 text-[10px] text-white hover:bg-white/20 hover:text-white md:text-xs">
-                        <CheckCircle2 className="h-3 w-3" /> Absensi
-                      </Button>
+                      <GuideAttendanceDialog
+                        tourId={selectedGroup?.tourId || ""}
+                        tourName={selectedGroup?.tourName || ""}
+                        tourDate={selectedGroup?.tourDate || ""}
+                        bookings={selectedGroup?.bookings || []}
+                      />
                     </div>
                   </div>
                 </CardHeader>
