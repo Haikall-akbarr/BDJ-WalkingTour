@@ -6,6 +6,7 @@ import { logAuditEvent } from '@/lib/audit-log';
 import { getCurrentSessionUser } from '@/lib/server-auth';
 import { sendEmail } from '@/lib/email';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getUserByEmail } from '@/lib/auth-store';
 
 export const runtime = 'nodejs';
 
@@ -30,7 +31,18 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: 'Akses booking ditolak.' }, { status: 403 });
     }
 
-    return NextResponse.json({ booking });
+    // Enrich with userEmergencyContact
+    let userEmergencyContact = null;
+    if (booking.userEmail) {
+      try {
+        const u = await getUserByEmail(booking.userEmail);
+        if (u && u.emergencyContact) {
+          userEmergencyContact = u.emergencyContact;
+        }
+      } catch { /* ignore */ }
+    }
+
+    return NextResponse.json({ booking: { ...booking, userEmergencyContact } });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Gagal mengambil booking.' }, { status: 500 });
   }
