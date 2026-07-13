@@ -376,6 +376,7 @@ async function getCurrentSessionUser(req) {
     email: user.email,
     name: user.name,
     role: user.role,
+    emergencyContact: user.emergencyContact || null,
     createdAt: user.createdAt,
   };
 }
@@ -435,6 +436,7 @@ function needsAuthForApi(pathname, method) {
   if (pathname.startsWith("/api/admin/")) return true;
   if (pathname.startsWith("/api/analytics/")) return true;
   if (pathname.startsWith("/api/attendance/")) return true;
+  if (pathname === "/api/bookings") return true;
   if (pathname.startsWith("/api/bookings/")) return true;
   if (pathname === "/api/notifications") return true;
   if (pathname === "/api/tours/images") return true;
@@ -841,7 +843,30 @@ app.get(
       );
     }
 
-    res.json({ bookings });
+    // Enrich bookings dengan emergencyContact dari tabel users
+    // Lakukan batch lookup dengan deduplikasi email
+    const uniqueEmails = [...new Set(bookings.map((b) => b.userEmail).filter(Boolean))];
+    const userMap = new Map();
+    if (uniqueEmails.length > 0) {
+      await Promise.all(
+        uniqueEmails.map(async (email) => {
+          try {
+            const u = await getUserByEmail(email);
+            if (u) userMap.set(email.toLowerCase(), u);
+          } catch { /* diabaikan */ }
+        })
+      );
+    }
+
+    const enrichedBookings = bookings.map((b) => {
+      const bookingUser = b.userEmail ? userMap.get(b.userEmail.toLowerCase()) : null;
+      return {
+        ...b,
+        userEmergencyContact: bookingUser?.emergencyContact || null,
+      };
+    });
+
+    res.json({ bookings: enrichedBookings });
   }),
 );
 
@@ -868,7 +893,16 @@ app.get(
       return;
     }
 
-    res.json({ booking });
+    // Enrich booking dengan emergencyContact dari tabel users
+    let userEmergencyContact = null;
+    if (booking.userEmail) {
+      try {
+        const bookingUser = await getUserByEmail(booking.userEmail);
+        userEmergencyContact = bookingUser?.emergencyContact || null;
+      } catch { /* diabaikan */ }
+    }
+
+    res.json({ booking: { ...booking, userEmergencyContact } });
   }),
 );
 
@@ -1488,357 +1522,6 @@ app.get(
 );
 
 app.get(
-  "/api/notifications",
-  asyncHandler(async (req, res) => {
-    if (!isDatabaseProviderEnabled()) {
-      res.json({ notifications: [] });
-      return;
-    }
-
-    const user = await getCurrentSessionUser(req);
-    if (!user) {
-      res.json({ notifications: [] });
-      return;
-    }
-
-    const isStaff = ["admin", "owner", "guide"].includes(user.role);
-    const bookings = await listBookings();
-    const visibleBookings = isStaff
-      ? bookings
-      : bookings.filter(
-          (booking) =>
-            booking.userEmail?.toLowerCase() === user.email.toLowerCase(),
-        );
-    const notifications = buildNotificationsFromBookings(visibleBookings).slice(
-      0,
-      12,
-    );
-
-    res.json({
-      notifications,
-      unreadCount: notifications.length,
-    });
-  }),
-);
-
-app.get(
-  "/api/payments/config",
-  asyncHandler(async (_, res) => {
-    res.json({
-      mode: getResolvedPaymentMode(),
-      manual: {
-        title: process.env.PAYMENT_MANUAL_TITLE || "Manual Payment Checkout",
-        description:
-          process.env.PAYMENT_MANUAL_DESCRIPTION ||
-          "Gunakan mode ini untuk transfer manual jika Anda memilih pembayaran non-gateway.",
-        instructions: splitInstructions(
-          process.env.PAYMENT_MANUAL_INSTRUCTIONS ||
-            "Transfer sesuai nominal yang tampil di halaman booking.\nSimpan bukti transfer untuk arsip Anda.\nKlik tombol konfirmasi setelah transfer selesai.",
-        ),
-        bankName: process.env.PAYMENT_MANUAL_BANK_NAME || "Bank tujuan",
-        accountName:
-          process.env.PAYMENT_MANUAL_ACCOUNT_NAME || "Nama pemilik rekening",
-        accountNumber:
-          process.env.PAYMENT_MANUAL_ACCOUNT_NUMBER ||
-          "Nomor rekening / e-wallet",
-        qrImageUrl: process.env.PAYMENT_MANUAL_QR_IMAGE_URL || "",
-        supportContact: process.env.PAYMENT_MANUAL_SUPPORT_CONTACT || "",
-      },
-    });
-  }),
-);
-
-app.post(
-  "/api/payments/dummy/confirm",
-  jsonBody,
-  asyncHandler(async (req, res) => {
-    initializeDummyBookings();
-
-    const bookingId = String(req.body?.bookingId || "").trim();
-    if (!bookingId) {
-      res.status(400).json({ error: "bookingId wajib diisi." });
-      return;
-    }
-
-    if (isDatabaseProviderEnabled()) {
-      const bookingData = await getBookingById(bookingId);
-      if (!bookingData) {
-        res.status(404).json({ error: "Booking tidak ditemukan." });
-        return;
-      }
-
-      const attendanceCode =
-        bookingData.attendanceCode || generateAttendanceCode(bookingId);
-      const qrImageUrl =
-        bookingData.attendanceQrImageUrl ||
-        buildAttendanceQrUrl(attendanceCode);
-      let emailDeliveryStatus = bookingData.userEmail
-        ? "failed"
-        : "not-requested";
-      let emailDeliveryDetail;
-
-      await updateBooking(bookingId, {
-        paymentStatus: "paid",
-        status: "paid",
-        paymentGateway: bookingData.paymentGateway || "dummy",
-        paymentTransactionId: `dummy-${bookingId}`,
-        attendanceCode,
-        attendanceQrImageUrl: qrImageUrl,
-        paidAt: new Date().toISOString(),
-      });
-
-      if (bookingData.userEmail) {
-        try {
-          const emailResult = await sendAttendanceEmail({
-            to: bookingData.userEmail,
-            name: bookingData.userName,
-            tourName: bookingData.tourName,
-            attendanceCode,
-            qrImageUrl,
-            orderId: bookingId,
-            totalAmount: Number(bookingData.grossAmount || 0),
-          });
-
-          if (emailResult?.skipped) {
-            emailDeliveryStatus = "skipped";
-            emailDeliveryDetail =
-              "Provider email belum dikonfigurasi (RESEND_API_KEY/RESEND_FROM_EMAIL).";
-          } else {
-            emailDeliveryStatus = "sent";
-          }
-
-          await updateBooking(bookingId, {
-            barcodeSentAt: new Date().toISOString(),
-          });
-        } catch (emailError) {
-          emailDeliveryStatus = "failed";
-          emailDeliveryDetail =
-            emailError?.message || "Gagal mengirim email barcode.";
-        }
-      }
-
-      if (bookingData.userWhatsApp) {
-        await sendWhatsAppConfirmation({
-          whatsapp: bookingData.userWhatsApp,
-          name: bookingData.userName,
-          tourName: bookingData.tourName,
-          orderId: bookingId,
-          totalAmount: Number(bookingData.grossAmount || 0),
-          qrImageUrl,
-        });
-      }
-
-      res.json({
-        ok: true,
-        bookingId,
-        attendanceCode,
-        qrImageUrl,
-        source: "database",
-        emailDelivery: {
-          status: emailDeliveryStatus,
-          detail: emailDeliveryDetail,
-          to: bookingData.userEmail || null,
-        },
-      });
-      return;
-    }
-
-    const localBooking = getDummyBooking(bookingId);
-    if (!localBooking) {
-      res.status(404).json({ error: "Booking tidak ditemukan di mode lokal." });
-      return;
-    }
-
-    const attendanceCode =
-      localBooking.attendanceCode || generateAttendanceCode(bookingId);
-    const qrImageUrl =
-      localBooking.attendanceQrImageUrl || buildAttendanceQrUrl(attendanceCode);
-
-    updateDummyBooking(bookingId, {
-      paymentStatus: "paid",
-      status: "paid",
-      paymentGateway: localBooking.paymentGateway || "dummy",
-      paymentTransactionId: `dummy-${bookingId}`,
-      attendanceCode,
-      attendanceQrImageUrl: qrImageUrl,
-      paidAt: new Date().toISOString(),
-    });
-
-    res.json({
-      ok: true,
-      bookingId,
-      attendanceCode,
-      qrImageUrl,
-      source: "local",
-    });
-  }),
-);
-
-app.get(
-  "/api/attendance/scan",
-  asyncHandler(async (_, res) => {
-    res.json({ status: "ok", message: "Attendance scan endpoint is ready" });
-  }),
-);
-
-app.post(
-  "/api/attendance/scan",
-  jsonBody,
-  asyncHandler(async (req, res) => {
-    initializeDummyBookings();
-
-    const attendanceCode = String(req.body?.attendanceCode || "").trim();
-    const scannedBy = req.body?.scannedBy || "guide";
-
-    if (!attendanceCode) {
-      res.status(400).json({ error: "attendanceCode wajib diisi." });
-      return;
-    }
-
-    let booking = null;
-    let bookingId = null;
-    let usedDatabase = false;
-
-    if (isDatabaseProviderEnabled()) {
-      const databaseBooking = await getBookingByAttendanceCode(attendanceCode);
-      if (databaseBooking) {
-        booking = databaseBooking;
-        bookingId = databaseBooking.id;
-        usedDatabase = true;
-      }
-    }
-
-    if (!booking) {
-      const localBooking = findDummyBookingByAttendanceCode(attendanceCode);
-      if (localBooking) {
-        booking = localBooking;
-        bookingId = localBooking.id;
-      }
-    }
-
-    if (!booking || !bookingId) {
-      res.status(404).json({ error: "Kode tidak ditemukan (fallback lokal)." });
-      return;
-    }
-
-    if (booking.paymentStatus !== "paid") {
-      res
-        .status(400)
-        .json({
-          error:
-            "Pembayaran belum berhasil. Barcode belum valid untuk absensi.",
-        });
-      return;
-    }
-
-    if (booking.attendanceStatus === "present") {
-      res
-        .status(409)
-        .json({ error: "Barcode sudah pernah digunakan untuk absensi." });
-      return;
-    }
-
-    if (usedDatabase) {
-      await updateBooking(bookingId, {
-        attendanceScannedAt: new Date().toISOString(),
-        attendanceScannedBy: scannedBy,
-        attendanceStatus: "present",
-      });
-    } else {
-      const updated = updateDummyBooking(bookingId, {
-        attendanceScannedAt: new Date().toISOString(),
-        attendanceScannedBy: scannedBy,
-        attendanceStatus: "present",
-      });
-
-      if (updated) {
-        booking = updated;
-      }
-    }
-
-    await logAuditEvent({
-      action: "ticket_scanned",
-      entityType: "booking",
-      entityId: bookingId,
-      actorId: scannedBy || null,
-      actorRole: "guide",
-      actorName: scannedBy || "guide",
-      details: {
-        attendanceCode,
-        source: usedDatabase ? "database" : "local",
-        bookingUserName: booking?.userName || null,
-        tourName: booking?.tourName || null,
-      },
-    });
-
-    res.json({
-      ok: true,
-      bookingId,
-      booking,
-      source: usedDatabase ? "database" : "local",
-    });
-  }),
-);
-
-app.get(
-  "/api/notifications",
-  asyncHandler(async (req, res) => {
-    if (!isDatabaseProviderEnabled()) {
-      res.json({ notifications: [] });
-      return;
-    }
-
-    const user = await getCurrentSessionUser(req);
-    if (!user) {
-      res.json({ notifications: [] });
-      return;
-    }
-
-    const isStaff = ["admin", "owner", "guide"].includes(user.role);
-    const bookings = await listBookings();
-    const visibleBookings = isStaff
-      ? bookings
-      : bookings.filter(
-          (booking) =>
-            booking.userEmail?.toLowerCase() === user.email.toLowerCase(),
-        );
-    const notifications = buildNotificationsFromBookings(visibleBookings).slice(
-      0,
-      12,
-    );
-
-    res.json({
-      notifications,
-      unreadCount: notifications.length,
-    });
-  }),
-);
-
-app.get(
-  "/api/analytics/bookings",
-  asyncHandler(async (_, res) => {
-    if (!ensureDatabase(res)) {
-      return;
-    }
-
-    const bookings = await listBookings();
-    res.json({ data: buildDailySeries(bookings, "bookings") });
-  }),
-);
-
-app.get(
-  "/api/analytics/users",
-  asyncHandler(async (_, res) => {
-    if (!ensureDatabase(res)) {
-      return;
-    }
-
-    const users = await listUsers();
-    res.json({ data: buildDailySeries(users, "users") });
-  }),
-);
-
-app.get(
   "/api/analytics/revenue",
   asyncHandler(async (req, res) => {
     if (!ensureDatabase(res)) {
@@ -1857,7 +1540,7 @@ app.get(
     if (user.role === "guide") {
       const myBookings = paidBookings.filter((b) => b.guideId === user.id);
       const myRevenue = myBookings.reduce((sum, b) => sum + (Number(b.grossAmount) || 0) * 0.35, 0);
-      res.json({ totalRevenue: myRevenue });
+      res.json({ totalRevenue: myRevenue, totalGuideRevenue: myRevenue });
       return;
     }
 
@@ -1881,674 +1564,6 @@ app.get(
 );
 
 app.get(
-  "/api/admin/users",
-  asyncHandler(async (req, res) => {
-    if (!ensureDatabase(res)) {
-      return;
-    }
-
-    const role = String(req.query.role || "")
-      .trim()
-      .toLowerCase();
-    const users = await listUsers();
-    const filtered = role
-      ? users.filter((user) => String(user.role || "").toLowerCase() === role)
-      : users;
-    res.json({ users: filtered });
-  }),
-);
-
-app.post(
-  "/api/admin/users",
-  jsonBody,
-  asyncHandler(async (req, res) => {
-    if (!ensureDatabase(res)) {
-      return;
-    }
-
-    const email = String(req.body?.email || "")
-      .trim()
-      .toLowerCase();
-    const name = String(req.body?.name || "").trim() || email;
-    const role = String(req.body?.role || "user");
-
-    if (!email) {
-      res.status(400).json({ error: "Email wajib diisi." });
-      return;
-    }
-
-    const password = String(
-      req.body?.password || `${Math.random().toString(36).slice(2, 10)}A!`,
-    );
-    const user = await upsertUser({
-      email,
-      name,
-      role,
-      passwordHash: await hashPassword(password),
-    });
-
-    try {
-      const html = `
-        <p>Halo ${name},</p>
-        <p>Akun Anda telah dibuat di BDJ WalkingTour.</p>
-        <p><strong>Email:</strong> ${email}<br/><strong>Password:</strong> ${password}</p>
-        <p>Silakan login di <a href="${process.env.APP_BASE_URL || "/"}">${process.env.APP_BASE_URL || ""}</a></p>
-      `;
-      await sendEmail(email, "Akun BDJ WalkingTour dibuat", html);
-    } catch {
-      // ignore send error
-    }
-    res.json({ user, password });
-  }),
-);
-
-app.get(
-  "/api/admin/audit-logs",
-  asyncHandler(async (_, res) => {
-    if (!ensureDatabase(res)) {
-      return;
-    }
-
-    const logs = await listAuditLogs();
-    res.json({ logs });
-  }),
-);
-
-app.get(
-  "/api/auth/me",
-  asyncHandler(async (req, res) => {
-    const user = await getCurrentSessionUser(req);
-    res.json({ user: user || null });
-  }),
-);
-
-app.post(
-  "/api/auth/login",
-  jsonBody,
-  asyncHandler(async (req, res) => {
-    if (!ensureDatabase(res)) {
-      return;
-    }
-
-    const email = String(req.body?.email || "")
-      .trim()
-      .toLowerCase();
-    const password = String(req.body?.password || "");
-
-    if (!email || !password) {
-      res.status(400).json({ error: "Email dan password wajib diisi." });
-      return;
-    }
-
-    const user = await getUserByEmail(email);
-    if (
-      !user ||
-      !user.isActive ||
-      !(await verifyPassword(password, user.passwordHash)).valid
-    ) {
-      res.status(401).json({ error: "Email atau password salah." });
-      return;
-    }
-
-    const token = generateSessionToken();
-    const tokenHash = hashSessionToken(token);
-    const expiresAt = getSessionExpiryDate(14);
-
-    await createSession({ userId: user.id, tokenHash, expiresAt });
-    setSessionCookie(res, token, expiresAt);
-
-    res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
-    });
-  }),
-);
-
-app.post(
-  "/api/auth/register",
-  jsonBody,
-  asyncHandler(async (req, res) => {
-    if (!ensureDatabase(res)) {
-      return;
-    }
-
-    const name = String(req.body?.name || "").trim();
-    const email = String(req.body?.email || "")
-      .trim()
-      .toLowerCase();
-    const password = String(req.body?.password || "");
-    const confirmPassword = String(req.body?.confirmPassword || "");
-
-    if (!name || !email || !password || !confirmPassword) {
-      res.status(400).json({ error: "Nama, email, dan password wajib diisi." });
-      return;
-    }
-
-    if (password.length < 8) {
-      res.status(400).json({ error: "Password minimal 8 karakter." });
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      res.status(400).json({ error: "Konfirmasi password tidak sama." });
-      return;
-    }
-
-    const existing = await getUserByEmail(email);
-    if (existing) {
-      res
-        .status(409)
-        .json({
-          error: "Email sudah terdaftar. Silakan login atau reset password.",
-        });
-      return;
-    }
-
-    const user = await upsertUser({
-      id: crypto.randomUUID(),
-      email,
-      name,
-      role: "user",
-      passwordHash: await hashPassword(password),
-      isActive: true,
-    });
-
-    if (user) {
-      try {
-        await sendAuthEmail({
-          to: user.email,
-          subject: "Akun BDJ WalkingTour berhasil dibuat",
-          html: buildWelcomeEmailHtml({ name: user.name }),
-        });
-      } catch {
-        // Keep registration non-blocking when email is unavailable.
-      }
-    }
-
-    const token = generateSessionToken();
-    const tokenHash = hashSessionToken(token);
-    const expiresAt = getSessionExpiryDate(14);
-
-    await createSession({ userId: user.id, tokenHash, expiresAt });
-    setSessionCookie(res, token, expiresAt);
-
-    res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
-    });
-  }),
-);
-
-app.post(
-  "/api/auth/logout",
-  asyncHandler(async (req, res) => {
-    const token = getCookie(req, getSessionCookieName());
-
-    if (token) {
-      await deleteSessionByTokenHash(hashSessionToken(token));
-    }
-
-    clearSessionCookie(res);
-    res.json({ ok: true });
-  }),
-);
-
-app.post(
-  "/api/auth/password-reset/request",
-  jsonBody,
-  asyncHandler(async (req, res) => {
-    if (!ensureDatabase(res)) {
-      return;
-    }
-
-    const email = String(req.body?.email || "")
-      .trim()
-      .toLowerCase();
-    if (!email) {
-      res.status(400).json({ error: "Email wajib diisi." });
-      return;
-    }
-
-    const user = await getUserByEmail(email);
-    if (!user || user.role !== "user") {
-      res.json({ ok: true });
-      return;
-    }
-
-    const token = generateResetToken();
-    const tokenHash = hashResetToken(token);
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-
-    await createPasswordResetToken({
-      userId: user.id,
-      tokenHash,
-      expiresAt,
-    });
-
-    const resetUrl = `${buildPublicBaseUrl(req)}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
-
-    try {
-      await sendAuthEmail({
-        to: user.email,
-        subject: "Reset password BDJ WalkingTour",
-        html: buildPasswordResetEmailHtml({ name: user.name, resetUrl }),
-      });
-    } catch {
-      // Keep the flow non-blocking.
-    }
-    res.json({
-      ok: true,
-      resetUrl: process.env.NODE_ENV === "production" ? undefined : resetUrl,
-    });
-  }),
-);
-
-app.post(
-  "/api/auth/password-reset/confirm",
-  jsonBody,
-  asyncHandler(async (req, res) => {
-    if (!ensureDatabase(res)) {
-      return;
-    }
-
-    const email = String(req.body?.email || "")
-      .trim()
-      .toLowerCase();
-    const token = String(req.body?.token || "").trim();
-    const password = String(req.body?.password || "");
-    const confirmPassword = String(req.body?.confirmPassword || "");
-
-    if (!email || !token || !password || !confirmPassword) {
-      res
-        .status(400)
-        .json({ error: "Email, token, dan password wajib diisi." });
-      return;
-    }
-
-    if (password.length < 8) {
-      res.status(400).json({ error: "Password minimal 8 karakter." });
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      res.status(400).json({ error: "Konfirmasi password tidak sama." });
-      return;
-    }
-
-    const user = await getUserByEmail(email);
-    if (!user || user.role !== "user") {
-      res.status(404).json({ error: "Akun tidak ditemukan." });
-      return;
-    }
-
-    const tokenRecord = await getPasswordResetTokenByHash(
-      hashResetToken(token),
-    );
-    if (!tokenRecord || tokenRecord.userId !== user.id) {
-      res.status(400).json({ error: "Token reset tidak valid." });
-      return;
-    }
-
-    if (tokenRecord.usedAt) {
-      res.status(400).json({ error: "Token reset sudah dipakai." });
-      return;
-    }
-
-    if (
-      !tokenRecord.expiresAt ||
-      new Date(tokenRecord.expiresAt).getTime() < Date.now()
-    ) {
-      res.status(400).json({ error: "Token reset sudah kedaluwarsa." });
-      return;
-    }
-
-    await updateUserPasswordHash(user.id, hashPassword(password));
-    await markPasswordResetTokenUsed(tokenRecord.id);
-    await deleteSessionsByUserId(user.id);
-
-    const sessionToken = generateSessionToken();
-    const sessionTokenHash = hashSessionToken(sessionToken);
-    const expiresAt = getSessionExpiryDate(14);
-
-    await createSession({
-      userId: user.id,
-      tokenHash: sessionTokenHash,
-      expiresAt,
-    });
-
-    setSessionCookie(res, sessionToken, expiresAt);
-    res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
-    });
-  }),
-);
-
-app.post(
-  "/api/auth/seed",
-  asyncHandler(async (_, res) => {
-    if (!ensureDatabase(res)) {
-      return;
-    }
-
-    const users = [
-      {
-        id: "admin-1",
-        email: "admin@bdjwalkingtour.com",
-        name: "Admin BDJ",
-        role: "admin",
-        password: "admin123",
-      },
-      {
-        id: "owner-1",
-        email: "owner@bdjwalkingtour.com",
-        name: "Owner BDJ",
-        role: "owner",
-        password: "owner123",
-      },
-      {
-        id: "g1",
-        email: "guide@bdjwalkingtour.com",
-        name: "Guide BDJ",
-        role: "guide",
-        password: "guide123",
-      },
-      {
-        id: "user-1",
-        email: "user@bdjwalkingtour.com",
-        name: "User BDJ",
-        role: "user",
-        password: "user123",
-      },
-    ];
-
-    for (const item of users) {
-      await upsertUser({
-        id: item.id,
-        email: item.email,
-        name: item.name,
-        role: item.role,
-        passwordHash: await hashPassword(item.password),
-        isActive: true,
-      });
-    }
-
-    res.json({ ok: true, seeded: users.length });
-  }),
-);
-
-app.get(
-  "/api/payments/config",
-  asyncHandler(async (_, res) => {
-    res.json({
-      mode: getResolvedPaymentMode(),
-      manual: {
-        title: process.env.PAYMENT_MANUAL_TITLE || "Manual Payment Checkout",
-        description:
-          process.env.PAYMENT_MANUAL_DESCRIPTION ||
-          "Gunakan mode ini untuk transfer manual jika Anda memilih pembayaran non-gateway.",
-        instructions: splitInstructions(
-          process.env.PAYMENT_MANUAL_INSTRUCTIONS ||
-            "Transfer sesuai nominal yang tampil di halaman booking.\nSimpan bukti transfer untuk arsip Anda.\nKlik tombol konfirmasi setelah transfer selesai.",
-        ),
-        bankName: process.env.PAYMENT_MANUAL_BANK_NAME || "Bank tujuan",
-        accountName:
-          process.env.PAYMENT_MANUAL_ACCOUNT_NAME || "Nama pemilik rekening",
-        accountNumber:
-          process.env.PAYMENT_MANUAL_ACCOUNT_NUMBER ||
-          "Nomor rekening / e-wallet",
-        qrImageUrl: process.env.PAYMENT_MANUAL_QR_IMAGE_URL || "",
-        supportContact: process.env.PAYMENT_MANUAL_SUPPORT_CONTACT || "",
-      },
-    });
-  }),
-);
-
-app.post(
-  "/api/payments/dummy/confirm",
-  jsonBody,
-  asyncHandler(async (req, res) => {
-    initializeDummyBookings();
-
-    const bookingId = String(req.body?.bookingId || "").trim();
-    if (!bookingId) {
-      res.status(400).json({ error: "bookingId wajib diisi." });
-      return;
-    }
-
-    if (isDatabaseProviderEnabled()) {
-      const bookingData = await getBookingById(bookingId);
-      if (!bookingData) {
-        res.status(404).json({ error: "Booking tidak ditemukan." });
-        return;
-      }
-
-      const attendanceCode =
-        bookingData.attendanceCode || generateAttendanceCode(bookingId);
-      const qrImageUrl =
-        bookingData.attendanceQrImageUrl ||
-        buildAttendanceQrUrl(attendanceCode);
-      let emailDeliveryStatus = bookingData.userEmail
-        ? "failed"
-        : "not-requested";
-      let emailDeliveryDetail;
-
-      await updateBooking(bookingId, {
-        paymentStatus: "paid",
-        status: "paid",
-        paymentGateway: bookingData.paymentGateway || "dummy",
-        paymentTransactionId: `dummy-${bookingId}`,
-        attendanceCode,
-        attendanceQrImageUrl: qrImageUrl,
-        paidAt: new Date().toISOString(),
-      });
-
-      if (bookingData.userEmail) {
-        try {
-          const emailResult = await sendAttendanceEmail({
-            to: bookingData.userEmail,
-            name: bookingData.userName,
-            tourName: bookingData.tourName,
-            attendanceCode,
-            qrImageUrl,
-            orderId: bookingId,
-            totalAmount: Number(bookingData.grossAmount || 0),
-          });
-
-          if (emailResult?.skipped) {
-            emailDeliveryStatus = "skipped";
-            emailDeliveryDetail =
-              "Provider email belum dikonfigurasi (RESEND_API_KEY/RESEND_FROM_EMAIL).";
-          } else {
-            emailDeliveryStatus = "sent";
-          }
-
-          await updateBooking(bookingId, {
-            barcodeSentAt: new Date().toISOString(),
-          });
-        } catch (emailError) {
-          emailDeliveryStatus = "failed";
-          emailDeliveryDetail =
-            emailError?.message || "Gagal mengirim email barcode.";
-        }
-      }
-
-      if (bookingData.userWhatsApp) {
-        await sendWhatsAppConfirmation({
-          whatsapp: bookingData.userWhatsApp,
-          name: bookingData.userName,
-          tourName: bookingData.tourName,
-          orderId: bookingId,
-          totalAmount: Number(bookingData.grossAmount || 0),
-          qrImageUrl,
-        });
-      }
-
-      res.json({
-        ok: true,
-        bookingId,
-        attendanceCode,
-        qrImageUrl,
-        source: "database",
-        emailDelivery: {
-          status: emailDeliveryStatus,
-          detail: emailDeliveryDetail,
-          to: bookingData.userEmail || null,
-        },
-      });
-      return;
-    }
-
-    const localBooking = getDummyBooking(bookingId);
-    if (!localBooking) {
-      res.status(404).json({ error: "Booking tidak ditemukan di mode lokal." });
-      return;
-    }
-
-    const attendanceCode =
-      localBooking.attendanceCode || generateAttendanceCode(bookingId);
-    const qrImageUrl =
-      localBooking.attendanceQrImageUrl || buildAttendanceQrUrl(attendanceCode);
-
-    updateDummyBooking(bookingId, {
-      paymentStatus: "paid",
-      status: "paid",
-      paymentGateway: localBooking.paymentGateway || "dummy",
-      paymentTransactionId: `dummy-${bookingId}`,
-      attendanceCode,
-      attendanceQrImageUrl: qrImageUrl,
-      paidAt: new Date().toISOString(),
-    });
-
-    res.json({
-      ok: true,
-      bookingId,
-      attendanceCode,
-      qrImageUrl,
-      source: "local",
-    });
-  }),
-);
-
-app.get(
-  "/api/attendance/scan",
-  asyncHandler(async (_, res) => {
-    res.json({ status: "ok", message: "Attendance scan endpoint is ready" });
-  }),
-);
-
-app.post(
-  "/api/attendance/scan",
-  jsonBody,
-  asyncHandler(async (req, res) => {
-    initializeDummyBookings();
-
-    const attendanceCode = String(req.body?.attendanceCode || "").trim();
-    const scannedBy = req.body?.scannedBy || "guide";
-
-    if (!attendanceCode) {
-      res.status(400).json({ error: "attendanceCode wajib diisi." });
-      return;
-    }
-
-    let booking = null;
-    let bookingId = null;
-    let usedDatabase = false;
-
-    if (isDatabaseProviderEnabled()) {
-      const databaseBooking = await getBookingByAttendanceCode(attendanceCode);
-      if (databaseBooking) {
-        booking = databaseBooking;
-        bookingId = databaseBooking.id;
-        usedDatabase = true;
-      }
-    }
-
-    if (!booking) {
-      const localBooking = findDummyBookingByAttendanceCode(attendanceCode);
-      if (localBooking) {
-        booking = localBooking;
-        bookingId = localBooking.id;
-      }
-    }
-
-    if (!booking || !bookingId) {
-      res.status(404).json({ error: "Kode tidak ditemukan (fallback lokal)." });
-      return;
-    }
-
-    if (booking.paymentStatus !== "paid") {
-      res
-        .status(400)
-        .json({
-          error:
-            "Pembayaran belum berhasil. Barcode belum valid untuk absensi.",
-        });
-      return;
-    }
-
-    if (booking.attendanceStatus === "present") {
-      res
-        .status(409)
-        .json({ error: "Barcode sudah pernah digunakan untuk absensi." });
-      return;
-    }
-
-    if (usedDatabase) {
-      await updateBooking(bookingId, {
-        attendanceScannedAt: new Date().toISOString(),
-        attendanceScannedBy: scannedBy,
-        attendanceStatus: "present",
-      });
-    } else {
-      const updated = updateDummyBooking(bookingId, {
-        attendanceScannedAt: new Date().toISOString(),
-        attendanceScannedBy: scannedBy,
-        attendanceStatus: "present",
-      });
-
-      if (updated) {
-        booking = updated;
-      }
-    }
-
-    await logAuditEvent({
-      action: "ticket_scanned",
-      entityType: "booking",
-      entityId: bookingId,
-      actorId: scannedBy || null,
-      actorRole: "guide",
-      actorName: scannedBy || "guide",
-      details: {
-        attendanceCode,
-        source: usedDatabase ? "database" : "local",
-        bookingUserName: booking?.userName || null,
-        tourName: booking?.tourName || null,
-      },
-    });
-
-    res.json({
-      ok: true,
-      bookingId,
-      booking,
-      source: usedDatabase ? "database" : "local",
-    });
-  }),
-);
-
-app.get(
   "/api/notifications",
   asyncHandler(async (req, res) => {
     if (!isDatabaseProviderEnabled()) {
@@ -2557,7 +1572,6 @@ app.get(
     }
 
     const user = await getCurrentSessionUser(req);
-    console.log("[server.js /api/notifications] user:", user);
     if (!user) {
       res.json({ notifications: [] });
       return;
@@ -2593,6 +1607,267 @@ app.get(
     });
   }),
 );
+
+app.get(
+  "/api/payments/config",
+  asyncHandler(async (_, res) => {
+    res.json({
+      mode: getResolvedPaymentMode(),
+      manual: {
+        title: process.env.PAYMENT_MANUAL_TITLE || "Manual Payment Checkout",
+        description:
+          process.env.PAYMENT_MANUAL_DESCRIPTION ||
+          "Gunakan mode ini untuk transfer manual jika Anda memilih pembayaran non-gateway.",
+        instructions: splitInstructions(
+          process.env.PAYMENT_MANUAL_INSTRUCTIONS ||
+            "Transfer sesuai nominal yang tampil di halaman booking.\nSimpan bukti transfer untuk arsip Anda.\nKlik tombol konfirmasi setelah transfer selesai.",
+        ),
+        bankName: process.env.PAYMENT_MANUAL_BANK_NAME || "Bank tujuan",
+        accountName:
+          process.env.PAYMENT_MANUAL_ACCOUNT_NAME || "Nama pemilik rekening",
+        accountNumber:
+          process.env.PAYMENT_MANUAL_ACCOUNT_NUMBER ||
+          "Nomor rekening / e-wallet",
+        qrImageUrl: process.env.PAYMENT_MANUAL_QR_IMAGE_URL || "",
+        supportContact: process.env.PAYMENT_MANUAL_SUPPORT_CONTACT || "",
+      },
+    });
+  }),
+);
+
+app.post(
+  "/api/payments/dummy/confirm",
+  jsonBody,
+  asyncHandler(async (req, res) => {
+    initializeDummyBookings();
+
+    const bookingId = String(req.body?.bookingId || "").trim();
+    if (!bookingId) {
+      res.status(400).json({ error: "bookingId wajib diisi." });
+      return;
+    }
+
+    if (isDatabaseProviderEnabled()) {
+      const bookingData = await getBookingById(bookingId);
+      if (!bookingData) {
+        res.status(404).json({ error: "Booking tidak ditemukan." });
+        return;
+      }
+
+      const attendanceCode =
+        bookingData.attendanceCode || generateAttendanceCode(bookingId);
+      const qrImageUrl =
+        bookingData.attendanceQrImageUrl ||
+        buildAttendanceQrUrl(attendanceCode);
+      let emailDeliveryStatus = bookingData.userEmail
+        ? "failed"
+        : "not-requested";
+      let emailDeliveryDetail;
+
+      await updateBooking(bookingId, {
+        paymentStatus: "paid",
+        status: "paid",
+        paymentGateway: bookingData.paymentGateway || "dummy",
+        paymentTransactionId: `dummy-${bookingId}`,
+        attendanceCode,
+        attendanceQrImageUrl: qrImageUrl,
+        paidAt: new Date().toISOString(),
+      });
+
+      if (bookingData.userEmail) {
+        try {
+          const emailResult = await sendAttendanceEmail({
+            to: bookingData.userEmail,
+            name: bookingData.userName,
+            tourName: bookingData.tourName,
+            attendanceCode,
+            qrImageUrl,
+            orderId: bookingId,
+            totalAmount: Number(bookingData.grossAmount || 0),
+          });
+
+          if (emailResult?.skipped) {
+            emailDeliveryStatus = "skipped";
+            emailDeliveryDetail =
+              "Provider email belum dikonfigurasi (RESEND_API_KEY/RESEND_FROM_EMAIL).";
+          } else {
+            emailDeliveryStatus = "sent";
+          }
+
+          await updateBooking(bookingId, {
+            barcodeSentAt: new Date().toISOString(),
+          });
+        } catch (emailError) {
+          emailDeliveryStatus = "failed";
+          emailDeliveryDetail =
+            emailError?.message || "Gagal mengirim email barcode.";
+        }
+      }
+
+      if (bookingData.userWhatsApp) {
+        await sendWhatsAppConfirmation({
+          whatsapp: bookingData.userWhatsApp,
+          name: bookingData.userName,
+          tourName: bookingData.tourName,
+          orderId: bookingId,
+          totalAmount: Number(bookingData.grossAmount || 0),
+          qrImageUrl,
+        });
+      }
+
+      res.json({
+        ok: true,
+        bookingId,
+        attendanceCode,
+        qrImageUrl,
+        source: "database",
+        emailDelivery: {
+          status: emailDeliveryStatus,
+          detail: emailDeliveryDetail,
+          to: bookingData.userEmail || null,
+        },
+      });
+      return;
+    }
+
+    const localBooking = getDummyBooking(bookingId);
+    if (!localBooking) {
+      res.status(404).json({ error: "Booking tidak ditemukan di mode lokal." });
+      return;
+    }
+
+    const attendanceCode =
+      localBooking.attendanceCode || generateAttendanceCode(bookingId);
+    const qrImageUrl =
+      localBooking.attendanceQrImageUrl || buildAttendanceQrUrl(attendanceCode);
+
+    updateDummyBooking(bookingId, {
+      paymentStatus: "paid",
+      status: "paid",
+      paymentGateway: localBooking.paymentGateway || "dummy",
+      paymentTransactionId: `dummy-${bookingId}`,
+      attendanceCode,
+      attendanceQrImageUrl: qrImageUrl,
+      paidAt: new Date().toISOString(),
+    });
+
+    res.json({
+      ok: true,
+      bookingId,
+      attendanceCode,
+      qrImageUrl,
+      source: "local",
+    });
+  }),
+);
+
+app.get(
+  "/api/attendance/scan",
+  asyncHandler(async (_, res) => {
+    res.json({ status: "ok", message: "Attendance scan endpoint is ready" });
+  }),
+);
+
+app.post(
+  "/api/attendance/scan",
+  jsonBody,
+  asyncHandler(async (req, res) => {
+    initializeDummyBookings();
+
+    const attendanceCode = String(req.body?.attendanceCode || "").trim();
+    const scannedBy = req.body?.scannedBy || "guide";
+
+    if (!attendanceCode) {
+      res.status(400).json({ error: "attendanceCode wajib diisi." });
+      return;
+    }
+
+    let booking = null;
+    let bookingId = null;
+    let usedDatabase = false;
+
+    if (isDatabaseProviderEnabled()) {
+      const databaseBooking = await getBookingByAttendanceCode(attendanceCode);
+      if (databaseBooking) {
+        booking = databaseBooking;
+        bookingId = databaseBooking.id;
+        usedDatabase = true;
+      }
+    }
+
+    if (!booking) {
+      const localBooking = findDummyBookingByAttendanceCode(attendanceCode);
+      if (localBooking) {
+        booking = localBooking;
+        bookingId = localBooking.id;
+      }
+    }
+
+    if (!booking || !bookingId) {
+      res.status(404).json({ error: "Kode tidak ditemukan (fallback lokal)." });
+      return;
+    }
+
+    if (booking.paymentStatus !== "paid") {
+      res
+        .status(400)
+        .json({
+          error:
+            "Pembayaran belum berhasil. Barcode belum valid untuk absensi.",
+        });
+      return;
+    }
+
+    if (booking.attendanceStatus === "present") {
+      res
+        .status(409)
+        .json({ error: "Barcode sudah pernah digunakan untuk absensi." });
+      return;
+    }
+
+    if (usedDatabase) {
+      await updateBooking(bookingId, {
+        attendanceScannedAt: new Date().toISOString(),
+        attendanceScannedBy: scannedBy,
+        attendanceStatus: "present",
+      });
+    } else {
+      const updated = updateDummyBooking(bookingId, {
+        attendanceScannedAt: new Date().toISOString(),
+        attendanceScannedBy: scannedBy,
+        attendanceStatus: "present",
+      });
+
+      if (updated) {
+        booking = updated;
+      }
+    }
+
+    await logAuditEvent({
+      action: "ticket_scanned",
+      entityType: "booking",
+      entityId: bookingId,
+      actorId: scannedBy || null,
+      actorRole: "guide",
+      actorName: scannedBy || "guide",
+      details: {
+        attendanceCode,
+        source: usedDatabase ? "database" : "local",
+        bookingUserName: booking?.userName || null,
+        tourName: booking?.tourName || null,
+      },
+    });
+
+    res.json({
+      ok: true,
+      bookingId,
+      booking,
+      source: usedDatabase ? "database" : "local",
+    });
+  }),
+);
+
+
 
 app.use((error, _req, res, _next) => {
   const message =

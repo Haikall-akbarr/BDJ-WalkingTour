@@ -835,7 +835,11 @@ export default function AdminDashboard() {
                           </td>
                           <td className="p-3 md:p-4 whitespace-nowrap">{booking.tourName}</td>
                           <td className="p-3 md:p-4 text-center font-semibold">
-                            {booking.pax} {booking.tourName?.toLowerCase().includes("hemat") ? "(Hemat)" : booking.tourName?.toLowerCase().includes("reguler") ? "(Reguler)" : ""}
+                            {booking.pax} {(() => {
+                              if (booking.tourName?.toLowerCase().includes("hemat")) return "(Hemat)";
+                              if (booking.tourName?.toLowerCase().includes("reguler")) return "(Reguler)";
+                              return "";
+                            })()}
                           </td>
                           <td className="p-3 md:p-4 whitespace-nowrap">
                             {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('id-ID') : '-'}

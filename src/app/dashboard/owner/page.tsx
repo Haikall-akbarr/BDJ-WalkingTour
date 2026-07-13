@@ -961,7 +961,11 @@ export default function OwnerDashboard() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-bold text-sm text-emerald-600">Rp {Number(b.grossAmount || 0).toLocaleString("id-ID")}</p>
-                      <p className="text-[10px] text-zinc-400">{b.pax} Pax {b.tourName?.toLowerCase().includes("hemat") ? "(Hemat)" : b.tourName?.toLowerCase().includes("reguler") ? "(Reguler)" : ""}</p>
+                      <p className="text-[10px] text-zinc-400">{b.pax} Pax {(() => {
+                        if (b.tourName?.toLowerCase().includes("hemat")) return "(Hemat)";
+                        if (b.tourName?.toLowerCase().includes("reguler")) return "(Reguler)";
+                        return "";
+                      })()}</p>
                     </div>
                   </div>
                   <p className="mt-2 text-[10px] text-zinc-400">
