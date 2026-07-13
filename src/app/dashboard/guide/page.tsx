@@ -147,7 +147,35 @@ export default function GuideDashboard() {
       groups[tId].bookings.push(booking);
     }
 
-    return Object.values(groups);
+    const parseDate = (dateStr: string) => {
+      if (!dateStr || dateStr === "-") return 0;
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) return d.getTime();
+      
+      const months: Record<string, string> = {
+          'januari': 'Jan', 'jan': 'Jan',
+          'februari': 'Feb', 'feb': 'Feb',
+          'maret': 'Mar', 'mar': 'Mar',
+          'april': 'Apr', 'apr': 'Apr',
+          'mei': 'May',
+          'juni': 'Jun', 'jun': 'Jun',
+          'juli': 'Jul', 'jul': 'Jul',
+          'agustus': 'Aug', 'agu': 'Aug',
+          'september': 'Sep', 'sep': 'Sep',
+          'oktober': 'Oct', 'okt': 'Oct',
+          'november': 'Nov', 'nov': 'Nov',
+          'desember': 'Dec', 'des': 'Dec'
+      };
+      let s = dateStr.toLowerCase();
+      for (const [id, en] of Object.entries(months)) {
+          s = s.replace(id, en);
+      }
+      const d2 = new Date(s);
+      if (!isNaN(d2.getTime())) return d2.getTime();
+      return 0;
+    };
+
+    return Object.values(groups).sort((a: any, b: any) => parseDate(a.tourDate) - parseDate(b.tourDate));
   }, [apiTours, toursList, toursDateMap]);
 
   const selectedGroup = useMemo(() => {

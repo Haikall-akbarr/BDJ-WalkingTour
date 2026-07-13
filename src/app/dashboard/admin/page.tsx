@@ -1428,6 +1428,7 @@ export default function AdminDashboard() {
                 <Label htmlFor="tour-date">Tanggal Opsional</Label>
                 <Input 
                   id="tour-date" 
+                  type="date"
                   placeholder="15 Jan 2024"
                   value={tourFormData.date}
                   onChange={(e) => setTourFormData({...tourFormData, date: e.target.value})}
