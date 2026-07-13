@@ -135,11 +135,24 @@ export default function GuideDashboard() {
         const matchedTour = toursList.find((t: any) => t.id === tId);
         const cleanName = matchedTour?.name || booking.tourName.replace(/\s*\(Paket\s*(Hemat|Reguler)\)/gi, "");
 
+        const rawDate = toursDateMap[tId] || (booking.createdAt ? new Date(booking.createdAt).toISOString() : "-");
+        
+        const formatDateToIndonesian = (dateStr: string) => {
+            if (!dateStr || dateStr === "-") return "-";
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            const months = [
+                "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+            ];
+            return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+        };
+
         groups[tId] = {
           id: tId,
           tourId: tId,
           tourName: cleanName,
-          tourDate: toursDateMap[tId] || (booking.createdAt ? new Date(booking.createdAt).toLocaleDateString("id-ID") : "-"),
+          tourDate: formatDateToIndonesian(rawDate),
           bookings: [],
           isDemo: booking.id.startsWith("mock") || booking.id.startsWith("local-"),
         };
