@@ -175,7 +175,7 @@ export default function GuideDashboard() {
       return 0;
     };
 
-    return Object.values(groups).sort((a: any, b: any) => parseDate(a.tourDate) - parseDate(b.tourDate));
+    return Object.values(groups).sort((a: any, b: any) => parseDate(b.tourDate) - parseDate(a.tourDate));
   }, [apiTours, toursList, toursDateMap]);
 
   const selectedGroup = useMemo(() => {
