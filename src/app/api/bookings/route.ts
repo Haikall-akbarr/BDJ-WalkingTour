@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { listBookings } from '@/lib/data-store';
 import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { getUserByEmail } from '@/lib/auth-store';
+import { requireRole } from '@/lib/api-auth-guard';
 
 export const runtime = 'nodejs';
 
@@ -14,11 +15,26 @@ function assertMySql() {
 export async function GET(request: NextRequest) {
   try {
     assertMySql();
+    
+    // Auth Guard: Only authenticated users with valid roles can access
+    const auth = await requireRole('admin', 'owner', 'guide', 'user');
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const status = request.nextUrl.searchParams.get('status') || undefined;
     const paymentStatus = request.nextUrl.searchParams.get('paymentStatus') || undefined;
     const guideId = request.nextUrl.searchParams.get('guideId') || undefined;
     const unassigned = request.nextUrl.searchParams.get('unassigned') === 'true';
-    const bookings = await listBookings({ status, paymentStatus, guideId, unassigned });
+    
+    let bookings = await listBookings({ status, paymentStatus, guideId, unassigned });
+
+    // Filter bookings if the requester is a regular user (can only see their own)
+    if (auth.user.role === 'user') {
+      bookings = bookings.filter(
+        (b) => b.userEmail?.toLowerCase() === auth.user.email.toLowerCase()
+      );
+    }
     
     // Enrich bookings with emergencyContact from users table
     const uniqueEmails = [...new Set(bookings.map((b) => b.userEmail).filter(Boolean))];

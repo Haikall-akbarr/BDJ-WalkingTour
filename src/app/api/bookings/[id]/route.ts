@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { getBookingById, updateBooking } from '@/lib/data-store';
 import { isDatabaseProviderEnabled } from '@/lib/database-provider';
 import { logAuditEvent } from '@/lib/audit-log';
-import { getCurrentSessionUser } from '@/lib/server-auth';
+import { requireRole } from '@/lib/api-auth-guard';
 import { sendEmail } from '@/lib/email';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getUserByEmail } from '@/lib/auth-store';
@@ -26,8 +26,12 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: 'Booking tidak ditemukan.' }, { status: 404 });
     }
 
-    const user = await getCurrentSessionUser();
-    if (user?.role === 'user' && booking.userEmail?.toLowerCase() !== user.email.toLowerCase()) {
+    const auth = await requireRole('admin', 'owner', 'guide', 'user');
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    if (auth.user.role === 'user' && booking.userEmail?.toLowerCase() !== auth.user.email.toLowerCase()) {
       return NextResponse.json({ error: 'Akses booking ditolak.' }, { status: 403 });
     }
 
@@ -57,12 +61,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: 'Booking tidak ditemukan.' }, { status: 404 });
     }
 
-    const user = await getCurrentSessionUser();
+    const auth = await requireRole('admin', 'owner', 'guide', 'user');
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const body = await request.json();
 
     let patch: Record<string, unknown> = {};
-    if (user?.role === 'user') {
-      if (existingBooking.userEmail?.toLowerCase() !== user.email.toLowerCase()) {
+    if (auth.user.role === 'user') {
+      if (existingBooking.userEmail?.toLowerCase() !== auth.user.email.toLowerCase()) {
         return NextResponse.json({ error: 'Akses booking ditolak.' }, { status: 403 });
       }
       patch = {
@@ -126,7 +134,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     // NOTE: notifications untuk report reply juga otomatis di-sync oleh syncBookingToTables()
 
-    if (user?.role !== 'user' && (body?.guideId || body?.guideName)) {
+    if (auth.user.role !== 'user' && (body?.guideId || body?.guideName)) {
       await logAuditEvent({
         action: 'guide_assigned',
         entityType: 'booking',
