@@ -400,9 +400,18 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           ) : allTours && allTours.length > 0 ? (
                             allTours.map((t: any) => {
                               const isFull = t.availablePax !== undefined && t.availablePax <= 0;
+                              
+                              const formatDate = (dStr: string) => {
+                                if (!dStr) return "";
+                                const d = new Date(dStr);
+                                if (isNaN(d.getTime())) return dStr;
+                                const m = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+                                return `${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear()}`;
+                              };
+
                               return (
                                 <SelectItem key={t.id} value={t.id} disabled={isFull}>
-                                  {t.name} {t.date ? `- ${t.date}` : ''} {t.availablePax !== undefined ? (isFull ? '(Penuh)' : `- Sisa ${t.availablePax} pax`) : (isFull ? '(Penuh)' : `- Sisa 35 pax`)}
+                                  {t.name} {t.date ? `- ${formatDate(t.date)}` : ''} {t.availablePax !== undefined ? (isFull ? '(Penuh)' : `- Sisa ${t.availablePax} pax`) : (isFull ? '(Penuh)' : `- Sisa 35 pax`)}
                                 </SelectItem>
                               );
                             })
