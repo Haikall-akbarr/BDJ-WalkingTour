@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
 
     const token = generateSessionToken();
     const tokenHash = hashSessionToken(token);
-    const expiresAt = getSessionExpiryDate(14);
+    const expiresAt = getSessionExpiryDate(1);
 
     await createSession({
       userId: user!.id,

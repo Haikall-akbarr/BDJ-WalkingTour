@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     const sessionToken = generateSessionToken();
     const sessionTokenHash = hashSessionToken(sessionToken);
-    const expiresAt = getSessionExpiryDate(14);
+    const expiresAt = getSessionExpiryDate(1);
 
     await createSession({
       userId: user.id,

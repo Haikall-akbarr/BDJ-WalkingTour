@@ -73,8 +73,8 @@ export function hashResetToken(token: string) {
   return createHash('sha256').update(`${getSessionSecret()}:reset:${token}`).digest('hex');
 }
 
-export function getSessionExpiryDate(days = 14) {
+export function getSessionExpiryDate(hours = 1) {
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + days);
+  expiresAt.setHours(expiresAt.getHours() + hours);
   return expiresAt;
 }
