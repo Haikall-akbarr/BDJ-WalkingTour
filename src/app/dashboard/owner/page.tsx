@@ -784,16 +784,37 @@ export default function OwnerDashboard() {
                         <p><strong>Atas Nama:</strong> {bankData.accountName || '-'}</p>
                       </div>
                       
-                      <Button 
-                        size="sm" 
-                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl"
-                        disabled={processingRefund === b.id}
-                        onClick={() => handleApproveRefund(b.id)}
-                      >
-                        {processingRefund === b.id ? (
-                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
-                        ) : "Tandai Sudah Ditransfer"}
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl"
+                            disabled={processingRefund === b.id}
+                          >
+                            {processingRefund === b.id ? (
+                              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
+                            ) : "Tandai Sudah Ditransfer"}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="rounded-2xl sm:rounded-3xl">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Konfirmasi Refund</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Apakah Anda yakin sudah men-transfer uang refund ke rekening <strong>{bankData.accountName || '-'}</strong>? 
+                              Tindakan ini akan mengirimkan notifikasi WhatsApp secara otomatis ke pelanggan.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="rounded-xl">Batal</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleApproveRefund(b.id)}
+                              className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white"
+                            >
+                              Ya, Sudah Ditransfer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   );
                 })}
@@ -961,7 +982,11 @@ export default function OwnerDashboard() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-bold text-sm text-emerald-600">Rp {Number(b.grossAmount || 0).toLocaleString("id-ID")}</p>
-                      <p className="text-[10px] text-zinc-400">{b.pax} Pax {b.tourName?.toLowerCase().includes("hemat") ? "(Hemat)" : b.tourName?.toLowerCase().includes("reguler") ? "(Reguler)" : ""}</p>
+                      <p className="text-[10px] text-zinc-400">{b.pax} Pax {(() => {
+                        if (b.tourName?.toLowerCase().includes("hemat")) return "(Hemat)";
+                        if (b.tourName?.toLowerCase().includes("reguler")) return "(Reguler)";
+                        return "";
+                      })()}</p>
                     </div>
                   </div>
                   <p className="mt-2 text-[10px] text-zinc-400">

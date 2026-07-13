@@ -98,8 +98,22 @@ export async function POST(request: NextRequest) {
     if (isDatabaseProviderEnabled()) {
       const mysqlTour = await getTourById(body.tourId);
       if (mysqlTour) {
-        tourName = mysqlTour.name || body.tourName;
-        tourPrice = Number(mysqlTour.price || body.tourPrice);
+        // Validasi harga yang dikirim frontend: harus sama dengan price ATAU priceHemat
+        const validPrices: number[] = [Number(mysqlTour.price)];
+        if (mysqlTour.priceHemat != null) {
+          validPrices.push(Number(mysqlTour.priceHemat));
+        }
+        const submittedPrice = Number(body.tourPrice);
+        if (!validPrices.includes(submittedPrice)) {
+          return NextResponse.json(
+            { error: 'Harga paket tidak valid. Silakan pilih ulang paket tur.' },
+            { status: 400 }
+          );
+        }
+        // Gunakan tourName dari frontend (sudah benar, misal: "Nama Tur (Paket Hemat)")
+        // dan tourPrice yang sudah divalidasi di atas — jangan override!
+        tourName = body.tourName;
+        tourPrice = submittedPrice;
       }
     }
 

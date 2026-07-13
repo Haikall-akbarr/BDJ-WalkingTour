@@ -91,7 +91,7 @@ export default function GuideDashboard() {
         if (response.ok && mounted) {
           setMyRevenue(result.totalGuideRevenue || 0);
         }
-      } catch {}
+      } catch { }
     };
 
     const loadTours = async () => {
@@ -125,16 +125,16 @@ export default function GuideDashboard() {
 
   const groupedTourGroups = useMemo(() => {
     if (!apiTours || apiTours.length === 0) return [];
-    
+
     const groups: Record<string, any> = {};
-    
+
     for (const booking of apiTours) {
       const tId = booking.tourId;
       if (!groups[tId]) {
         // Look up clean name from toursList if available
         const matchedTour = toursList.find((t: any) => t.id === tId);
         const cleanName = matchedTour?.name || booking.tourName.replace(/\s*\(Paket\s*(Hemat|Reguler)\)/gi, "");
-        
+
         groups[tId] = {
           id: tId,
           tourId: tId,
@@ -146,7 +146,7 @@ export default function GuideDashboard() {
       }
       groups[tId].bookings.push(booking);
     }
-    
+
     return Object.values(groups);
   }, [apiTours, toursList, toursDateMap]);
 
@@ -468,7 +468,7 @@ export default function GuideDashboard() {
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
-                      <GuideAnnouncementDialog 
+                      <GuideAnnouncementDialog
                         tourId={selectedGroup?.tourId || ""}
                         tourName={selectedGroup?.tourName || ""}
                         tourDate={selectedGroup?.tourDate || ""}
@@ -492,7 +492,7 @@ export default function GuideDashboard() {
                       {selectedGroup?.bookings.length} Pemesanan
                     </Badge>
                   </div>
-                  
+
                   <div className="max-h-[500px] overflow-y-auto space-y-3 pr-1">
                     {selectedGroup?.bookings.map((booking: any) => (
                       <div key={booking.id} className="rounded-2xl bg-zinc-50 border border-zinc-200/60 p-4 text-sm space-y-2">
@@ -502,19 +502,24 @@ export default function GuideDashboard() {
                             Booking: {booking.id.startsWith("local-") ? booking.id.slice(0, 12) : booking.id.slice(0, 8)}
                           </Badge>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-1 text-xs text-zinc-600">
                           <p>WhatsApp: <span className="font-semibold text-zinc-800">{booking.userWhatsApp}</span></p>
                           <p>Email: <span className="text-zinc-800">{booking.userEmail}</span></p>
+                          {booking.userEmergencyContact && (
+                            <p className="md:col-span-2 mt-0.5 text-red-600 flex items-center gap-1">
+                              <span className="font-semibold">Kontak Darurat:</span> {booking.userEmergencyContact}
+                            </p>
+                          )}
                         </div>
-                        
+
                         {booking.participantNames && (
                           <div className="text-xs text-zinc-700 bg-white p-2.5 rounded-lg border border-black/5">
                             <strong className="block text-zinc-800 mb-0.5">Peserta Tambahan:</strong>
                             {booking.participantNames}
                           </div>
                         )}
-                        
+
                         <div className="flex flex-wrap items-center gap-2 pt-1">
                           <Badge variant="outline" className="rounded-full bg-white text-[11px] text-zinc-700">
                             Domisili: {booking.domicile} {booking.customDomicile ? `(${booking.customDomicile})` : ""}
@@ -522,15 +527,25 @@ export default function GuideDashboard() {
                           <Badge variant="outline" className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-bold text-zinc-800">
                             {booking.pax} Pax
                           </Badge>
-                          {booking.tourName?.toLowerCase().includes("hemat") ? (
-                            <Badge className="bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-full text-[10px]">
-                              Paket Hemat
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-50 rounded-full text-[10px]">
-                              Paket Reguler
-                            </Badge>
-                          )}
+                          {(() => {
+                            const isHemat =
+                              booking.tourName?.toLowerCase().includes("hemat") ||
+                              (!booking.tourName?.toLowerCase().includes("reguler") &&
+                                (() => {
+                                  const matchedTour = toursList.find((t: any) => t.id === booking.tourId);
+                                  return matchedTour?.priceHemat != null &&
+                                    Number(booking.pricePerPax) === Number(matchedTour.priceHemat);
+                                })());
+                            return isHemat ? (
+                              <Badge className="bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-full text-[10px]">
+                                Paket Hemat
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-50 rounded-full text-[10px]">
+                                Paket Reguler
+                              </Badge>
+                            );
+                          })()}
                         </div>
                       </div>
                     ))}
