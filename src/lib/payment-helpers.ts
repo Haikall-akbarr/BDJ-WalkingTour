@@ -377,3 +377,42 @@ export async function sendWhatsAppAnnouncement(params: {
     return null;
   }
 }
+
+export async function sendWhatsAppRefundNotification(params: {
+  whatsapp: string;
+  name: string;
+  tourName: string;
+  totalAmount: number;
+}) {
+  const token = process.env.FONNTE_TOKEN || 'YXAefASCYfDftvarX6Mj';
+  if (!params.whatsapp) return { skipped: true, reason: 'No WhatsApp number' };
+
+  let target = params.whatsapp;
+  if (target.startsWith('0')) target = '62' + target.slice(1);
+  if (target.startsWith('+')) target = target.slice(1);
+
+  const message = `Halo ${params.name},\n\nPermintaan *Refund* Anda untuk pesanan tur *${params.tourName}* sebesar Rp ${params.totalAmount.toLocaleString('id-ID')} telah dikonfirmasi dan ditransfer oleh pihak Owner.\n\nSilakan cek rekening bank Anda.\n\nTerima kasih telah menggunakan layanan BDJ WalkingTour.`;
+
+  const formData = new FormData();
+  formData.append('target', target);
+  formData.append('message', message);
+  formData.append('delay', '2');
+
+  try {
+    const res = await fetch('https://api.fonnte.com/send', {
+      method: 'POST',
+      headers: { Authorization: token },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok || !data.status) {
+      console.error('[sendWhatsAppRefundNotification] Fonnte API Error:', data);
+    } else {
+      console.log('[sendWhatsAppRefundNotification] WA refund terkirim ke', target);
+    }
+    return data;
+  } catch (error) {
+    console.error('[sendWhatsAppRefundNotification] Request failed:', error);
+    return null;
+  }
+}

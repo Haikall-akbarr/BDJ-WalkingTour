@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBookingById, updateBooking } from '@/lib/data-store';
 import { requireRole } from '@/lib/api-auth-guard';
+import { sendWhatsAppRefundNotification } from '@/lib/payment-helpers';
 
 export const runtime = 'nodejs';
 
@@ -26,6 +27,15 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       paymentStatus: 'refunded',
       status: 'cancelled'
     });
+
+    if (booking.userWhatsApp) {
+      await sendWhatsAppRefundNotification({
+        whatsapp: booking.userWhatsApp,
+        name: booking.userName || 'Peserta',
+        tourName: booking.tourName || 'Tur',
+        totalAmount: Number(booking.grossAmount || 0)
+      }).catch(err => console.error("Gagal mengirim WA refund:", err));
+    }
 
     return NextResponse.json({ success: true, message: 'Refund berhasil disetujui.' });
   } catch (error: any) {
