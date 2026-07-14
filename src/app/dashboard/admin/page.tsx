@@ -636,6 +636,31 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleResetQuota = async (tourId: string, tourName: string) => {
+    try {
+      const response = await fetch(`/api/tours/${tourId}/bookings`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal mereset kuota tur.");
+      }
+
+      await fetchTours();
+      toast({
+        title: "Kuota Direset",
+        description: `Semua data pendaftar pada tur "${tourName}" telah dihapus.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal mereset kuota",
+        description: error?.message || "Coba lagi beberapa saat.",
+      });
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await signOutFirebase()
@@ -949,6 +974,28 @@ export default function AdminDashboard() {
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Batal</AlertDialogCancel>
                                     <AlertDialogAction onClick={() => handleDeleteTour(tour.id)} className="bg-red-500 hover:bg-red-600">Hapus</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="icon" variant="outline" title="Reset Kuota (Hapus Pendaftar)" className="h-8 w-8 rounded-full shadow-sm hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200">
+                                    <RefreshCcw className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Reset Kuota Tur?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      <span className="font-semibold text-red-600 block mb-2">Peringatan: Tindakan ini sangat destruktif!</span>
+                                      Semua data pemesanan (pendaftar) pada tur "{tour.name}" akan <strong>dihapus secara permanen</strong>. Jumlah "Terdaftar" akan kembali menjadi 0.
+                                      <br/><br/>
+                                      Jika Anda ingin mendata ulang tur ini untuk sesi tanggal berikutnya, sangat disarankan menggunakan tombol <strong>Duplikat</strong> alih-alih mereset kuota.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleResetQuota(tour.id, tour.name)} className="bg-orange-500 hover:bg-orange-600 text-white">Ya, Hapus Semua Pendaftar</AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>

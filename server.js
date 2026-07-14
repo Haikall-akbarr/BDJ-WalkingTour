@@ -40,6 +40,7 @@ import {
 import {
   createTour,
   deleteTour,
+  deleteBookingsByTourId,
   getBookingByAttendanceCode,
   getBookingById,
   getTourById,
@@ -812,6 +813,20 @@ app.delete(
       return;
     }
 
+    res.json({ ok: true });
+  }),
+);
+
+app.delete(
+  "/api/tours/:id/bookings",
+  asyncHandler(async (req, res) => {
+    if (!ensureDatabase(res)) {
+      return;
+    }
+
+    const tourId = String(req.params.id);
+    await deleteBookingsByTourId(tourId);
+    
     res.json({ ok: true });
   }),
 );

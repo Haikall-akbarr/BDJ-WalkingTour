@@ -75,3 +75,7 @@ export function createBooking(...args: Parameters<typeof mysqlStore.createBookin
 export function updateBooking(...args: Parameters<typeof mysqlStore.updateBooking>) {
 	return getStore().updateBooking(...args);
 }
+
+export function deleteBookingsByTourId(...args: Parameters<typeof mysqlStore.deleteBookingsByTourId>) {
+	return getStore().deleteBookingsByTourId(...args);
+}

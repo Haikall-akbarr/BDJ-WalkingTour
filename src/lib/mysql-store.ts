@@ -467,3 +467,10 @@ export async function updateBooking(id: string, patch: Record<string, unknown>) 
   await pool.execute(`UPDATE bookings SET ${sets.join(', ')}, updated_at = NOW() WHERE id = ?`, values);
   return getBookingById(id);
 }
+
+export async function deleteBookingsByTourId(tourId: string) {
+  const pool = await getMySqlPool();
+  await pool.execute('DELETE FROM bookings WHERE tour_id = ?', [tourId]);
+  return true;
+}
+
