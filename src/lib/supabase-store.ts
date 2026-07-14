@@ -487,6 +487,13 @@ export async function updateBooking(id: string, patch: Record<string, unknown>) 
   return mapBooking(data);
 }
 
+export async function deleteBookingsByTourId(tourId: string) {
+  const admin = getSupabaseAdmin();
+  const { error } = await admin.from('bookings').delete().eq('tour_id', tourId);
+  if (error) throw error;
+  return true;
+}
+
 // ============================================================
 // AUTO-SYNC: barcode_scans, guide_tour_assignments, notifications
 // Dipanggil otomatis setiap kali booking di-update
