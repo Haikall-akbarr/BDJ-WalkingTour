@@ -21,6 +21,7 @@ type DbTourRow = RowDataPacket & {
   route_detail: string | null;
   route_map_url: string | null;
   poi_list: string | null;
+  max_pax: number | null;
   created_at: Date | string;
   updated_at: Date | string;
 };
@@ -87,6 +88,7 @@ function mapTour(row: DbTourRow) {
     routeDetail: row.route_detail || '',
     routeMapUrl: row.route_map_url || '',
     poiList: row.poi_list || '[]',
+    maxPax: row.max_pax != null ? Number(row.max_pax) : null,
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
   };
@@ -186,13 +188,14 @@ export async function createTour(input: {
   routeDetail?: string;
   routeMapUrl?: string;
   poiList?: string;
+  maxPax?: number;
 }) {
   const pool = getMySqlPool();
   const id = randomUUID();
 
   await pool.execute(
-    `INSERT INTO tours (id, name, price, price_hemat, price_reguler_desc, price_hemat_desc, date, description, distance, duration, description_full, history_culture, history_highlights, route_detail, route_map_url, poi_list, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+    `INSERT INTO tours (id, name, price, price_hemat, price_reguler_desc, price_hemat_desc, date, description, distance, duration, description_full, history_culture, history_highlights, route_detail, route_map_url, poi_list, max_pax, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
     [
       id,
       input.name,
@@ -210,6 +213,7 @@ export async function createTour(input: {
       input.routeDetail || null,
       input.routeMapUrl || null,
       input.poiList || null,
+      input.maxPax != null ? Number(input.maxPax) : null,
     ]
   );
 
@@ -234,6 +238,7 @@ export async function updateTour(
     routeDetail: string;
     routeMapUrl: string;
     poiList: string;
+    maxPax: number;
   }>
 ) {
   const pool = getMySqlPool();
@@ -255,6 +260,7 @@ export async function updateTour(
   if (typeof input.routeDetail !== 'undefined') { fields.push('route_detail = ?'); values.push(input.routeDetail || null); }
   if (typeof input.routeMapUrl !== 'undefined') { fields.push('route_map_url = ?'); values.push(input.routeMapUrl || null); }
   if (typeof input.poiList !== 'undefined') { fields.push('poi_list = ?'); values.push(input.poiList || null); }
+  if (typeof input.maxPax !== 'undefined') { fields.push('max_pax = ?'); values.push(input.maxPax != null ? Number(input.maxPax) : null); }
 
   if (fields.length === 0) {
     return getTourById(id);

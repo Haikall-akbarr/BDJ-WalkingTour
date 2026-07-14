@@ -92,6 +92,7 @@ export default function AdminDashboard() {
     highlight4Title: "",
     highlight4Desc: "",
     routeMapUrl: "",
+    maxPax: "",
     pois: ["", "", "", "", ""]
   });
   const [routeMapFile, setRouteMapFile] = useState<File | null>(null);
@@ -365,6 +366,7 @@ export default function AdminDashboard() {
       highlight4Title: "",
       highlight4Desc: "",
       routeMapUrl: "",
+      maxPax: "",
       pois: ["", "", "", "", ""]
     });
     setTourFiles([]);
@@ -410,6 +412,7 @@ export default function AdminDashboard() {
       highlight4Title: highlights[3]?.title || "",
       highlight4Desc: highlights[3]?.desc || "",
       routeMapUrl: tour.routeMapUrl || "",
+      maxPax: tour.maxPax != null ? String(tour.maxPax) : "",
       pois: pois.length > 0 ? pois : ["", "", "", "", ""]
     });
     setTourFiles([]);
@@ -456,6 +459,7 @@ export default function AdminDashboard() {
       highlight4Title: highlights[3]?.title || "",
       highlight4Desc: highlights[3]?.desc || "",
       routeMapUrl: tour.routeMapUrl || "",
+      maxPax: tour.maxPax != null ? String(tour.maxPax) : "",
       pois: pois.length > 0 ? pois : ["", "", "", "", ""]
     });
     setTourFiles([]);
@@ -494,8 +498,11 @@ export default function AdminDashboard() {
       historyCulture: tourFormData.historyCulture,
       historyHighlights: JSON.stringify(highlightsList),
       routeMapUrl: tourFormData.routeMapUrl,
+      maxPax: tourFormData.maxPax ? Number(tourFormData.maxPax) : undefined,
       poiList: JSON.stringify(poisList),
     };
+
+    console.log('[handleSaveTour] payload.maxPax:', payload.maxPax, '| tourFormData.maxPax:', tourFormData.maxPax);
 
     try {
       const response = await fetch(editingTour ? `/api/tours/${editingTour.id}` : "/api/tours", {
@@ -952,6 +959,11 @@ export default function AdminDashboard() {
                             <CardDescription className="text-xs md:text-sm">
                               Rp {tour.price?.toLocaleString('id-ID')} • {tour.distance} • {tour.duration}
                             </CardDescription>
+                            <div className="mt-2 text-xs font-medium text-muted-foreground flex gap-2 flex-wrap">
+                              <Badge variant="outline" className="bg-white/50">Maks: {tour.maxPax}</Badge>
+                              <Badge variant="outline" className="bg-white/50">Terdaftar: {tour.bookedPax || 0}</Badge>
+                              <Badge variant="secondary" className="bg-primary/10 text-primary">Sisa: {tour.availablePax}</Badge>
+                            </div>
                           </CardHeader>
                         </Card>
                       )
@@ -1424,15 +1436,27 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="tour-date">Tanggal Opsional</Label>
-                <Input 
-                  id="tour-date" 
-                  type="date"
-                  placeholder="15 Jan 2024"
-                  value={tourFormData.date}
-                  onChange={(e) => setTourFormData({...tourFormData, date: e.target.value})}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="tour-date">Tanggal Opsional</Label>
+                  <Input 
+                    id="tour-date" 
+                    type="date"
+                    placeholder="15 Jan 2024"
+                    value={tourFormData.date}
+                    onChange={(e) => setTourFormData({...tourFormData, date: e.target.value})}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="tour-max-pax">Maksimal Pax</Label>
+                  <Input 
+                    id="tour-max-pax" 
+                    type="number"
+                    placeholder="35"
+                    value={tourFormData.maxPax || ""}
+                    onChange={(e) => setTourFormData({...tourFormData, maxPax: e.target.value})}
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">

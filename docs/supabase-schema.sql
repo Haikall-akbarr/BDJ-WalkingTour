@@ -19,6 +19,7 @@ create table if not exists tours (
   route_detail TEXT null,
   route_map_url TEXT null,
   poi_list TEXT null,
+  max_pax INTEGER default 35,
   created_at TIMESTAMPTZ not null default now(),
   updated_at TIMESTAMPTZ not null default now()
 );

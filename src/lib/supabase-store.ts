@@ -29,6 +29,7 @@ function mapTour(row: AnyRow) {
     routeDetail: row.route_detail || '',
     routeMapUrl: row.route_map_url || '',
     poiList: row.poi_list || '[]',
+    maxPax: row.max_pax != null ? Number(row.max_pax) : null,
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
   };
@@ -219,6 +220,7 @@ export async function createTour(input: {
   routeDetail?: string;
   routeMapUrl?: string;
   poiList?: string;
+  maxPax?: number;
 }) {
   const admin = getSupabaseAdmin();
   const row = {
@@ -238,6 +240,7 @@ export async function createTour(input: {
     route_detail: input.routeDetail || null,
     route_map_url: input.routeMapUrl || null,
     poi_list: input.poiList || null,
+    max_pax: input.maxPax || null,
   };
 
   const { data, error } = await admin.from('tours').insert(row).select('*').single();
@@ -246,6 +249,9 @@ export async function createTour(input: {
   // VERIFICATION: Check if price_hemat was silently ignored by Supabase (PostgREST schema cache issue)
   if ('price_hemat' in row && row.price_hemat != null && data.price_hemat === undefined) {
     throw new Error("Gagal menyimpan Harga Hemat. Kolom price_hemat tidak terdeteksi. Silakan jalankan: NOTIFY pgrst, 'reload schema'; di Supabase SQL Editor.");
+  }
+  if ('max_pax' in row && row.max_pax != null && data.max_pax === undefined) {
+    throw new Error("Gagal menyimpan Maksimal Pax. Kolom max_pax tidak terdeteksi. Silakan jalankan: NOTIFY pgrst, 'reload schema'; di Supabase SQL Editor.");
   }
 
   return mapTour(data);
@@ -269,6 +275,7 @@ export async function updateTour(
     routeDetail: string;
     routeMapUrl: string;
     poiList: string;
+    maxPax: number;
   }>
 ) {
   const admin = getSupabaseAdmin();
@@ -289,6 +296,7 @@ export async function updateTour(
   if (typeof input.routeDetail !== 'undefined') patch.route_detail = input.routeDetail || null;
   if (typeof input.routeMapUrl !== 'undefined') patch.route_map_url = input.routeMapUrl || null;
   if (typeof input.poiList !== 'undefined') patch.poi_list = input.poiList || null;
+  if (typeof input.maxPax !== 'undefined') patch.max_pax = input.maxPax != null ? Number(input.maxPax) : null;
 
   if (Object.keys(patch).length === 0) {
     return getTourById(id);
@@ -312,6 +320,7 @@ export async function updateTour(
     price_hemat: data.price_hemat,
     price_reguler_desc: data.price_reguler_desc,
     price_hemat_desc: data.price_hemat_desc,
+    max_pax: data.max_pax,
   }));
 
   // VERIFICATION: Check if price_hemat or descriptions were silently ignored by Supabase (PostgREST schema cache issue)
@@ -320,6 +329,9 @@ export async function updateTour(
   }
   if ('price_reguler_desc' in patch && data.price_reguler_desc === undefined) {
     throw new Error("Gagal menyimpan Deskripsi. Kolom price_reguler_desc tidak terdeteksi. Silakan jalankan: NOTIFY pgrst, 'reload schema'; di Supabase SQL Editor.");
+  }
+  if ('max_pax' in patch && patch.max_pax != null && data.max_pax === undefined) {
+    throw new Error("Gagal menyimpan Maksimal Pax. Kolom max_pax tidak terdeteksi. Silakan jalankan: NOTIFY pgrst, 'reload schema'; di Supabase SQL Editor.");
   }
 
   return mapTour(data);

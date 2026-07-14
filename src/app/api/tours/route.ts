@@ -28,7 +28,7 @@ export async function GET() {
     
     const enrichedTours = tours.map(t => {
       const bookedPax = paxByTour[t.id] || 0;
-      const maxPax = 35;
+      const maxPax = typeof t.maxPax === 'number' ? t.maxPax : 0;
       const availablePax = Math.max(0, maxPax - bookedPax);
       return {
         ...t,
@@ -37,7 +37,6 @@ export async function GET() {
         availablePax
       };
     });
-    console.log("First enriched tour:", enrichedTours[0]);
     return NextResponse.json({ tours: enrichedTours });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Gagal mengambil data tur.' }, { status: 500 });
@@ -70,10 +69,11 @@ export async function POST(request: NextRequest) {
       duration: body.duration ? String(body.duration) : '2 Jam',
       descriptionFull: body.descriptionFull ? String(body.descriptionFull) : '',
       historyCulture: body.historyCulture ? String(body.historyCulture) : '',
-      historyHighlights: body.historyHighlights ? String(body.historyHighlights) : '[]',
+      historyHighlights: typeof body.historyHighlights === 'string' ? body.historyHighlights : JSON.stringify(body.historyHighlights || []),
       routeDetail: body.routeDetail ? String(body.routeDetail) : '',
       routeMapUrl: routeMapUrl,
-      poiList: body.poiList ? String(body.poiList) : '[]',
+      poiList: typeof body.poiList === 'string' ? body.poiList : JSON.stringify(body.poiList || []),
+      maxPax: body.maxPax ? Number(body.maxPax) : undefined
     });
 
     return NextResponse.json({ tour }, { status: 201 });
@@ -81,4 +81,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error?.message || 'Gagal membuat tur.' }, { status: 500 });
   }
 }
-

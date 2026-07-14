@@ -39,16 +39,23 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const body = await request.json();
 
-    console.log('[PUT /api/tours] Full body received:', JSON.stringify(body, null, 2));
-    console.log('[PUT /api/tours] priceRegulerDesc:', body.priceRegulerDesc, '| priceHematDesc:', body.priceHematDesc);
-    console.log('[PUT /api/tours] price:', body.price, '| priceHemat:', body.priceHemat);
+    console.log('[PUT /api/tours] body.maxPax:', body.maxPax, '| type:', typeof body.maxPax);
 
     let routeMapUrl = typeof body?.routeMapUrl === 'undefined' ? undefined : String(body.routeMapUrl || '');
-    console.log('PUT received routeMapUrl:', routeMapUrl);
     if (routeMapUrl) {
       routeMapUrl = await resolveGoogleMapsUrl(routeMapUrl);
-      console.log('PUT resolved routeMapUrl:', routeMapUrl);
     }
+
+    // Parse maxPax robustly - accept number or string, no default fallback to 35
+    let maxPaxValue: number | undefined = undefined;
+    if (body?.maxPax !== undefined && body?.maxPax !== null && body?.maxPax !== '') {
+      maxPaxValue = Number(body.maxPax);
+      if (isNaN(maxPaxValue) || maxPaxValue <= 0) {
+        maxPaxValue = undefined; // invalid, skip update
+      }
+    }
+
+    console.log('[PUT /api/tours] parsed maxPaxValue:', maxPaxValue);
 
     const tour = await updateTour(id, {
       name: typeof body?.name === 'undefined' ? undefined : String(body.name),
@@ -62,21 +69,25 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       duration: typeof body?.duration === 'undefined' ? undefined : String(body.duration || ''),
       descriptionFull: typeof body?.descriptionFull === 'undefined' ? undefined : String(body.descriptionFull || ''),
       historyCulture: typeof body?.historyCulture === 'undefined' ? undefined : String(body.historyCulture || ''),
-      historyHighlights: typeof body?.historyHighlights === 'undefined' ? undefined : String(body.historyHighlights || '[]'),
+      historyHighlights: typeof body?.historyHighlights === 'undefined' ? undefined : (typeof body.historyHighlights === 'string' ? body.historyHighlights : JSON.stringify(body.historyHighlights || [])),
       routeDetail: typeof body?.routeDetail === 'undefined' ? undefined : String(body.routeDetail || ''),
       routeMapUrl: routeMapUrl,
-      poiList: typeof body?.poiList === 'undefined' ? undefined : String(body.poiList || '[]'),
+      poiList: typeof body?.poiList === 'undefined' ? undefined : (typeof body.poiList === 'string' ? body.poiList : JSON.stringify(body.poiList || [])),
+      maxPax: maxPaxValue
     });
 
     if (!tour) {
       return NextResponse.json({ error: 'Tur tidak ditemukan.' }, { status: 404 });
     }
 
+    console.log('[PUT /api/tours] saved tour.maxPax:', tour.maxPax);
+
     revalidatePath('/api/tours');
     revalidatePath('/dashboard/admin');
 
     return NextResponse.json({ tour });
   } catch (error: any) {
+    console.error('[PUT /api/tours] Error:', error);
     return NextResponse.json({ error: error?.message || 'Gagal memperbarui tur.' }, { status: 500 });
   }
 }
@@ -96,4 +107,3 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: error?.message || 'Gagal menghapus tur.' }, { status: 500 });
   }
 }
-

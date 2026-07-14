@@ -672,6 +672,7 @@ app.post(
       routeDetail: req.body.routeDetail ? String(req.body.routeDetail) : "",
       routeMapUrl: routeMapUrl,
       poiList: req.body.poiList ? String(req.body.poiList) : "[]",
+      maxPax: req.body.maxPax ? Number(req.body.maxPax) : undefined,
     });
 
     res.status(201).json({ tour });
@@ -782,6 +783,10 @@ app.put(
         typeof req.body?.poiList === "undefined"
           ? undefined
           : String(req.body.poiList || "[]"),
+      maxPax:
+        typeof req.body?.maxPax === "undefined"
+          ? undefined
+          : (req.body.maxPax != null ? Number(req.body.maxPax) : undefined),
     });
 
     if (!tour) {
