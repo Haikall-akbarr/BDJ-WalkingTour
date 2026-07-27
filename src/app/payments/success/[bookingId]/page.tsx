@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { BadgeCheck, Loader2, QrCode, RefreshCw } from 'lucide-react';
+import { BadgeCheck, Loader2, RefreshCw, Clock } from 'lucide-react';
 
 type PaymentStatusResponse = {
   source: string;
@@ -38,11 +37,18 @@ export default function PaymentSuccessPage() {
   const [error, setError] = useState<string | null>(null);
   const [payload, setPayload] = useState<PaymentStatusResponse | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const mountTimeRef = useRef(Date.now());
+  const pollCountRef = useRef(0);
 
   const booking = payload?.booking;
   const isPaid = booking?.paymentStatus === 'paid' || booking?.status === 'paid';
   const hasBarcode = Boolean(booking?.attendanceCode && booking?.attendanceQrImageUrl);
   const paymentTargetUrl = booking?.paymentCheckoutUrl || (booking?.paymentGateway === 'manual' ? `/payments/manual/${bookingId}` : booking?.paymentGateway === 'dummy' ? `/payments/dummy/${bookingId}` : null);
+
+  // Detect if user just returned from payment gateway (within first 30 seconds)
+  const isRecentRedirect = useMemo(() => {
+    return !isPaid && (Date.now() - mountTimeRef.current < 30000);
+  }, [isPaid]);
 
   const formattedAmount = useMemo(() => {
     if (!booking?.grossAmount) return null;
@@ -81,16 +87,35 @@ export default function PaymentSuccessPage() {
     loadStatus();
   }, [bookingId]);
 
+  // Aggressive polling: 1.5s for the first 30 seconds (to catch webhook quickly after
+  // redirect from Pakasir), then slow down to 3s. Stops once payment is confirmed.
   useEffect(() => {
     if (isPaid && hasBarcode) {
       return;
     }
 
-    const timer = window.setInterval(() => {
-      loadStatus(true);
-    }, 3000);
+    const getInterval = () => {
+      const elapsed = Date.now() - mountTimeRef.current;
+      // First 30 seconds: poll every 1.5s to quickly catch webhook
+      if (elapsed < 30000) return 1500;
+      // Next 2 minutes: poll every 3s
+      if (elapsed < 150000) return 3000;
+      // After that: poll every 5s
+      return 5000;
+    };
 
-    return () => window.clearInterval(timer);
+    let timerId: ReturnType<typeof setTimeout>;
+
+    const poll = () => {
+      pollCountRef.current += 1;
+      loadStatus(true);
+      timerId = setTimeout(poll, getInterval());
+    };
+
+    // Start first poll faster (500ms) to give webhook a moment
+    timerId = setTimeout(poll, 500);
+
+    return () => clearTimeout(timerId);
   }, [bookingId, isPaid, hasBarcode]);
 
   useEffect(() => {
@@ -117,14 +142,19 @@ export default function PaymentSuccessPage() {
       <div className="mx-auto max-w-2xl">
         <Card className="rounded-[28px] border-none bg-white/95 shadow-[0_24px_80px_rgba(16,34,31,0.12)]">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-black uppercase">Pembayaran Berhasil</CardTitle>
+            <CardTitle className="text-2xl font-black uppercase">
+              {isPaid ? 'Pembayaran Berhasil' : loading ? 'Memverifikasi Pembayaran...' : 'Status Pembayaran'}
+            </CardTitle>
             <CardDescription>
-              {booking?.tourName ? `${booking.tourName} • ` : ''}Barcode akan tampil setelah webhook memproses pembayaran.
+              {isPaid
+                ? (booking?.tourName ? `${booking.tourName} • ` : '') + 'Pembayaran Anda sudah dikonfirmasi.'
+                : 'Halaman ini akan otomatis memperbarui status setelah pembayaran diproses.'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 text-center">
-            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-2xl bg-zinc-100">
-              {isPaid ? <BadgeCheck className="h-12 w-12 text-emerald-600" /> : <QrCode className="h-12 w-12 text-[#10221f]" />}
+            <div className={`mx-auto flex h-24 w-24 items-center justify-center rounded-2xl ${isPaid ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+              {isPaid ? <BadgeCheck className="h-12 w-12 text-emerald-600" /> : loading ? <Loader2 className="h-12 w-12 text-amber-500 animate-spin" /> : <Clock className="h-12 w-12 text-amber-500" />}
             </div>
 
             <div className="space-y-2 text-sm text-zinc-600">
@@ -153,14 +183,17 @@ export default function PaymentSuccessPage() {
             )}
 
             {loading ? (
-              <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-sm text-zinc-600">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Memuat status pembayaran...
+              <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-amber-200 bg-amber-50/50 p-6 text-sm text-amber-800">
+                <Loader2 className="h-5 w-5 animate-spin text-amber-600" />
+                <p className="font-semibold">Memverifikasi status pembayaran...</p>
+                <p className="text-xs text-amber-600">Mohon tunggu, kami sedang mengecek pembayaran Anda dari Pakasir.</p>
               </div>
             ) : isPaid ? (
               !hasBarcode ? (
-                <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
-                  Pembayaran sudah diterima, barcode sedang dibuat. Tunggu sebentar atau klik refresh.
+                <div className="flex flex-col items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+                  <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
+                  <p className="font-semibold">Pembayaran sudah diterima!</p>
+                  <p className="text-xs">Barcode sedang dibuat. Tunggu sebentar atau klik refresh.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -205,8 +238,18 @@ export default function PaymentSuccessPage() {
                 {error}
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
-                Pembayaran belum terverifikasi. Halaman ini akan otomatis mengecek status setiap beberapa detik.
+              <div className="rounded-2xl border border-dashed border-amber-200 bg-amber-50/50 p-5 text-sm text-amber-800 space-y-3">
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+                  <p className="font-semibold">Menunggu konfirmasi pembayaran...</p>
+                </div>
+                <p className="text-xs text-amber-600 text-center">
+                  Jika Anda sudah membayar di Pakasir, status akan otomatis berubah dalam beberapa detik.
+                  Halaman ini mengecek status secara otomatis.
+                </p>
+                {refreshing && (
+                  <p className="text-[10px] text-amber-500 text-center animate-pulse">Mengecek status terbaru...</p>
+                )}
               </div>
             )}
           </CardContent>
